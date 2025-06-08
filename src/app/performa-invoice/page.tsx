@@ -4,7 +4,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { Header } from "@/components/layout/header";
 import { PerformaInvoiceForm } from "@/components/performa-invoice-form";
-// import { PerformaInvoiceList } from "@/components/performa-invoice-list"; // If you create a list component
+import { PerformaInvoiceList } from "@/components/performa-invoice-list";
 import type { PerformaInvoice } from "@/types/performa-invoice";
 import type { Company } from "@/types/company";
 import type { Client } from "@/types/client";
@@ -29,19 +29,20 @@ export default function PerformaInvoicePage() {
   const [isClient, setIsClient] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
-  const getNextInvoiceNumber = useCallback((invoices: PerformaInvoice[]): string => {
+  const getNextInvoiceNumberInternal = useCallback((invoices: PerformaInvoice[]): string => {
     if (invoices.length === 0) {
       return `${INVOICE_PREFIX}1`;
     }
-    const lastInvoice = invoices
+    const lastInvoiceNum = invoices
       .map(inv => {
         const parts = inv.invoiceNumber.split('/');
-        return parseInt(parts[parts.length - 1], 10);
+        const numPart = parts[parts.length - 1];
+        return parseInt(numPart, 10);
       })
       .filter(num => !isNaN(num))
       .sort((a, b) => b - a)[0];
       
-    const nextNum = (lastInvoice || 0) + 1;
+    const nextNum = (lastInvoiceNum || 0) + 1;
     return `${INVOICE_PREFIX}${nextNum}`;
   }, []);
 
@@ -51,8 +52,14 @@ export default function PerformaInvoicePage() {
       try {
         const storedInvoices = localStorage.getItem(LOCAL_STORAGE_PERFORMA_INVOICES_KEY);
         const currentInvoices = storedInvoices ? JSON.parse(storedInvoices) : [];
-        setPerformaInvoices(currentInvoices);
-        setNextInvoiceNumber(getNextInvoiceNumber(currentInvoices));
+        // Ensure invoice dates are Date objects
+        const parsedInvoices = currentInvoices.map((inv: any) => ({
+          ...inv,
+          invoiceDate: new Date(inv.invoiceDate), 
+          items: inv.items.map((item:any) => ({...item})) // basic pass through for items
+        }));
+        setPerformaInvoices(parsedInvoices);
+        setNextInvoiceNumber(getNextInvoiceNumberInternal(parsedInvoices));
 
         const storedExporters = localStorage.getItem(LOCAL_STORAGE_COMPANIES_KEY);
         setExporters(storedExporters ? JSON.parse(storedExporters) : []);
@@ -68,9 +75,8 @@ export default function PerformaInvoicePage() {
 
       } catch (error) {
         console.error("Failed to parse data from localStorage", error);
-        // Initialize with empty arrays and default next invoice number if parsing fails
         setPerformaInvoices([]);
-        setNextInvoiceNumber(getNextInvoiceNumber([]));
+        setNextInvoiceNumber(getNextInvoiceNumberInternal([]));
         setExporters([]);
         setClients([]);
         setSizes([]);
@@ -79,7 +85,7 @@ export default function PerformaInvoicePage() {
         setIsLoading(false);
       }
     }
-  }, [getNextInvoiceNumber]);
+  }, [getNextInvoiceNumberInternal]);
 
   const handleSavePerformaInvoice = (newInvoice: PerformaInvoice) => {
     const updatedInvoices = [...performaInvoices, newInvoice];
@@ -87,8 +93,31 @@ export default function PerformaInvoicePage() {
     if (typeof window !== "undefined") {
       localStorage.setItem(LOCAL_STORAGE_PERFORMA_INVOICES_KEY, JSON.stringify(updatedInvoices));
     }
-    setNextInvoiceNumber(getNextInvoiceNumber(updatedInvoices)); // Update for the next form
+    setNextInvoiceNumber(getNextInvoiceNumberInternal(updatedInvoices));
   };
+
+  const handleDeleteInvoice = (invoiceIdToDelete: string) => {
+    const updatedInvoices = performaInvoices.filter(inv => inv.id !== invoiceIdToDelete);
+    setPerformaInvoices(updatedInvoices);
+    if (typeof window !== "undefined") {
+      localStorage.setItem(LOCAL_STORAGE_PERFORMA_INVOICES_KEY, JSON.stringify(updatedInvoices));
+    }
+    setNextInvoiceNumber(getNextInvoiceNumberInternal(updatedInvoices)); // Recalculate next invoice number
+  };
+
+  const handleEditInvoice = (invoiceIdToEdit: string) => {
+    // Placeholder: In a real app, you'd likely navigate to a form pre-filled with this invoice's data
+    // or open a modal for editing.
+    console.log("Edit invoice:", invoiceIdToEdit);
+    alert(`Edit functionality for invoice ID ${invoiceIdToEdit} is not yet implemented.`);
+  };
+
+  const handleGeneratePO = (invoiceIdForPO: string) => {
+    // Placeholder: This would navigate to a new page or trigger a PO generation process.
+    console.log("Generate PO for invoice:", invoiceIdForPO);
+    alert(`Purchase Order generation for invoice ID ${invoiceIdForPO} is not yet implemented.`);
+  };
+
 
   if (!isClient || isLoading) {
     return (
@@ -117,7 +146,7 @@ export default function PerformaInvoicePage() {
             allProducts={products}
           />
         ) : (
-           <Card className="w-full max-w-2xl mx-auto shadow-xl">
+           <Card className="w-full max-w-2xl mx-auto shadow-xl mb-8">
             <CardHeader>
               <CardTitle className="font-headline text-2xl">Cannot Create Performa Invoice</CardTitle>
             </CardHeader>
@@ -137,7 +166,14 @@ export default function PerformaInvoicePage() {
             </CardContent>
           </Card>
         )}
-        {/* <PerformaInvoiceList invoices={performaInvoices} />  Placeholder for a list component */}
+        <PerformaInvoiceList 
+          invoices={performaInvoices}
+          exporters={exporters}
+          clients={clients}
+          onDeleteInvoice={handleDeleteInvoice}
+          onEditInvoice={handleEditInvoice}
+          onGeneratePO={handleGeneratePO}
+        />
       </main>
       <footer className="py-6 text-center text-sm text-muted-foreground border-t">
         © {new Date().getFullYear()} BizForm. All rights reserved.

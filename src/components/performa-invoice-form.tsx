@@ -42,20 +42,20 @@ const performaInvoiceItemSchema = z.object({
 
 const formSchema = z.object({
   exporterId: z.string().min(1, "Exporter is required"),
-  invoiceNumber: z.string(), // Read-only, generated
+  invoiceNumber: z.string(), 
   invoiceDate: z.date({ required_error: "Invoice date is required" }),
   clientId: z.string().min(1, "Client is required"),
   finalDestination: z.string().min(2, "Final destination is required"),
   totalContainer: z.coerce.number().min(0, "Total containers must be non-negative"),
   containerSize: z.enum(["20 ft", "40 ft"]),
   currencyType: z.enum(["INR", "USD", "Euro"]),
-  totalGrossWeight: z.string().min(1, "Total gross weight is required"), // Can be "NA"
+  totalGrossWeight: z.string().min(1, "Total gross weight is required"), 
   freight: z.coerce.number().min(0, "Freight must be non-negative").optional().default(0),
   discount: z.coerce.number().min(0, "Discount must be non-negative").optional().default(0),
-  notifyPartyLine1: z.string().optional(),
-  notifyPartyLine2: z.string().optional(),
+  notifyPartyLine1: z.string().optional().default(""),
+  notifyPartyLine2: z.string().optional().default(""),
   termsAndConditions: z.string().min(10, "Terms and conditions are required"),
-  note: z.string().optional(),
+  note: z.string().optional().default(""),
   items: z.array(performaInvoiceItemSchema).min(1, "At least one product item is required"),
 });
 
@@ -67,7 +67,7 @@ interface PerformaInvoiceFormProps {
   exporters: Company[];
   clients: Client[];
   sizes: Size[];
-  allProducts: Product[]; // All products, will be filtered client-side
+  allProducts: Product[]; 
 }
 
 const defaultTerms = "30 % advance and 70% against BL ( against scan copy of BL)";
@@ -85,16 +85,22 @@ export function PerformaInvoiceForm({
   const form = useForm<PerformaInvoiceFormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
+      exporterId: "",
       invoiceNumber: nextInvoiceNumber,
       invoiceDate: new Date(),
+      clientId: "",
+      finalDestination: "",
+      totalContainer: 0,
       containerSize: "20 ft",
       currencyType: "USD",
       totalGrossWeight: "NA",
+      freight: 0,
+      discount: 0,
+      notifyPartyLine1: "",
+      notifyPartyLine2: "",
       termsAndConditions: defaultTerms,
       note: defaultNote,
       items: [{ sizeId: "", productId: "", boxes: 1, ratePerSqmt: 0, commission: 0 }],
-      freight: 0,
-      discount: 0,
     },
   });
 
@@ -107,16 +113,25 @@ export function PerformaInvoiceForm({
   const watchedFreight = form.watch("freight");
   const watchedDiscount = form.watch("discount");
 
-  const exporterOptions: ComboboxOption[] = exporters.map(c => ({ value: c.id, label: c.companyName }));
-  const clientOptions: ComboboxOption[] = clients.map(c => ({ value: c.id, label: c.companyName }));
-  const sizeOptions: ComboboxOption[] = sizes.map(s => ({ value: s.id, label: `${s.size} (HSN: ${s.hsnCode})` }));
+  const exporterOptions: ComboboxOption[] = useMemo(() => 
+    exporters.map(c => ({ value: c.id, label: c.companyName })), 
+    [exporters]
+  );
+  const clientOptions: ComboboxOption[] = useMemo(() =>
+    clients.map(c => ({ value: c.id, label: c.companyName })),
+    [clients]
+  );
+  const sizeOptions: ComboboxOption[] = useMemo(() =>
+    sizes.map(s => ({ value: s.id, label: `${s.size} (HSN: ${s.hsnCode})` })),
+    [sizes]
+  );
 
-  const getProductOptions = (sizeId: string): ComboboxOption[] => {
-    if (!sizeId) return [];
+  const getProductOptions = useCallback((sizeId: string): ComboboxOption[] => {
+    if (!sizeId || !allProducts) return [];
     return allProducts
       .filter(p => p.sizeId === sizeId)
       .map(p => ({ value: p.id, label: p.designName }));
-  };
+  }, [allProducts]);
 
   useEffect(() => {
     form.setValue("invoiceNumber", nextInvoiceNumber);
@@ -124,7 +139,7 @@ export function PerformaInvoiceForm({
   
   const handleSizeChange = (itemIndex: number, newSizeId: string) => {
     form.setValue(`items.${itemIndex}.sizeId`, newSizeId);
-    form.setValue(`items.${itemIndex}.productId`, ""); // Reset product when size changes
+    form.setValue(`items.${itemIndex}.productId`, ""); 
     const selectedSize = sizes.find(s => s.id === newSizeId);
     if (selectedSize) {
       form.setValue(`items.${itemIndex}.ratePerSqmt`, selectedSize.salesPrice);
@@ -135,9 +150,7 @@ export function PerformaInvoiceForm({
 
   const handleProductChange = (itemIndex: number, newProductId: string) => {
     form.setValue(`items.${itemIndex}.productId`, newProductId);
-    // Rate is already set by size change, but could be re-fetched if product had its own price
   };
-
 
   const { subTotal, grandTotal, itemsWithCalculations } = useMemo(() => {
     let currentSubTotal = 0;
@@ -145,7 +158,7 @@ export function PerformaInvoiceForm({
       const sizeDetail = sizes.find(s => s.id === item.sizeId);
       let quantitySqmt = 0;
       let amount = 0;
-      if (sizeDetail && item.boxes > 0) {
+      if (sizeDetail && item.boxes > 0 && item.ratePerSqmt >= 0) {
         quantitySqmt = item.boxes * sizeDetail.sqmPerBox;
         amount = quantitySqmt * item.ratePerSqmt;
       }
@@ -156,13 +169,12 @@ export function PerformaInvoiceForm({
     return { subTotal: currentSubTotal, grandTotal: currentGrandTotal, itemsWithCalculations: calculatedItems };
   }, [watchedItems, sizes, watchedFreight, watchedDiscount]);
 
-
   function onSubmit(values: PerformaInvoiceFormValues) {
     const invoiceToSave: PerformaInvoice = {
       ...values,
-      id: Date.now().toString(), // Or a more robust ID generation
-      items: itemsWithCalculations.map(item => ({ // ensure calculated fields are part of the saved object if needed elsewhere
-        id: Math.random().toString(36).substring(2, 9), // Unique ID for item
+      id: Date.now().toString(),
+      items: itemsWithCalculations.map(item => ({ 
+        id: Math.random().toString(36).substring(2, 9),
         sizeId: item.sizeId,
         productId: item.productId,
         boxes: item.boxes,
@@ -180,8 +192,7 @@ export function PerformaInvoiceForm({
       description: `Invoice ${values.invoiceNumber} has been successfully saved.`,
     });
     form.reset({
-        ...form.getValues(), // Keep some values if needed or reset fully
-        invoiceNumber: nextInvoiceNumber, // This should be the *next* one after save
+        invoiceNumber: nextInvoiceNumber, // This is now handled by parent, it gets updated via prop
         invoiceDate: new Date(),
         containerSize: "20 ft",
         currencyType: "USD",
@@ -198,11 +209,12 @@ export function PerformaInvoiceForm({
         notifyPartyLine1: "",
         notifyPartyLine2: ""
     });
-     // After saving, the `nextInvoiceNumber` prop should be updated by the parent page for the *next* form.
+    // Ensure invoiceNumber field in the form also updates if nextInvoiceNumber prop changes
+    // This is handled by the useEffect for nextInvoiceNumber
   }
 
   return (
-    <Card className="w-full max-w-4xl mx-auto shadow-xl">
+    <Card className="w-full max-w-4xl mx-auto shadow-xl mb-8">
       <CardHeader>
         <CardTitle className="font-headline text-2xl flex items-center gap-2">
           <FileText className="h-6 w-6 text-primary" />
@@ -339,7 +351,7 @@ export function PerformaInvoiceForm({
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel className="flex items-center gap-2"><Anchor className="h-4 w-4 text-muted-foreground" />Container Size</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <Select onValueChange={field.onChange} value={field.value}>
                       <FormControl>
                         <SelectTrigger>
                           <SelectValue placeholder="Select container size" />
@@ -360,7 +372,7 @@ export function PerformaInvoiceForm({
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel className="flex items-center gap-2"><DollarSign className="h-4 w-4 text-muted-foreground" />Currency</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <Select onValueChange={field.onChange} value={field.value}>
                       <FormControl>
                         <SelectTrigger>
                           <SelectValue placeholder="Select currency" />
@@ -456,7 +468,7 @@ export function PerformaInvoiceForm({
                                 placeholder="Select Product..."
                                 searchPlaceholder="Search Products..."
                                 emptySearchMessage="No product found for this size."
-                                disabled={!currentItemSizeId}
+                                disabled={!currentItemSizeId || productOptionsForThisItem.length === 0}
                               />
                               <FormMessage />
                             </FormItem>
