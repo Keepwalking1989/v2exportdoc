@@ -13,7 +13,7 @@ import {
 } from "@/components/ui/menubar";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
-import { Menu as MenuIcon, X as XIcon, Building, PlusCircle, ShoppingCart, Receipt, Palette, Package, Landmark, Briefcase } from "lucide-react";
+import { Menu as MenuIcon, X as XIcon, Building, PlusCircle, ShoppingCart, Receipt, Palette, Package, Landmark, Briefcase, FileText } from "lucide-react"; // Added FileText
 
 export function Header() {
   const [isMobile, setIsMobile] = useState(false);
@@ -66,7 +66,9 @@ export function Header() {
           <ShoppingCart className="mr-2 h-4 w-4" /> SALE
         </MenubarTrigger>
         <MenubarContent>
-          <MenubarItem>Performa Invoice</MenubarItem>
+          <Link href="/performa-invoice" passHref>
+            <MenubarItem>Performa Invoice</MenubarItem>
+          </Link>
           <MenubarItem>Purchase Order</MenubarItem>
           <MenubarItem>Export Document</MenubarItem>
         </MenubarContent>
@@ -101,16 +103,16 @@ export function Header() {
         <Button variant="ghost" className="justify-start font-normal w-full" asChild onClick={() => setIsMobileMenuOpen(false)}><Link href="/bank">Bank</Link></Button>
       </div>
 
-      <Button variant="ghost" className="justify-start font-headline text-lg mt-2" onClick={() => setIsMobileMenuOpen(false)}>
+      <Button variant="ghost" className="justify-start font-headline text-lg mt-2" onClick={() => { /* Consider sub-menu expansion for mobile */ }}>
          <ShoppingCart className="mr-2 h-5 w-5" /> SALE
       </Button>
        <div className="pl-6">
-        <Button variant="ghost" className="justify-start font-normal w-full" onClick={() => setIsMobileMenuOpen(false)}>Performa Invoice</Button>
+        <Button variant="ghost" className="justify-start font-normal w-full" asChild onClick={() => setIsMobileMenuOpen(false)}><Link href="/performa-invoice">Performa Invoice</Link></Button>
         <Button variant="ghost" className="justify-start font-normal w-full" onClick={() => setIsMobileMenuOpen(false)}>Purchase Order</Button>
         <Button variant="ghost" className="justify-start font-normal w-full" onClick={() => setIsMobileMenuOpen(false)}>Export Document</Button>
       </div>
 
-      <Button variant="ghost" className="justify-start font-headline text-lg mt-2" onClick={() => setIsMobileMenuOpen(false)}>
+      <Button variant="ghost" className="justify-start font-headline text-lg mt-2" onClick={() => { /* Consider sub-menu expansion for mobile */ }}>
         <Receipt className="mr-2 h-5 w-5" /> PURCHASE
       </Button>
       <div className="pl-6">
