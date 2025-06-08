@@ -13,7 +13,7 @@ import {
 } from "@/components/ui/menubar";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
-import { Menu as MenuIcon, X as XIcon, Building, PlusCircle, ShoppingCart, Receipt, Palette, Package, Landmark } from "lucide-react"; // Added Landmark
+import { Menu as MenuIcon, X as XIcon, Building, PlusCircle, ShoppingCart, Receipt, Palette, Package, Landmark, Briefcase } from "lucide-react";
 
 export function Header() {
   const [isMobile, setIsMobile] = useState(false);
@@ -37,6 +37,9 @@ export function Header() {
             <MenubarItem>EXPORTER</MenubarItem>
           </Link>
           <MenubarSeparator />
+          <Link href="/client" passHref>
+            <MenubarItem>Client</MenubarItem>
+          </Link>
           <Link href="/manufacturer" passHref>
             <MenubarItem>Manufacturer</MenubarItem>
           </Link>
@@ -88,6 +91,7 @@ export function Header() {
       </Button>
       <div className="pl-6">
         <Button variant="ghost" className="justify-start font-normal w-full" asChild onClick={() => setIsMobileMenuOpen(false)}><Link href="/">EXPORTER</Link></Button>
+        <Button variant="ghost" className="justify-start font-normal w-full" asChild onClick={() => setIsMobileMenuOpen(false)}><Link href="/client">Client</Link></Button>
         <Button variant="ghost" className="justify-start font-normal w-full" asChild onClick={() => setIsMobileMenuOpen(false)}><Link href="/manufacturer">Manufacturer</Link></Button>
         <Button variant="ghost" className="justify-start font-normal w-full" asChild onClick={() => setIsMobileMenuOpen(false)}><Link href="/pallet">Pallet</Link></Button>
         <Button variant="ghost" className="justify-start font-normal w-full" asChild onClick={() => setIsMobileMenuOpen(false)}><Link href="/transporter">Transporter</Link></Button>
