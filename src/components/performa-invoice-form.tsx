@@ -24,7 +24,7 @@ import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import { format, parseISO } from "date-fns";
 import { CalendarIcon, PlusCircle, Trash2, FileText, Users, DollarSign, Package, Map, Anchor, Ship, Weight, Percent, Edit3, StickyNote } from "lucide-react";
-import React, { useEffect, useState, useMemo } from "react";
+import React, { useEffect, useState, useMemo, useCallback } from "react";
 
 import type { PerformaInvoice, PerformaInvoiceItem } from "@/types/performa-invoice";
 import type { Company } from "@/types/company";
@@ -42,14 +42,14 @@ const performaInvoiceItemSchema = z.object({
 
 const formSchema = z.object({
   exporterId: z.string().min(1, "Exporter is required"),
-  invoiceNumber: z.string(), 
+  invoiceNumber: z.string(),
   invoiceDate: z.date({ required_error: "Invoice date is required" }),
   clientId: z.string().min(1, "Client is required"),
   finalDestination: z.string().min(2, "Final destination is required"),
   totalContainer: z.coerce.number().min(0, "Total containers must be non-negative"),
   containerSize: z.enum(["20 ft", "40 ft"]),
   currencyType: z.enum(["INR", "USD", "Euro"]),
-  totalGrossWeight: z.string().min(1, "Total gross weight is required"), 
+  totalGrossWeight: z.string().min(1, "Total gross weight is required"),
   freight: z.coerce.number().min(0, "Freight must be non-negative").optional().default(0),
   discount: z.coerce.number().min(0, "Discount must be non-negative").optional().default(0),
   notifyPartyLine1: z.string().optional().default(""),
@@ -67,7 +67,7 @@ interface PerformaInvoiceFormProps {
   exporters: Company[];
   clients: Client[];
   sizes: Size[];
-  allProducts: Product[]; 
+  allProducts: Product[];
 }
 
 const defaultTerms = "30 % advance and 70% against BL ( against scan copy of BL)";
@@ -113,8 +113,8 @@ export function PerformaInvoiceForm({
   const watchedFreight = form.watch("freight");
   const watchedDiscount = form.watch("discount");
 
-  const exporterOptions: ComboboxOption[] = useMemo(() => 
-    exporters.map(c => ({ value: c.id, label: c.companyName })), 
+  const exporterOptions: ComboboxOption[] = useMemo(() =>
+    exporters.map(c => ({ value: c.id, label: c.companyName })),
     [exporters]
   );
   const clientOptions: ComboboxOption[] = useMemo(() =>
@@ -136,10 +136,10 @@ export function PerformaInvoiceForm({
   useEffect(() => {
     form.setValue("invoiceNumber", nextInvoiceNumber);
   }, [nextInvoiceNumber, form]);
-  
+
   const handleSizeChange = (itemIndex: number, newSizeId: string) => {
     form.setValue(`items.${itemIndex}.sizeId`, newSizeId);
-    form.setValue(`items.${itemIndex}.productId`, ""); 
+    form.setValue(`items.${itemIndex}.productId`, "");
     const selectedSize = sizes.find(s => s.id === newSizeId);
     if (selectedSize) {
       form.setValue(`items.${itemIndex}.ratePerSqmt`, selectedSize.salesPrice);
@@ -173,7 +173,7 @@ export function PerformaInvoiceForm({
     const invoiceToSave: PerformaInvoice = {
       ...values,
       id: Date.now().toString(),
-      items: itemsWithCalculations.map(item => ({ 
+      items: itemsWithCalculations.map(item => ({
         id: Math.random().toString(36).substring(2, 9),
         sizeId: item.sizeId,
         productId: item.productId,
@@ -402,7 +402,7 @@ export function PerformaInvoiceForm({
                 )}
               />
             </div>
-            
+
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center justify-between">
@@ -606,3 +606,5 @@ export function PerformaInvoiceForm({
     </Card>
   );
 }
+
+    
