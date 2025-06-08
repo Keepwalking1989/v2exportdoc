@@ -37,7 +37,9 @@ export function Header() {
             <MenubarItem>EXPORTER</MenubarItem>
           </Link>
           <MenubarSeparator />
-          <MenubarItem>Manufacturer</MenubarItem>
+          <Link href="/manufacturer" passHref>
+            <MenubarItem>Manufacturer</MenubarItem>
+          </Link>
           <MenubarItem>Pallet</MenubarItem>
           <MenubarItem>Transporter</MenubarItem>
           <MenubarItem>Suppliers</MenubarItem>
@@ -76,7 +78,7 @@ export function Header() {
       </Button>
       <div className="pl-6">
         <Button variant="ghost" className="justify-start font-normal w-full" asChild onClick={() => setIsMobileMenuOpen(false)}><Link href="/">EXPORTER</Link></Button>
-        <Button variant="ghost" className="justify-start font-normal w-full" onClick={() => setIsMobileMenuOpen(false)}>Manufacturer</Button>
+        <Button variant="ghost" className="justify-start font-normal w-full" asChild onClick={() => setIsMobileMenuOpen(false)}><Link href="/manufacturer">Manufacturer</Link></Button>
         <Button variant="ghost" className="justify-start font-normal w-full" onClick={() => setIsMobileMenuOpen(false)}>Pallet</Button>
         <Button variant="ghost" className="justify-start font-normal w-full" onClick={() => setIsMobileMenuOpen(false)}>Transporter</Button>
         <Button variant="ghost" className="justify-start font-normal w-full" onClick={() => setIsMobileMenuOpen(false)}>Suppliers</Button>
