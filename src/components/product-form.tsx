@@ -24,15 +24,15 @@ import React from "react";
 
 const formSchema = z.object({
   selectedSizeId: z.string().min(1, { message: "Please select a size." }),
+  designNames: z.string().min(1, { message: "Design name(s) are required." })
+    .refine(value => value.split(',').every(name => name.trim().length > 0), {
+      message: "All comma-separated design names must be valid and non-empty.",
+    }),
   sqmPerBoxDisplay: z.string().optional(),
   boxWeightDisplay: z.string().optional(),
   purchasePriceDisplay: z.string().optional(),
   salesPriceDisplay: z.string().optional(),
   hsnCodeDisplay: z.string().optional(),
-  designNames: z.string().min(1, { message: "Design name(s) are required." })
-    .refine(value => value.split(',').every(name => name.trim().length > 0), {
-      message: "All comma-separated design names must be valid and non-empty.",
-    }),
 });
 
 type ProductFormValues = z.infer<typeof formSchema>;
@@ -48,12 +48,12 @@ export function ProductForm({ sizes, onSave }: ProductFormProps) {
     resolver: zodResolver(formSchema),
     defaultValues: {
       selectedSizeId: "",
+      designNames: "",
       sqmPerBoxDisplay: "",
       boxWeightDisplay: "",
       purchasePriceDisplay: "",
       salesPriceDisplay: "",
       hsnCodeDisplay: "",
-      designNames: "",
     },
   });
 
@@ -138,6 +138,21 @@ export function ProductForm({ sizes, onSave }: ProductFormProps) {
 
             <FormField
               control={form.control}
+              name="designNames"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="flex items-center gap-2"><Palette className="h-4 w-4 text-muted-foreground" />Design Name(s)</FormLabel>
+                  <FormControl>
+                    <Input placeholder="e.g. Onyx Black, Marble White, Stone Grey" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                  <p className="text-xs text-muted-foreground">Enter one or more design names, separated by commas.</p>
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
               name="sqmPerBoxDisplay"
               render={({ field }) => (
                 <FormItem>
@@ -202,21 +217,6 @@ export function ProductForm({ sizes, onSave }: ProductFormProps) {
                 </FormItem>
               )}
             />
-
-            <FormField
-              control={form.control}
-              name="designNames"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="flex items-center gap-2"><Palette className="h-4 w-4 text-muted-foreground" />Design Name(s)</FormLabel>
-                  <FormControl>
-                    <Input placeholder="e.g. Onyx Black, Marble White, Stone Grey" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                  <p className="text-xs text-muted-foreground">Enter one or more design names, separated by commas.</p>
-                </FormItem>
-              )}
-            />
             
             <Button type="submit" className="w-full bg-accent hover:bg-accent/90 text-accent-foreground font-headline">
               Save Product(s)
@@ -227,3 +227,4 @@ export function ProductForm({ sizes, onSave }: ProductFormProps) {
     </Card>
   );
 }
+
