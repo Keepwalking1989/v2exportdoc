@@ -13,7 +13,7 @@ import {
 } from "@/components/ui/menubar";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
-import { Menu as MenuIcon, X as XIcon, Building, PlusCircle, ShoppingCart, Receipt, Palette } from "lucide-react"; // Added Palette
+import { Menu as MenuIcon, X as XIcon, Building, PlusCircle, ShoppingCart, Receipt, Palette, Package } from "lucide-react"; // Added Palette, Package
 
 export function Header() {
   const [isMobile, setIsMobile] = useState(false);
@@ -151,3 +151,4 @@ export function Header() {
     </header>
   );
 }
+
