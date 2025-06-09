@@ -30,28 +30,24 @@ const LH_PACKED_ADDITION = 1.8; // For multi-line text blocks where lines are cl
 const LH_SINGLE_ADDITION = 2.0; // For single lines or when more space is needed around a line
 
 // Specific line height additions for main title and second row header labels, used with their respective font categories
-const LH_MAIN_TITLE_ADDITION = LH_SINGLE_ADDITION;
-const LH_SECOND_ROW_HEADER_LABEL_ADDITION = LH_SINGLE_ADDITION;
+const LH_MAIN_TITLE_ADDITION = LH_SINGLE_ADDITION; // For FONT_CAT_1
+const LH_SECOND_ROW_HEADER_LABEL_ADDITION = LH_SINGLE_ADDITION; // For FONT_CAT_2 (used in blue boxes "EXPORTER", "CONSIGNEE")
 
-// --- Element Heights ---
-const BLUE_BOX_TEXT_PADDING_Y = 4; // Vertical padding inside blue boxes
+// --- Element Heights & Padding ---
+const BLUE_BOX_TEXT_PADDING_Y = 4; // Vertical padding inside blue boxes (total, so half above, half below text)
 
-const BLUE_HEADER_BOX_HEIGHT_TOP = FONT_CAT_1 + LH_MAIN_TITLE_ADDITION + (BLUE_BOX_TEXT_PADDING_Y * 2);
-const BLUE_HEADER_BOX_HEIGHT_SECOND_ROW = FONT_CAT_2 + LH_SECOND_ROW_HEADER_LABEL_ADDITION + (BLUE_BOX_TEXT_PADDING_Y * 2);
+const BLUE_HEADER_BOX_HEIGHT_TOP = FONT_CAT_1 + LH_MAIN_TITLE_ADDITION + BLUE_BOX_TEXT_PADDING_Y;
+const BLUE_HEADER_BOX_HEIGHT_SECOND_ROW = FONT_CAT_2 + LH_SECOND_ROW_HEADER_LABEL_ADDITION + BLUE_BOX_TEXT_PADDING_Y;
 
 // For blue boxes that contain two lines of text (e.g., Label on one line, Value on the next)
 // Label (FONT_CAT_2) + Value (FONT_CAT_3)
-const BLUE_BG_LABEL_DOUBLE_LINE_HEIGHT = (FONT_CAT_2 + LH_PACKED_ADDITION) + (FONT_CAT_3 + LH_PACKED_ADDITION) + BLUE_BOX_TEXT_PADDING_Y * 1.5;
+const BLUE_BG_LABEL_DOUBLE_LINE_HEIGHT = (FONT_CAT_2 + LH_PACKED_ADDITION) + (FONT_CAT_3 + LH_PACKED_ADDITION) + BLUE_BOX_TEXT_PADDING_Y;
 
-// For blue boxes with a single line label (e.g., IEC Code label, if value is separate)
-// Now adapting this for the new structure where IEC Code label and value are on separate lines within the same box
-// So, using BLUE_BG_LABEL_DOUBLE_LINE_HEIGHT for IEC as well.
-
-const BLUE_BG_TOTALS_LINE_HEIGHT = FONT_CAT_2 + BLUE_BOX_TEXT_PADDING_Y * 1.5; // For "TOTAL SQM" and "Amount in Words" labels/values
+const BLUE_BG_TOTALS_LINE_HEIGHT = FONT_CAT_2 + LH_SINGLE_ADDITION + BLUE_BOX_TEXT_PADDING_Y; // For "TOTAL SQM" and "Amount in Words" labels/values
 
 // --- Spacing (pt) ---
 const HORIZONTAL_LINE_THICKNESS = 0.5;
-const SPACE_AFTER_MAIN_TITLE_ROW = 0.0; // Space between "PROFORMA INVOICE" row and "EXPORTER/CONSIGNEE" row (now just line thickness)
+const SPACE_AFTER_MAIN_TITLE_ROW_BOX = 0.0; // Space between "PROFORMA INVOICE" row and "EXPORTER/CONSIGNEE" row (now just line thickness)
 const SPACE_AFTER_SECOND_ROW_LINE_CONTENT = 4.0; // Space after "EXPORTER/CONSIGNEE" blue boxes before company details
 const SPACE_BETWEEN_HEADER_SECTIONS = 1.5; // Small gap between distinct header parts
 const SPACE_AFTER_HORIZONTAL_LINE_CONTENT = 2.0;
@@ -60,11 +56,15 @@ const SPACE_AFTER_TABLE = 4.0;
 const SPACE_FOOTER_SECTION_GAP = 3.0;
 const SPACE_BEFORE_SIGNATURE = 10.0;
 
+/**
+ * Draws a block of text, potentially wrapped, and returns the Y-coordinate
+ * for the TOP of the NEXT potential line of text (not its baseline).
+ */
 function drawTextBlockAndGetEndY(
   doc: jsPDF,
   text: string | string[],
   x: number,
-  currentY: number, // Y position for the TOP of the text block
+  startY: number, // Y position for the TOP of the text block
   fontSize: number,
   fontWeight: 'normal' | 'bold',
   fontStyle: 'normal' | 'italic',
@@ -83,7 +83,7 @@ function drawTextBlockAndGetEndY(
   doc.setTextColor(color[0], color[1], color[2]);
 
   const lines = Array.isArray(text) ? text : (maxWidth ? doc.splitTextToSize(text || '', maxWidth) : [text || '']);
-  let yBaselineForCurrentLine = currentY; // This will track the top of the current line being drawn
+  let currentLineTopY = startY;
 
   lines.forEach(lineContent => {
     let drawX = x;
@@ -94,13 +94,14 @@ function drawTextBlockAndGetEndY(
         const textWidth = doc.getTextWidth(lineContent);
         drawX = x + maxWidth - textWidth;
     }
-    // doc.text y is baseline. So, current line's top + font size.
-    doc.text(lineContent, drawX, yBaselineForCurrentLine + fontSize, { align: align === 'center' && !maxWidth ? 'center' : 'left', baseline: 'alphabetic' });
-    yBaselineForCurrentLine += (fontSize + lineHeightAddition); // Advance to the top of the next line
+    // doc.text y is baseline. So, current line's top + font size (approx for baseline)
+    doc.text(lineContent, drawX, currentLineTopY + fontSize, { align: align === 'center' && !maxWidth ? 'center' : 'left', baseline: 'alphabetic' });
+    currentLineTopY += (fontSize + lineHeightAddition); // Advance to the top of the next line
   });
-  // Return the Y position for the TOP of the NEXT potential line of text (not its baseline)
-  return yBaselineForCurrentLine;
+  // Return the Y position for the TOP of the NEXT potential line of text
+  return currentLineTopY;
 }
+
 
 export function generatePerformaInvoicePdf(
   invoice: PerformaInvoice,
@@ -127,10 +128,7 @@ export function generatePerformaInvoicePdf(
   // --- HEADER: "PROFORMA INVOICE" Box (First Row) ---
   doc.setFillColor(COLOR_BLUE_RGB[0], COLOR_BLUE_RGB[1], COLOR_BLUE_RGB[2]);
   doc.rect(PAGE_MARGIN_X, yPos, contentWidth, BLUE_HEADER_BOX_HEIGHT_TOP, 'F');
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(FONT_CAT_1);
-  doc.setTextColor(COLOR_BLACK_RGB[0], COLOR_BLACK_RGB[1], COLOR_BLACK_RGB[2]);
-  doc.text("PROFORMA INVOICE", pageWidth / 2, yPos + (BLUE_HEADER_BOX_HEIGHT_TOP / 2), { align: 'center', baseline: 'middle' });
+  drawTextBlockAndGetEndY(doc, "PROFORMA INVOICE", pageWidth / 2, yPos + (BLUE_HEADER_BOX_HEIGHT_TOP - (FONT_CAT_1 + LH_MAIN_TITLE_ADDITION)) / 2, FONT_CAT_1, 'bold', 'normal', LH_MAIN_TITLE_ADDITION, contentWidth, COLOR_BLACK_RGB, 'center');
   yPos += BLUE_HEADER_BOX_HEIGHT_TOP;
 
   // --- Line between "PROFORMA INVOICE" and "EXPORTER/CONSIGNEE" boxes ---
@@ -138,50 +136,107 @@ export function generatePerformaInvoicePdf(
   doc.setLineWidth(HORIZONTAL_LINE_THICKNESS);
   doc.line(PAGE_MARGIN_X, yPos, pageWidth - PAGE_MARGIN_X, yPos);
   yPos += HORIZONTAL_LINE_THICKNESS;
-  // SPACE_AFTER_MAIN_TITLE_ROW is 0.0, so no yPos += SPACE_AFTER_MAIN_TITLE_ROW;
+  yPos += SPACE_AFTER_MAIN_TITLE_ROW_BOX; // This is 0.0
 
   // --- HEADER: "EXPORTER" and "CONSIGNEE / BUYER:" Boxes (Second Row) ---
   const secondHeaderRowY = yPos;
   doc.setFillColor(COLOR_BLUE_RGB[0], COLOR_BLUE_RGB[1], COLOR_BLUE_RGB[2]);
   doc.rect(leftColumnX, secondHeaderRowY, halfContentWidth, BLUE_HEADER_BOX_HEIGHT_SECOND_ROW, 'F');
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(FONT_CAT_2); // Category 2 for these labels
-  doc.setTextColor(COLOR_BLACK_RGB[0], COLOR_BLACK_RGB[1], COLOR_BLACK_RGB[2]);
-  doc.text("EXPORTER", leftColumnX + (halfContentWidth / 2), secondHeaderRowY + (BLUE_HEADER_BOX_HEIGHT_SECOND_ROW / 2), { align: 'center', baseline: 'middle' });
+  drawTextBlockAndGetEndY(doc, "EXPORTER", leftColumnX + (halfContentWidth / 2), secondHeaderRowY + (BLUE_HEADER_BOX_HEIGHT_SECOND_ROW - (FONT_CAT_2 + LH_SECOND_ROW_HEADER_LABEL_ADDITION)) / 2, FONT_CAT_2, 'bold', 'normal', LH_SECOND_ROW_HEADER_LABEL_ADDITION, halfContentWidth, COLOR_BLACK_RGB, 'center');
 
   doc.setFillColor(COLOR_BLUE_RGB[0], COLOR_BLUE_RGB[1], COLOR_BLUE_RGB[2]);
   doc.rect(rightColumnX, secondHeaderRowY, halfContentWidth, BLUE_HEADER_BOX_HEIGHT_SECOND_ROW, 'F');
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(FONT_CAT_2); // Category 2 for these labels
-  doc.setTextColor(COLOR_BLACK_RGB[0], COLOR_BLACK_RGB[1], COLOR_BLACK_RGB[2]);
-  doc.text("CONSIGNEE / BUYER:", rightColumnX + (halfContentWidth / 2), secondHeaderRowY + (BLUE_HEADER_BOX_HEIGHT_SECOND_ROW / 2), { align: 'center', baseline: 'middle' });
+  drawTextBlockAndGetEndY(doc, "CONSIGNEE / BUYER:", rightColumnX + (halfContentWidth / 2), secondHeaderRowY + (BLUE_HEADER_BOX_HEIGHT_SECOND_ROW - (FONT_CAT_2 + LH_SECOND_ROW_HEADER_LABEL_ADDITION)) / 2, FONT_CAT_2, 'bold', 'normal', LH_SECOND_ROW_HEADER_LABEL_ADDITION, halfContentWidth, COLOR_BLACK_RGB, 'center');
 
-  // Vertical line dividing Exporter and Consignee boxes
+  // Vertical line dividing Exporter and Consignee boxes in the second row header
   doc.setDrawColor(COLOR_BLACK_RGB[0], COLOR_BLACK_RGB[1], COLOR_BLACK_RGB[2]);
   doc.setLineWidth(HORIZONTAL_LINE_THICKNESS);
   doc.line(leftColumnX + halfContentWidth, secondHeaderRowY, leftColumnX + halfContentWidth, secondHeaderRowY + BLUE_HEADER_BOX_HEIGHT_SECOND_ROW);
   
   yPos = secondHeaderRowY + BLUE_HEADER_BOX_HEIGHT_SECOND_ROW;
   
-  // --- EXPORTER & CONSIGNEE DETAILS ---
-  yPos += SPACE_AFTER_SECOND_ROW_LINE_CONTENT; 
+  // --- EXPORTER & CONSIGNEE DETAILS CARDS ---
+  yPos += SPACE_AFTER_SECOND_ROW_LINE_CONTENT;
+  let detailsCardStartY = yPos;
+  let exporterCardContentEndY = detailsCardStartY;
+  let clientCardContentEndY = detailsCardStartY;
 
-  let detailsStartY = yPos;
-  let exporterEndY = detailsStartY;
-  let consigneeEndY = detailsStartY;
+  // --- Exporter Card ---
+  const exporterCompanyNameWrapped = doc.splitTextToSize(exporter.companyName.toUpperCase(), halfContentWidth - 4 - 4); // -4 for x-padding, -4 for border width approx
+  const exporterCompanyNameTextHeight = (exporterCompanyNameWrapped.length * (FONT_CAT_2 + LH_PACKED_ADDITION)) - LH_PACKED_ADDITION;
+  const exporterCompanyNameBlueBoxHeight = exporterCompanyNameTextHeight + BLUE_BOX_TEXT_PADDING_Y;
 
-  // Double line space (effectively, as redundant labels are removed)
-  exporterEndY += (FONT_CAT_2 + LH_PACKED_ADDITION); // Space equivalent to one line of FONT_CAT_2
-  consigneeEndY += (FONT_CAT_2 + LH_PACKED_ADDITION); // Space equivalent to one line of FONT_CAT_2
-
-  exporterEndY = drawTextBlockAndGetEndY(doc, exporter.companyName.toUpperCase(), leftColumnX + 2, exporterEndY, FONT_CAT_2, 'bold', 'normal', LH_PACKED_ADDITION, halfContentWidth - 4);
-  exporterEndY = drawTextBlockAndGetEndY(doc, exporter.address, leftColumnX + 2, exporterEndY, FONT_CAT_3, 'normal', 'normal', LH_PACKED_ADDITION, halfContentWidth - 4);
-
-  consigneeEndY = drawTextBlockAndGetEndY(doc, client.companyName.toUpperCase(), rightColumnX + 2, consigneeEndY, FONT_CAT_2, 'bold', 'normal', LH_PACKED_ADDITION, halfContentWidth - 4);
-  consigneeEndY = drawTextBlockAndGetEndY(doc, client.address, rightColumnX + 2, consigneeEndY, FONT_CAT_3, 'normal', 'normal', LH_PACKED_ADDITION, halfContentWidth - 4);
+  doc.setFillColor(COLOR_BLUE_RGB[0], COLOR_BLUE_RGB[1], COLOR_BLUE_RGB[2]);
+  doc.rect(leftColumnX, detailsCardStartY, halfContentWidth, exporterCompanyNameBlueBoxHeight, 'F');
+  drawTextBlockAndGetEndY(
+    doc, 
+    exporter.companyName.toUpperCase(), 
+    leftColumnX + 2, 
+    detailsCardStartY + (exporterCompanyNameBlueBoxHeight - exporterCompanyNameTextHeight) / 2, 
+    FONT_CAT_2, 'bold', 'normal', 
+    LH_PACKED_ADDITION, 
+    halfContentWidth - 4, 
+    COLOR_BLACK_RGB
+  );
   
-  yPos = Math.max(exporterEndY, consigneeEndY);
-  yPos += SPACE_BETWEEN_HEADER_SECTIONS; 
+  let exporterAddressStartY = detailsCardStartY + exporterCompanyNameBlueBoxHeight;
+  const exporterAddressEndY = drawTextBlockAndGetEndY(
+    doc, 
+    exporter.address, 
+    leftColumnX + 2, 
+    exporterAddressStartY, // Address starts right after the blue box
+    FONT_CAT_3, 'normal', 'normal', 
+    LH_PACKED_ADDITION, 
+    halfContentWidth - 4
+  );
+  const exporterTotalCardHeight = (exporterAddressEndY - exporterAddressStartY) + exporterCompanyNameBlueBoxHeight;
+  doc.setDrawColor(COLOR_BLACK_RGB[0], COLOR_BLACK_RGB[1], COLOR_BLACK_RGB[2]);
+  doc.setLineWidth(HORIZONTAL_LINE_THICKNESS);
+  doc.rect(leftColumnX, detailsCardStartY, halfContentWidth, exporterTotalCardHeight, 'S');
+  exporterCardContentEndY = detailsCardStartY + exporterTotalCardHeight;
+
+  // --- Client Card ---
+  const clientCompanyNameWrapped = doc.splitTextToSize(client.companyName.toUpperCase(), halfContentWidth - 4 - 4);
+  const clientCompanyNameTextHeight = (clientCompanyNameWrapped.length * (FONT_CAT_2 + LH_PACKED_ADDITION)) - LH_PACKED_ADDITION;
+  const clientCompanyNameBlueBoxHeight = clientCompanyNameTextHeight + BLUE_BOX_TEXT_PADDING_Y;
+
+  doc.setFillColor(COLOR_BLUE_RGB[0], COLOR_BLUE_RGB[1], COLOR_BLUE_RGB[2]);
+  doc.rect(rightColumnX, detailsCardStartY, halfContentWidth, clientCompanyNameBlueBoxHeight, 'F');
+  drawTextBlockAndGetEndY(
+    doc, 
+    client.companyName.toUpperCase(), 
+    rightColumnX + 2, 
+    detailsCardStartY + (clientCompanyNameBlueBoxHeight - clientCompanyNameTextHeight) / 2, 
+    FONT_CAT_2, 'bold', 'normal', 
+    LH_PACKED_ADDITION, 
+    halfContentWidth - 4, 
+    COLOR_BLACK_RGB
+  );
+
+  let clientAddressStartY = detailsCardStartY + clientCompanyNameBlueBoxHeight;
+  const clientAddressEndY = drawTextBlockAndGetEndY(
+    doc, 
+    client.address, 
+    rightColumnX + 2, 
+    clientAddressStartY, 
+    FONT_CAT_3, 'normal', 'normal', 
+    LH_PACKED_ADDITION, 
+    halfContentWidth - 4
+  );
+  const clientTotalCardHeight = (clientAddressEndY - clientAddressStartY) + clientCompanyNameBlueBoxHeight;
+  doc.setDrawColor(COLOR_BLACK_RGB[0], COLOR_BLACK_RGB[1], COLOR_BLACK_RGB[2]);
+  doc.setLineWidth(HORIZONTAL_LINE_THICKNESS);
+  doc.rect(rightColumnX, detailsCardStartY, halfContentWidth, clientTotalCardHeight, 'S');
+  clientCardContentEndY = detailsCardStartY + clientTotalCardHeight;
+
+  yPos = Math.max(exporterCardContentEndY, clientCardContentEndY);
+
+  // Vertical line dividing Exporter and Client cards
+  doc.setDrawColor(COLOR_BLACK_RGB[0], COLOR_BLACK_RGB[1], COLOR_BLACK_RGB[2]);
+  doc.setLineWidth(HORIZONTAL_LINE_THICKNESS);
+  doc.line(leftColumnX + halfContentWidth, detailsCardStartY, leftColumnX + halfContentWidth, yPos);
+  
+  yPos += SPACE_BETWEEN_HEADER_SECTIONS;
 
   // --- HORIZONTAL LINE 1 (Content) ---
   doc.setDrawColor(COLOR_BLACK_RGB[0], COLOR_BLACK_RGB[1], COLOR_BLACK_RGB[2]);
@@ -198,18 +253,23 @@ export function generatePerformaInvoicePdf(
 
   doc.setFillColor(COLOR_BLUE_RGB[0], COLOR_BLUE_RGB[1], COLOR_BLUE_RGB[2]);
   doc.rect(leftColumnX, invDestBlockStartY, halfContentWidth, currentBlockHeightInvDest, 'F');
-  let tempY = invDestBlockStartY + BLUE_BOX_TEXT_PADDING_Y / 2; 
+  let tempY = invDestBlockStartY + (currentBlockHeightInvDest - ((FONT_CAT_2 + LH_PACKED_ADDITION) + (FONT_CAT_3 + LH_PACKED_ADDITION))) / 2; // Adjusted for vertical centering of 2 lines
   tempY = drawTextBlockAndGetEndY(doc, "INVOICE NO & DATE:", leftColumnX + 2, tempY, FONT_CAT_2, 'bold', 'normal', LH_PACKED_ADDITION, halfContentWidth - 4);
   drawTextBlockAndGetEndY(doc, `${invoice.invoiceNumber} / ${format(new Date(invoice.invoiceDate), 'dd-MM-yyyy')}`, leftColumnX + 2, tempY, FONT_CAT_3, 'normal', 'normal', LH_PACKED_ADDITION, halfContentWidth - 4);
   invDateBlockEndY = invDestBlockStartY + currentBlockHeightInvDest;
 
   doc.setFillColor(COLOR_BLUE_RGB[0], COLOR_BLUE_RGB[1], COLOR_BLUE_RGB[2]);
   doc.rect(rightColumnX, invDestBlockStartY, halfContentWidth, currentBlockHeightInvDest, 'F');
-  tempY = invDestBlockStartY + BLUE_BOX_TEXT_PADDING_Y / 2; 
+  tempY = invDestBlockStartY + (currentBlockHeightInvDest - ((FONT_CAT_2 + LH_PACKED_ADDITION) + (FONT_CAT_3 + LH_PACKED_ADDITION))) / 2;
   tempY = drawTextBlockAndGetEndY(doc, "FINAL DESTINATION:", rightColumnX + 2, tempY, FONT_CAT_2, 'bold', 'normal', LH_PACKED_ADDITION, halfContentWidth - 4);
   drawTextBlockAndGetEndY(doc, invoice.finalDestination.toUpperCase(), rightColumnX + 2, tempY, FONT_CAT_3, 'normal', 'normal', LH_PACKED_ADDITION, halfContentWidth - 4);
   finalDestBlockEndY = invDestBlockStartY + currentBlockHeightInvDest;
-  
+
+  // Vertical line dividing Invoice No/Date and Final Destination boxes
+  doc.setDrawColor(COLOR_BLACK_RGB[0], COLOR_BLACK_RGB[1], COLOR_BLACK_RGB[2]);
+  doc.setLineWidth(HORIZONTAL_LINE_THICKNESS);
+  doc.line(leftColumnX + halfContentWidth, invDestBlockStartY, leftColumnX + halfContentWidth, invDestBlockStartY + currentBlockHeightInvDest);
+
   yPos = Math.max(invDateBlockEndY, finalDestBlockEndY);
   yPos += SPACE_BETWEEN_HEADER_SECTIONS;
 
@@ -229,7 +289,7 @@ export function generatePerformaInvoicePdf(
   // IEC Code (Label FONT_CAT_2, Value FONT_CAT_3 on separate lines)
   doc.setFillColor(COLOR_BLUE_RGB[0], COLOR_BLUE_RGB[1], COLOR_BLUE_RGB[2]);
   doc.rect(leftColumnX, iecTermsBlockStartY, halfContentWidth, currentBlockHeightIec, 'F');
-  tempY = iecTermsBlockStartY + BLUE_BOX_TEXT_PADDING_Y / 2;
+  tempY = iecTermsBlockStartY + (currentBlockHeightIec - ((FONT_CAT_2 + LH_PACKED_ADDITION) + (FONT_CAT_3 + LH_PACKED_ADDITION))) / 2;
   tempY = drawTextBlockAndGetEndY(doc, "IEC. CODE:", leftColumnX + 2, tempY, FONT_CAT_2, 'bold', 'normal', LH_PACKED_ADDITION, halfContentWidth - 4);
   drawTextBlockAndGetEndY(doc, exporter.iecNumber, leftColumnX + 2, tempY, FONT_CAT_3, 'normal', 'normal', LH_PACKED_ADDITION, halfContentWidth - 4);
   iecBlockEndY = iecTermsBlockStartY + currentBlockHeightIec;
@@ -238,16 +298,28 @@ export function generatePerformaInvoicePdf(
   doc.setFillColor(COLOR_BLUE_RGB[0], COLOR_BLUE_RGB[1], COLOR_BLUE_RGB[2]);
   const termsLabel = "TERMS AND CONDITIONS OF DELIVERY & PAYMENT:";
   const termsContent = invoice.termsAndConditions;
-  const termsLabelHeight = (FONT_CAT_2 + LH_PACKED_ADDITION);
-  const termsContentWrapped = doc.splitTextToSize(termsContent, halfContentWidth - 4); // Use halfContentWidth - padding
-  const termsContentHeight = termsContentWrapped.length * (FONT_CAT_3 + LH_PACKED_ADDITION) - LH_PACKED_ADDITION; // Subtract one addition for last line
-  const termsBlueBoxHeight = termsLabelHeight + termsContentHeight + BLUE_BOX_TEXT_PADDING_Y * 1.5; // Adjusted padding
+  const termsLabelWrapped = doc.splitTextToSize(termsLabel, halfContentWidth - 4);
+  const termsLabelTextHeight = (termsLabelWrapped.length * (FONT_CAT_2 + LH_PACKED_ADDITION)) - LH_PACKED_ADDITION;
+  
+  const termsContentWrapped = doc.splitTextToSize(termsContent, halfContentWidth - 4);
+  const termsContentTextHeight = (termsContentWrapped.length * (FONT_CAT_3 + LH_PACKED_ADDITION)) - LH_PACKED_ADDITION;
+  
+  const termsBlueBoxHeight = termsLabelTextHeight + termsContentTextHeight + BLUE_BOX_TEXT_PADDING_Y + (FONT_CAT_3 + LH_PACKED_ADDITION); // Extra line height for spacing between label and content
   
   doc.rect(rightColumnX, iecTermsBlockStartY, halfContentWidth, termsBlueBoxHeight, 'F');
   tempY = iecTermsBlockStartY + BLUE_BOX_TEXT_PADDING_Y / 2;
   tempY = drawTextBlockAndGetEndY(doc, termsLabel, rightColumnX + 2, tempY, FONT_CAT_2, 'bold', 'normal', LH_PACKED_ADDITION, halfContentWidth - 4);
+  // Add a bit more space before drawing the terms content, effectively an extra line
+  tempY += (FONT_CAT_3 + LH_PACKED_ADDITION) / 2; // Half line space or adjust as needed
   termsBlockEndY = drawTextBlockAndGetEndY(doc, termsContent, rightColumnX + 2, tempY, FONT_CAT_3, 'normal', 'normal', LH_PACKED_ADDITION, halfContentWidth - 4);
+  // Ensure termsBlockEndY reflects the bottom of the blue box
   termsBlockEndY = iecTermsBlockStartY + termsBlueBoxHeight; 
+
+  // Vertical line dividing IEC Code and Terms boxes
+  doc.setDrawColor(COLOR_BLACK_RGB[0], COLOR_BLACK_RGB[1], COLOR_BLACK_RGB[2]);
+  doc.setLineWidth(HORIZONTAL_LINE_THICKNESS);
+  doc.line(leftColumnX + halfContentWidth, iecTermsBlockStartY, leftColumnX + halfContentWidth, Math.max(iecBlockEndY, termsBlockEndY));
+
 
   yPos = Math.max(iecBlockEndY, termsBlockEndY);
   yPos += SPACE_BEFORE_TABLE;
@@ -316,36 +388,74 @@ export function generatePerformaInvoicePdf(
   const totalSqmValue = invoice.items.reduce((sum, item) => sum + (item.quantitySqmt || 0), 0).toFixed(2);
   const totalSqmLabelText = "TOTAL SQM";
   const totalSqmBlockHeight = BLUE_BG_TOTALS_LINE_HEIGHT; 
-  const totalSqmLabelWidth = doc.getTextWidth(totalSqmLabelText) + 10;
-  const totalSqmValueWidth = 60;
+  const totalSqmLabelWidth = doc.getTextWidth(totalSqmLabelText) + 10; // Using FONT_CAT_2
+  const totalSqmValueWidth = 60; // Fixed width for the value part
   const totalSqmBlockWidth = totalSqmLabelWidth + totalSqmValueWidth;
 
   doc.setFillColor(COLOR_BLUE_RGB[0], COLOR_BLUE_RGB[1], COLOR_BLUE_RGB[2]);
   doc.rect(PAGE_MARGIN_X, yPos, totalSqmLabelWidth, totalSqmBlockHeight, 'F'); 
-  const totalSqmLabelYBaseline = yPos + (totalSqmBlockHeight / 2) - (FONT_CAT_2 / 2) + FONT_CAT_2; // Center based on FONT_CAT_2
-  drawTextBlockAndGetEndY(doc, totalSqmLabelText, PAGE_MARGIN_X + 2, totalSqmLabelYBaseline - FONT_CAT_2, FONT_CAT_2, 'bold', 'normal', LH_SINGLE_ADDITION, totalSqmLabelWidth - 4);
+  drawTextBlockAndGetEndY(
+    doc, 
+    totalSqmLabelText, 
+    PAGE_MARGIN_X + 2, 
+    yPos + (totalSqmBlockHeight - (FONT_CAT_2 + LH_SINGLE_ADDITION)) / 2, // Vertically center label
+    FONT_CAT_2, 'bold', 'normal', 
+    LH_SINGLE_ADDITION, 
+    totalSqmLabelWidth - 4
+  );
   
   doc.setDrawColor(COLOR_BLACK_RGB[0], COLOR_BLACK_RGB[1], COLOR_BLACK_RGB[2]);
-  doc.setLineWidth(HORIZONTAL_LINE_THICKNESS); // Ensure line thickness is set
+  doc.setLineWidth(HORIZONTAL_LINE_THICKNESS);
   doc.rect(PAGE_MARGIN_X + totalSqmLabelWidth, yPos, totalSqmValueWidth, totalSqmBlockHeight, 'S'); // 'S' for stroke
-  const totalSqmValueYBaseline = yPos + (totalSqmBlockHeight / 2) - (FONT_CAT_2 / 2) + FONT_CAT_2;
-  drawTextBlockAndGetEndY(doc, totalSqmValue, PAGE_MARGIN_X + totalSqmLabelWidth + (totalSqmValueWidth / 2), totalSqmValueYBaseline - FONT_CAT_2, FONT_CAT_2, 'bold', 'normal', LH_SINGLE_ADDITION, totalSqmValueWidth - 4, COLOR_BLACK_RGB, 'center');
+  drawTextBlockAndGetEndY(
+    doc, 
+    totalSqmValue, 
+    PAGE_MARGIN_X + totalSqmLabelWidth + (totalSqmValueWidth / 2), 
+    yPos + (totalSqmBlockHeight - (FONT_CAT_2 + LH_SINGLE_ADDITION)) / 2, // Vertically center value
+    FONT_CAT_2, 'bold', 'normal', 
+    LH_SINGLE_ADDITION, 
+    totalSqmValueWidth - 4, 
+    COLOR_BLACK_RGB, 
+    'center'
+  );
 
   const amountInWordsStr = amountToWords(invoice.grandTotal || 0, invoice.currencyType);
   const amountInWordsLabelText = "TOTAL INVOICE AMOUNT IN WORDS:";
-  const amountWordsLabelX = PAGE_MARGIN_X + totalSqmBlockWidth + 5;
-  const amountWordsLabelWidth = doc.getTextWidth(amountInWordsLabelText) + 10; // Use FONT_CAT_2 for this label
-  const amountWordsValueMaxWidth = contentWidth - (amountWordsLabelX - PAGE_MARGIN_X) - amountWordsLabelWidth;
+  const amountWordsLabelX = PAGE_MARGIN_X + totalSqmBlockWidth + 5; // 5pt gap
+  
+  // Calculate width needed for the label text
+  doc.setFont('helvetica', 'bold'); // Set font before measuring
+  doc.setFontSize(FONT_CAT_2);
+  const amountWordsLabelActualWidth = doc.getTextWidth(amountInWordsLabelText);
+  const amountWordsLabelBoxWidth = amountWordsLabelActualWidth + 10; // Add some padding
+
+  const amountWordsValueMaxWidth = contentWidth - (amountWordsLabelX - PAGE_MARGIN_X) - amountWordsLabelBoxWidth;
 
   doc.setFillColor(COLOR_BLUE_RGB[0], COLOR_BLUE_RGB[1], COLOR_BLUE_RGB[2]);
-  doc.rect(amountWordsLabelX, yPos, amountWordsLabelWidth, totalSqmBlockHeight, 'F'); 
-  const amountInWordsLabelYBaseline = yPos + (totalSqmBlockHeight / 2) - (FONT_CAT_2 / 2) + FONT_CAT_2;
-  drawTextBlockAndGetEndY(doc, amountInWordsLabelText, amountWordsLabelX + 2, amountInWordsLabelYBaseline - FONT_CAT_2, FONT_CAT_2, 'bold', 'normal', LH_SINGLE_ADDITION, amountWordsLabelWidth - 4, COLOR_BLACK_RGB);
+  doc.rect(amountWordsLabelX, yPos, amountWordsLabelBoxWidth, totalSqmBlockHeight, 'F'); 
+  drawTextBlockAndGetEndY(
+    doc, 
+    amountInWordsLabelText, 
+    amountWordsLabelX + 5, // padding for label text
+    yPos + (totalSqmBlockHeight - (FONT_CAT_2 + LH_SINGLE_ADDITION)) / 2, 
+    FONT_CAT_2, 'bold', 'normal', 
+    LH_SINGLE_ADDITION, 
+    amountWordsLabelActualWidth // Use actual text width for wrapping
+  );
 
   doc.setFillColor(COLOR_BLUE_RGB[0], COLOR_BLUE_RGB[1], COLOR_BLUE_RGB[2]);
-  doc.rect(amountWordsLabelX + amountWordsLabelWidth, yPos, amountWordsValueMaxWidth, totalSqmBlockHeight, 'F');
-  const amountInWordsStrYBaseline = yPos + (totalSqmBlockHeight / 2) - (FONT_CAT_2 / 2) + FONT_CAT_2;
-  drawTextBlockAndGetEndY(doc, amountInWordsStr.toUpperCase(), amountWordsLabelX + amountWordsLabelWidth + 2, amountInWordsStrYBaseline - FONT_CAT_2, FONT_CAT_2, 'bold', 'normal', LH_SINGLE_ADDITION, amountWordsValueMaxWidth - 4, COLOR_BLACK_RGB, 'left');
+  doc.rect(amountWordsLabelX + amountWordsLabelBoxWidth, yPos, amountWordsValueMaxWidth, totalSqmBlockHeight, 'F');
+  drawTextBlockAndGetEndY(
+    doc, 
+    amountInWordsStr.toUpperCase(), 
+    amountWordsLabelX + amountWordsLabelBoxWidth + 2, 
+    yPos + (totalSqmBlockHeight - (FONT_CAT_2 + LH_SINGLE_ADDITION)) / 2, 
+    FONT_CAT_2, 'bold', 'normal', 
+    LH_SINGLE_ADDITION, 
+    amountWordsValueMaxWidth - 4, 
+    COLOR_BLACK_RGB, 
+    'left'
+  );
   
   yPos += totalSqmBlockHeight + SPACE_FOOTER_SECTION_GAP;
 
@@ -386,16 +496,18 @@ export function generatePerformaInvoicePdf(
   const signatureTextLine1 = `FOR, ${exporter.companyName.toUpperCase()}`;
   const signatureTextLine2 = "AUTHORISED SIGNATURE";
   
-  const signatureBlockHeight = (FONT_CAT_2 + LH_SINGLE_ADDITION) * 3; 
+  const signatureBlockHeight = ((FONT_CAT_2 + LH_SINGLE_ADDITION) * 2) + (FONT_CAT_2 + LH_SINGLE_ADDITION); // Approximate height for two lines + some space before the second line
   if (yPos + signatureBlockHeight > doc.internal.pageSize.getHeight() - PAGE_MARGIN_Y_BOTTOM) {
     doc.addPage();
     yPos = PAGE_MARGIN_Y_TOP;
   }
 
   let signatureY = yPos;
-  signatureY = drawTextBlockAndGetEndY(doc, signatureTextLine1, pageWidth - PAGE_MARGIN_X, signatureY, FONT_CAT_2, 'bold', 'normal', LH_SINGLE_ADDITION, undefined, COLOR_BLACK_RGB, 'right'); // Signature FONT_CAT_2
-  signatureY += (FONT_CAT_2 + LH_SINGLE_ADDITION); 
-  drawTextBlockAndGetEndY(doc, signatureTextLine2, pageWidth - PAGE_MARGIN_X, signatureY, FONT_CAT_2, 'bold', 'normal', LH_SINGLE_ADDITION, undefined, COLOR_BLACK_RGB, 'right'); // Signature FONT_CAT_2
+  signatureY = drawTextBlockAndGetEndY(doc, signatureTextLine1, pageWidth - PAGE_MARGIN_X, signatureY, FONT_CAT_2, 'bold', 'normal', LH_SINGLE_ADDITION, undefined, COLOR_BLACK_RGB, 'right'); 
+  signatureY += (FONT_CAT_2 + LH_SINGLE_ADDITION); // Add space for the actual signature line if it were drawn
+  drawTextBlockAndGetEndY(doc, signatureTextLine2, pageWidth - PAGE_MARGIN_X, signatureY, FONT_CAT_2, 'bold', 'normal', LH_SINGLE_ADDITION, undefined, COLOR_BLACK_RGB, 'right');
 
   doc.save(`Performa_Invoice_${invoice.invoiceNumber.replace(/\//g, '_')}.pdf`);
 }
+
+    
