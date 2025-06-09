@@ -246,13 +246,13 @@ export function generatePerformaInvoicePdf(
   drawTextLines(totalSqmValue, PAGE_MARGIN_X + totalSqmLabelWidth + 5, yPos + FONT_FOOTER_LABEL_BLUE_BG * 0.9, FONT_FOOTER_LABEL_BLUE_BG, 'bold', LH_PACKED, totalSqmValueWidth - 10, COLOR_BLACK_RGB, 'center');
 
   const amountWordsLabelX = PAGE_MARGIN_X + totalSqmBlockWidth + 5;
-  const amountWordsLabelWidth = doc.getTextWidth(amountWordsLabel) + 10;
+  const amountWordsLabelWidth = doc.getTextWidth(amountInWordsLabel) + 10; // Corrected variable name
   const amountWordsValueMaxWidth = contentWidth - totalSqmBlockWidth - 5 - 5; // Remaining width
 
   // Blue BG for Amount in Words Label
   doc.setFillColor(COLOR_BLUE_RGB[0], COLOR_BLUE_RGB[1], COLOR_BLUE_RGB[2]);
   doc.rect(amountWordsLabelX, yPos, amountWordsLabelWidth, FONT_FOOTER_LABEL_BLUE_BG + 4, 'F');
-  drawTextLines(amountWordsLabel, amountWordsLabelX + 2, yPos + FONT_FOOTER_LABEL_BLUE_BG * 0.9, FONT_FOOTER_LABEL_BLUE_BG, 'bold', LH_PACKED, amountWordsLabelWidth - 4, COLOR_WHITE_RGB);
+  drawTextLines(amountInWordsLabel, amountWordsLabelX + 2, yPos + FONT_FOOTER_LABEL_BLUE_BG * 0.9, FONT_FOOTER_LABEL_BLUE_BG, 'bold', LH_PACKED, amountWordsLabelWidth - 4, COLOR_WHITE_RGB);
   
   yPos += FONT_FOOTER_LABEL_BLUE_BG + 4 + LH_SINGLE;
   // Value for Amount in Words (below its label)
@@ -314,4 +314,3 @@ export function generatePerformaInvoicePdf(
 
   doc.save(`Performa_Invoice_${invoice.invoiceNumber.replace(/\//g, '_')}.pdf`);
 }
-
