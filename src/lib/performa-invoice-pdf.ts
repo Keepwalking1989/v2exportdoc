@@ -11,13 +11,13 @@ import type { Bank } from '@/types/bank';
 import { amountToWords } from '@/lib/utils';
 
 // Constants for PDF layout
-const PAGE_MARGIN_TOP = 15;
+const PAGE_MARGIN_TOP = 10; // Reduced top margin
 const PAGE_MARGIN_SIDES = 15;
 const MINIMAL_SPACING = 1; // Smallest explicit space after a block
 
 // Font sizes
-const FONT_SIZE_NORMAL = 10;
-const FONT_SIZE_SMALL = 8;
+const FONT_SIZE_NORMAL = 9;
+const FONT_SIZE_SMALL = 8; // For table content and some details
 const FONT_SIZE_LARGE_TITLE = 14; // For "PERFORMA INVOICE"
 const FOOTER_FONT_SIZE = 8;
 
@@ -26,6 +26,7 @@ const LINE_HEIGHT_NORMAL = FONT_SIZE_NORMAL + 1;
 const LINE_HEIGHT_SMALL_TABLE = FONT_SIZE_SMALL + 1; // For table content
 const LINE_HEIGHT_LARGE_TITLE = FONT_SIZE_LARGE_TITLE + 1;
 const FOOTER_LINE_HEIGHT = FOOTER_FONT_SIZE + 1;
+const FOOTER_MINIMAL_SPACING = 1;
 
 
 export function generatePerformaInvoicePdf(
@@ -42,13 +43,13 @@ export function generatePerformaInvoicePdf(
 
   const addText = (text: string | string[], x: number, currentY: number, options: any = {}) => {
     const fontSize = options.fontSize || FONT_SIZE_NORMAL;
-    const fontStyle = options.fontStyle || 'normal';
-    const fontWeight = options.fontWeight || 'normal';
+    const fontStyle = options.fontStyle || 'normal'; // Default fontStyle to 'normal'
+    const fontWeight = options.fontWeight || 'normal'; // Default fontWeight to 'normal'
     const effectiveLineHeight = options.lineHeight || (fontSize + 1); // Default line height based on font size
     const align = options.align || 'left';
     
     doc.setFontSize(fontSize);
-    doc.setFont(fontStyle, fontWeight);
+    doc.setFont('helvetica', fontWeight === 'bold' ? 'bold' : fontStyle); // Use helvetica, manage bold via fontWeight
 
     let newY = currentY;
     const textToProcess = Array.isArray(text) ? text : [text];
@@ -57,11 +58,11 @@ export function generatePerformaInvoicePdf(
         const textWidth = doc.getTextWidth(lineContent);
         let actualX = x;
         if (align === 'center') {
-            actualX = x - textWidth / 2;
+            actualX = (doc.internal.pageSize.getWidth() / 2); // Center based on page width
         } else if (align === 'right') {
-            actualX = x - textWidth;
+            actualX = x - textWidth; // x is the right edge
         }
-        doc.text(lineContent, actualX, newY);
+        doc.text(lineContent, actualX, newY, { align: align === 'center' ? 'center' : 'left' }); // Pass align to doc.text for center
         newY += effectiveLineHeight;
     });
     
@@ -75,7 +76,7 @@ export function generatePerformaInvoicePdf(
     align: 'center', 
     fontSize: FONT_SIZE_LARGE_TITLE, 
     fontWeight: 'bold', 
-    spacingAfter: LINE_HEIGHT_NORMAL, // More space after title
+    spacingAfter: LINE_HEIGHT_NORMAL, 
     lineHeight: LINE_HEIGHT_LARGE_TITLE 
   }); 
 
@@ -83,10 +84,10 @@ export function generatePerformaInvoicePdf(
   const exporterStartY = yPos;
   yPos = addText('EXPORTER:', PAGE_MARGIN_SIDES, yPos, { fontSize: FONT_SIZE_NORMAL, fontWeight: 'bold', spacingAfter: MINIMAL_SPACING, lineHeight: LINE_HEIGHT_NORMAL });
   yPos = addText(exporter.companyName, PAGE_MARGIN_SIDES, yPos, { fontSize: FONT_SIZE_NORMAL, fontWeight: 'bold', spacingAfter: MINIMAL_SPACING, lineHeight: LINE_HEIGHT_NORMAL });
-  const exporterAddressLines = doc.splitTextToSize(exporter.address, (pageWidth / 2) - PAGE_MARGIN_SIDES * 1.5); // Slightly less width for address
+  const exporterAddressLines = doc.splitTextToSize(exporter.address, (pageWidth / 2) - PAGE_MARGIN_SIDES * 1.5); 
   yPos = addText(exporterAddressLines, PAGE_MARGIN_SIDES, yPos, { fontSize: FONT_SIZE_NORMAL, lineHeight: LINE_HEIGHT_NORMAL, spacingAfter: MINIMAL_SPACING });
   yPos = addText(`TEL: ${exporter.phoneNumber}`, PAGE_MARGIN_SIDES, yPos, { fontSize: FONT_SIZE_NORMAL, lineHeight: LINE_HEIGHT_NORMAL, spacingAfter: MINIMAL_SPACING });
-  yPos = addText(`IEC NO: ${exporter.iecNumber}`, PAGE_MARGIN_SIDES, yPos, { fontSize: FONT_SIZE_NORMAL, lineHeight: LINE_HEIGHT_NORMAL, spacingAfter: 0 }); // No extra space after last item
+  yPos = addText(`IEC NO: ${exporter.iecNumber}`, PAGE_MARGIN_SIDES, yPos, { fontSize: FONT_SIZE_NORMAL, lineHeight: LINE_HEIGHT_NORMAL, spacingAfter: 0 }); 
   const exporterYAfter = yPos;
 
   // Invoice Details (Right)
@@ -125,7 +126,7 @@ export function generatePerformaInvoicePdf(
   invoiceDetailsYPos = addDetailRow('Payment Terms', invoice.termsAndConditions, invoiceDetailsYPos, {
     isMultiLine: true, 
     valueMaxWidth: paymentTermsMaxWidth,
-    itemLineHeight: LINE_HEIGHT_NORMAL // Use normal line height for terms
+    itemLineHeight: LINE_HEIGHT_NORMAL 
   });
   
   const invoiceDetailsYAfter = invoiceDetailsYPos;
@@ -200,7 +201,7 @@ export function generatePerformaInvoicePdf(
   doc.setFont('helvetica', 'normal');
   doc.text(`${invoice.totalGrossWeight} KGS`, shipmentCol2X + shipmentLabelOffset, currentYRightCol);
 
-  yPos = Math.max(currentYLeftCol, currentYRightCol) + LINE_HEIGHT_NORMAL; // Space before table
+  yPos = Math.max(currentYLeftCol, currentYRightCol) + LINE_HEIGHT_NORMAL; 
 
 
   // Product Table
@@ -240,8 +241,8 @@ export function generatePerformaInvoicePdf(
     body: tableBody,
     startY: yPos,
     theme: 'grid',
-    headStyles: { fillColor: [220, 220, 220], textColor: [0,0,0], fontStyle: 'bold', halign: 'center', fontSize: FONT_SIZE_SMALL, cellPadding: 1.5, minCellHeight: LINE_HEIGHT_SMALL_TABLE }, 
-    bodyStyles: { fontSize: FONT_SIZE_SMALL, cellPadding: 1.5, minCellHeight: LINE_HEIGHT_SMALL_TABLE }, 
+    headStyles: { fillColor: [220, 220, 220], textColor: [0,0,0], fontStyle: 'bold', halign: 'center', fontSize: FONT_SIZE_SMALL, cellPadding: 1, minCellHeight: LINE_HEIGHT_SMALL_TABLE }, 
+    bodyStyles: { fontSize: FONT_SIZE_SMALL, cellPadding: 1, minCellHeight: LINE_HEIGHT_SMALL_TABLE }, 
     columnStyles: tableColumnStyles,
     didDrawPage: (data) => {
        // yPos = data.cursor?.y || yPos; 
@@ -316,19 +317,18 @@ export function generatePerformaInvoicePdf(
   // Signature
   const signatureX = pageWidth - PAGE_MARGIN_SIDES - 60; 
   let finalYPos = yPos;
-  const signatureBlockHeight = FOOTER_LINE_HEIGHT * 3; // Approximate height needed for signature block
+  const signatureBlockHeight = FOOTER_LINE_HEIGHT * 3; 
   
-  // Check if we need a new page for the signature
-  if (finalYPos > doc.internal.pageSize.getHeight() - PAGE_MARGIN_TOP - signatureBlockHeight - 10) { // Added a little buffer
+  if (finalYPos > doc.internal.pageSize.getHeight() - PAGE_MARGIN_TOP - signatureBlockHeight - 10) { 
       doc.addPage();
       finalYPos = PAGE_MARGIN_TOP; 
   } else {
-    finalYPos += FOOTER_LINE_HEIGHT; // Add some space before signature if on same page
+    finalYPos += FOOTER_LINE_HEIGHT; 
   }
 
   finalYPos = addText(`For ${exporter.companyName}`, signatureX + 30, finalYPos, { fontWeight: 'bold', align: 'center', fontSize: FOOTER_FONT_SIZE, spacingAfter: FOOTER_LINE_HEIGHT * 2, lineHeight: FOOTER_LINE_HEIGHT }); 
   doc.line(signatureX, finalYPos, signatureX + 60, finalYPos); 
-  finalYPos += (FOOTER_LINE_HEIGHT * 0.8); // Adjust this for closer text
+  finalYPos += (FOOTER_LINE_HEIGHT * 0.8); 
   addText('Authorized Signatory', signatureX + 30, finalYPos, { align: 'center', fontSize: FOOTER_FONT_SIZE, lineHeight: FOOTER_LINE_HEIGHT});
 
 
