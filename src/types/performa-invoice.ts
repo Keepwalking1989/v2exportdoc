@@ -7,7 +7,7 @@ export interface PerformaInvoiceItem {
   ratePerSqmt: number;
   commission: number;
   // Calculated fields, might not be stored directly if always derived
-  quantitySqmt?: number; 
+  quantitySqmt?: number;
   amount?: number;
 }
 
@@ -17,6 +17,7 @@ export interface PerformaInvoice {
   invoiceNumber: string;
   invoiceDate: Date;
   clientId: string;
+  selectedBankId?: string; // ID of the bank selected for this invoice
   finalDestination: string;
   totalContainer: number;
   containerSize: "20 ft" | "40 ft";
@@ -31,5 +32,5 @@ export interface PerformaInvoice {
   items: PerformaInvoiceItem[];
   // Calculated overall totals
   subTotal?: number;
-  grandTotal?: number; 
+  grandTotal?: number;
 }

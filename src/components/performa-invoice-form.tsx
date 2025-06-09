@@ -23,7 +23,7 @@ import { Combobox, type ComboboxOption } from "@/components/ui/combobox";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import { format, parseISO } from "date-fns";
-import { CalendarIcon, PlusCircle, Trash2, FileText, Users, DollarSign, Package, Map, Anchor, Ship, Weight, Percent, Edit3, StickyNote } from "lucide-react";
+import { CalendarIcon, PlusCircle, Trash2, FileText, Users, DollarSign, Package, Map, Anchor, Ship, Weight, Percent, Edit3, StickyNote, Landmark } from "lucide-react";
 import React, { useEffect, useState, useMemo, useCallback } from "react";
 
 import type { PerformaInvoice, PerformaInvoiceItem } from "@/types/performa-invoice";
@@ -31,6 +31,7 @@ import type { Company } from "@/types/company";
 import type { Client } from "@/types/client";
 import type { Size } from "@/types/size";
 import type { Product } from "@/types/product";
+import type { Bank } from "@/types/bank";
 
 const performaInvoiceItemSchema = z.object({
   sizeId: z.string().min(1, "Size is required"),
@@ -45,6 +46,7 @@ const formSchema = z.object({
   invoiceNumber: z.string(),
   invoiceDate: z.date({ required_error: "Invoice date is required" }),
   clientId: z.string().min(1, "Client is required"),
+  selectedBankId: z.string().min(1, "Beneficiary bank is required"),
   finalDestination: z.string().min(2, "Final destination is required"),
   totalContainer: z.coerce.number().min(0, "Total containers must be non-negative"),
   containerSize: z.enum(["20 ft", "40 ft"]),
@@ -68,6 +70,7 @@ interface PerformaInvoiceFormProps {
   clients: Client[];
   sizes: Size[];
   allProducts: Product[];
+  banks: Bank[];
 }
 
 const defaultTerms = "30 % advance and 70% against BL ( against scan copy of BL)";
@@ -80,6 +83,7 @@ export function PerformaInvoiceForm({
   clients,
   sizes,
   allProducts,
+  banks,
 }: PerformaInvoiceFormProps) {
   const { toast } = useToast();
   const form = useForm<PerformaInvoiceFormValues>({
@@ -89,6 +93,7 @@ export function PerformaInvoiceForm({
       invoiceNumber: nextInvoiceNumber,
       invoiceDate: new Date(),
       clientId: "",
+      selectedBankId: "",
       finalDestination: "",
       totalContainer: 0,
       containerSize: "20 ft",
@@ -121,6 +126,10 @@ export function PerformaInvoiceForm({
     clients.map(c => ({ value: c.id, label: c.companyName })),
     [clients]
   );
+  const bankOptions: ComboboxOption[] = useMemo(() =>
+    banks.map(b => ({ value: b.id, label: `${b.bankName} - A/C: ${b.accountNumber}` })),
+    [banks]
+  );
   const sizeOptions: ComboboxOption[] = useMemo(() =>
     sizes.map(s => ({ value: s.id, label: `${s.size} (HSN: ${s.hsnCode})` })),
     [sizes]
@@ -139,7 +148,7 @@ export function PerformaInvoiceForm({
 
   const handleSizeChange = (itemIndex: number, newSizeId: string) => {
     form.setValue(`items.${itemIndex}.sizeId`, newSizeId);
-    form.setValue(`items.${itemIndex}.productId`, "");
+    form.setValue(`items.${itemIndex}.productId`, ""); // Reset product when size changes
     const selectedSize = sizes.find(s => s.id === newSizeId);
     if (selectedSize) {
       form.setValue(`items.${itemIndex}.ratePerSqmt`, selectedSize.salesPrice);
@@ -168,7 +177,7 @@ export function PerformaInvoiceForm({
 
     const currentDiscountInput = Number(watchedDiscount);
     const discountAmount = isNaN(currentDiscountInput) ? 0 : currentDiscountInput;
-    
+
     const currentFreightInput = Number(watchedFreight);
     const freightAmount = isNaN(currentFreightInput) ? 0 : currentFreightInput;
 
@@ -199,7 +208,7 @@ export function PerformaInvoiceForm({
       description: `Invoice ${values.invoiceNumber} has been successfully saved.`,
     });
     form.reset({
-        invoiceNumber: nextInvoiceNumber, 
+        invoiceNumber: nextInvoiceNumber,
         invoiceDate: new Date(),
         containerSize: "20 ft",
         currencyType: "USD",
@@ -209,6 +218,7 @@ export function PerformaInvoiceForm({
         items: [{ sizeId: "", productId: "", boxes: 1, ratePerSqmt: 0, commission: 0 }],
         exporterId: "",
         clientId: "",
+        selectedBankId: "",
         finalDestination: "",
         totalContainer: 0,
         freight: 0,
@@ -323,6 +333,25 @@ export function PerformaInvoiceForm({
                   </FormItem>
                 )}
               />
+               <FormField
+                control={form.control}
+                name="selectedBankId"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="flex items-center gap-2"><Landmark className="h-4 w-4 text-muted-foreground" />Beneficiary Bank</FormLabel>
+                    <Combobox
+                      options={bankOptions}
+                      value={field.value}
+                      onChange={field.onChange}
+                      placeholder="Select Bank..."
+                      searchPlaceholder="Search Banks..."
+                      emptySearchMessage="No bank found."
+                      disabled={bankOptions.length === 0}
+                    />
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
               <FormField
                 control={form.control}
                 name="finalDestination"
@@ -336,6 +365,9 @@ export function PerformaInvoiceForm({
                   </FormItem>
                 )}
               />
+            </div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
                <FormField
                 control={form.control}
                 name="totalContainer"
@@ -349,9 +381,6 @@ export function PerformaInvoiceForm({
                   </FormItem>
                 )}
               />
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               <FormField
                 control={form.control}
                 name="containerSize"
@@ -400,7 +429,7 @@ export function PerformaInvoiceForm({
                 name="totalGrossWeight"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="flex items-center gap-2"><Weight className="h-4 w-4 text-muted-foreground" />Total Gross Weight (kg)</FormLabel>
+                    <FormLabel className="flex items-center gap-2"><Weight className="h-4 w-4 text-muted-foreground" />Total Gross Wt (kg)</FormLabel>
                     <FormControl>
                       <Input placeholder="NA or e.g. 24000" {...field} />
                     </FormControl>
@@ -537,7 +566,7 @@ export function PerformaInvoiceForm({
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel className="flex items-center gap-2"><Ship className="h-4 w-4 text-muted-foreground" />Freight</FormLabel>
-                    <FormControl><Input type="number" step="0.01" {...field} /></FormControl>
+                    <FormControl><Input type="number" step="0.01" {...field} value={field.value || 0} onChange={e => field.onChange(parseFloat(e.target.value) || 0)}/></FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -548,7 +577,7 @@ export function PerformaInvoiceForm({
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel className="flex items-center gap-2"><Percent className="h-4 w-4 text-muted-foreground" />Discount</FormLabel>
-                    <FormControl><Input type="number" step="0.01" {...field} /></FormControl>
+                    <FormControl><Input type="number" step="0.01" {...field} value={field.value || 0} onChange={e => field.onChange(parseFloat(e.target.value) || 0)}/></FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -614,5 +643,3 @@ export function PerformaInvoiceForm({
     </Card>
   );
 }
-
-    

@@ -10,6 +10,7 @@ import type { Company } from "@/types/company";
 import type { Client } from "@/types/client";
 import type { Size } from "@/types/size";
 import type { Product } from "@/types/product";
+import type { Bank } from "@/types/bank"; // Import Bank type
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
 const LOCAL_STORAGE_PERFORMA_INVOICES_KEY = "bizform_performa_invoices";
@@ -17,6 +18,7 @@ const LOCAL_STORAGE_COMPANIES_KEY = "bizform_companies";
 const LOCAL_STORAGE_CLIENTS_KEY = "bizform_clients";
 const LOCAL_STORAGE_SIZES_KEY = "bizform_sizes";
 const LOCAL_STORAGE_PRODUCTS_KEY = "bizform_products";
+const LOCAL_STORAGE_BANKS_KEY = "bizform_banks"; // Key for banks
 const INVOICE_PREFIX = "HEM/PI/25-26/";
 
 export default function PerformaInvoicePage() {
@@ -25,6 +27,7 @@ export default function PerformaInvoicePage() {
   const [clients, setClients] = useState<Client[]>([]);
   const [sizes, setSizes] = useState<Size[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
+  const [banks, setBanks] = useState<Bank[]>([]); // State for banks
   const [nextInvoiceNumber, setNextInvoiceNumber] = useState("");
   const [isClient, setIsClient] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
@@ -41,7 +44,7 @@ export default function PerformaInvoicePage() {
       })
       .filter(num => !isNaN(num))
       .sort((a, b) => b - a)[0];
-      
+
     const nextNum = (lastInvoiceNum || 0) + 1;
     return `${INVOICE_PREFIX}${nextNum}`;
   }, []);
@@ -52,11 +55,10 @@ export default function PerformaInvoicePage() {
       try {
         const storedInvoices = localStorage.getItem(LOCAL_STORAGE_PERFORMA_INVOICES_KEY);
         const currentInvoices = storedInvoices ? JSON.parse(storedInvoices) : [];
-        // Ensure invoice dates are Date objects
         const parsedInvoices = currentInvoices.map((inv: any) => ({
           ...inv,
-          invoiceDate: new Date(inv.invoiceDate), 
-          items: inv.items.map((item:any) => ({...item})) // basic pass through for items
+          invoiceDate: new Date(inv.invoiceDate),
+          items: inv.items.map((item:any) => ({...item}))
         }));
         setPerformaInvoices(parsedInvoices);
         setNextInvoiceNumber(getNextInvoiceNumberInternal(parsedInvoices));
@@ -69,9 +71,12 @@ export default function PerformaInvoicePage() {
 
         const storedSizes = localStorage.getItem(LOCAL_STORAGE_SIZES_KEY);
         setSizes(storedSizes ? JSON.parse(storedSizes) : []);
-        
+
         const storedProducts = localStorage.getItem(LOCAL_STORAGE_PRODUCTS_KEY);
         setProducts(storedProducts ? JSON.parse(storedProducts) : []);
+
+        const storedBanks = localStorage.getItem(LOCAL_STORAGE_BANKS_KEY); // Load banks
+        setBanks(storedBanks ? JSON.parse(storedBanks) : []);
 
       } catch (error) {
         console.error("Failed to parse data from localStorage", error);
@@ -81,6 +86,7 @@ export default function PerformaInvoicePage() {
         setClients([]);
         setSizes([]);
         setProducts([]);
+        setBanks([]); // Reset banks on error
       } finally {
         setIsLoading(false);
       }
@@ -102,18 +108,15 @@ export default function PerformaInvoicePage() {
     if (typeof window !== "undefined") {
       localStorage.setItem(LOCAL_STORAGE_PERFORMA_INVOICES_KEY, JSON.stringify(updatedInvoices));
     }
-    setNextInvoiceNumber(getNextInvoiceNumberInternal(updatedInvoices)); // Recalculate next invoice number
+    setNextInvoiceNumber(getNextInvoiceNumberInternal(updatedInvoices));
   };
 
   const handleEditInvoice = (invoiceIdToEdit: string) => {
-    // Placeholder: In a real app, you'd likely navigate to a form pre-filled with this invoice's data
-    // or open a modal for editing.
     console.log("Edit invoice:", invoiceIdToEdit);
     alert(`Edit functionality for invoice ID ${invoiceIdToEdit} is not yet implemented.`);
   };
 
   const handleGeneratePO = (invoiceIdForPO: string) => {
-    // Placeholder: This would navigate to a new page or trigger a PO generation process.
     console.log("Generate PO for invoice:", invoiceIdForPO);
     alert(`Purchase Order generation for invoice ID ${invoiceIdForPO} is not yet implemented.`);
   };
@@ -129,8 +132,8 @@ export default function PerformaInvoicePage() {
       </div>
     );
   }
-  
-  const canCreateInvoice = exporters.length > 0 && clients.length > 0 && sizes.length > 0 && products.length > 0;
+
+  const canCreateInvoice = exporters.length > 0 && clients.length > 0 && sizes.length > 0 && products.length > 0 && banks.length > 0;
 
   return (
     <div className="flex flex-col min-h-screen bg-background">
@@ -144,6 +147,7 @@ export default function PerformaInvoicePage() {
             clients={clients}
             sizes={sizes}
             allProducts={products}
+            banks={banks} // Pass banks to the form
           />
         ) : (
            <Card className="w-full max-w-2xl mx-auto shadow-xl mb-8">
@@ -159,6 +163,7 @@ export default function PerformaInvoicePage() {
                 {clients.length === 0 && <li>Client (on the Client page)</li>}
                 {sizes.length === 0 && <li>Size (on the Size page)</li>}
                 {products.length === 0 && <li>Product (on the Product page)</li>}
+                {banks.length === 0 && <li>Bank (on the Bank page)</li>}
               </ul>
                <p className="mt-4 text-sm text-muted-foreground">
                 Please add the required information on the respective pages under the "ADD" menu.
@@ -166,10 +171,13 @@ export default function PerformaInvoicePage() {
             </CardContent>
           </Card>
         )}
-        <PerformaInvoiceList 
+        <PerformaInvoiceList
           invoices={performaInvoices}
           exporters={exporters}
           clients={clients}
+          sizes={sizes}
+          allProducts={products}
+          banks={banks} // Pass banks to the list for PDF generation
           onDeleteInvoice={handleDeleteInvoice}
           onEditInvoice={handleEditInvoice}
           onGeneratePO={handleGeneratePO}

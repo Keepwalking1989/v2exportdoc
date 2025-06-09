@@ -5,6 +5,9 @@ import { useState, useMemo, useEffect } from "react";
 import type { PerformaInvoice } from "@/types/performa-invoice";
 import type { Company } from "@/types/company";
 import type { Client } from "@/types/client";
+import type { Size } from "@/types/size";
+import type { Product } from "@/types/product";
+import type { Bank } from "@/types/bank"; // Import Bank
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import {
@@ -17,17 +20,21 @@ import {
 } from "@/components/ui/table";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
-import { Search, ChevronLeft, ChevronRight, FileText, FilePenLine, Trash2, FileSymlink } from "lucide-react";
+import { Search, ChevronLeft, ChevronRight, FileText, FilePenLine, Trash2, FileSymlink, Download } from "lucide-react";
 import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
+import { generatePerformaInvoicePdf } from "@/lib/performa-invoice-pdf"; // Import PDF generator
 
 interface PerformaInvoiceListProps {
   invoices: PerformaInvoice[];
   exporters: Company[];
   clients: Client[];
+  sizes: Size[];
+  allProducts: Product[];
+  banks: Bank[]; // Add banks prop
   onDeleteInvoice: (invoiceId: string) => void;
-  onEditInvoice: (invoiceId: string) => void; // Placeholder
-  onGeneratePO: (invoiceId: string) => void; // Placeholder
+  onEditInvoice: (invoiceId: string) => void;
+  onGeneratePO: (invoiceId: string) => void;
 }
 
 const ITEMS_PER_PAGE = 5;
@@ -36,6 +43,9 @@ export function PerformaInvoiceList({
   invoices: initialInvoices,
   exporters,
   clients,
+  sizes,
+  allProducts,
+  banks, // Destructure banks
   onDeleteInvoice,
   onEditInvoice,
   onGeneratePO,
@@ -88,6 +98,25 @@ export function PerformaInvoiceList({
     });
   };
 
+  const handleDownloadPdf = (invoice: PerformaInvoice) => {
+    const exporter = exporters.find(e => e.id === invoice.exporterId);
+    const client = clients.find(c => c.id === invoice.clientId);
+    const selectedBank = banks.find(b => b.id === invoice.selectedBankId); // Find selected bank
+
+    if (!exporter || !client) {
+      toast({
+        variant: "destructive",
+        title: "Error generating PDF",
+        description: "Exporter or Client data missing for this invoice.",
+      });
+      return;
+    }
+    // Note: selectedBank can be optional if not made mandatory in the form yet
+    // If selectedBank is not found and it's mandatory, you might want to show an error
+
+    generatePerformaInvoicePdf(invoice, exporter, client, sizes, allProducts, selectedBank);
+  };
+
   return (
     <Card className="w-full shadow-xl mt-8">
       <CardHeader>
@@ -134,14 +163,14 @@ export function PerformaInvoiceList({
                     <TableCell className="hidden md:table-cell">
                       {invoice.grandTotal?.toFixed(2)} {invoice.currencyType}
                     </TableCell>
-                    <TableCell className="text-right">
-                      <Button variant="ghost" size="icon" onClick={() => onEditInvoice(invoice.id)} className="mr-1 hover:text-primary">
+                    <TableCell className="text-right space-x-1">
+                      <Button variant="ghost" size="icon" onClick={() => onEditInvoice(invoice.id)} className="hover:text-primary">
                         <FilePenLine className="h-4 w-4" />
                         <span className="sr-only">Edit</span>
                       </Button>
                        <AlertDialog>
                         <AlertDialogTrigger asChild>
-                           <Button variant="ghost" size="icon" className="mr-1 hover:text-destructive">
+                           <Button variant="ghost" size="icon" className="hover:text-destructive">
                             <Trash2 className="h-4 w-4" />
                             <span className="sr-only">Delete</span>
                           </Button>
@@ -164,6 +193,10 @@ export function PerformaInvoiceList({
                       <Button variant="ghost" size="icon" onClick={() => onGeneratePO(invoice.id)} className="hover:text-green-600">
                         <FileSymlink className="h-4 w-4" />
                          <span className="sr-only">Generate PO</span>
+                      </Button>
+                      <Button variant="ghost" size="icon" onClick={() => handleDownloadPdf(invoice)} className="hover:text-blue-600">
+                        <Download className="h-4 w-4" />
+                        <span className="sr-only">Download PDF</span>
                       </Button>
                     </TableCell>
                   </TableRow>
