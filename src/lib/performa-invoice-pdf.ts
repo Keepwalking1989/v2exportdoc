@@ -46,7 +46,7 @@ const LH_FOOTER_SINGLE_ADDITION = 1.8;
 const BLUE_BG_LABEL_HEIGHT = FONT_SECTION_LABEL_HEADER + 4; // Font size + vertical padding
 
 // --- Spacing (pt) ---
-const SPACE_AFTER_MAIN_TITLE = 4;
+const SPACE_AFTER_MAIN_TITLE = FONT_MAIN_TITLE + LH_MAIN_TITLE_ADDITION; // Updated for double line spacing
 const SPACE_BETWEEN_HEADER_SECTIONS = 1.5; // Space between Exporter/Consignee block and line, and between line and InvoiceDate/Dest block
 const SPACE_AFTER_HORIZONTAL_LINE = 2;   // Space after a line, before text
 const SPACE_BEFORE_TABLE = 3;
@@ -95,7 +95,19 @@ function drawTextBlockAndGetEndY(
   let yBaselineForCurrentLine = currentY;
 
   lines.forEach(lineContent => {
-    doc.text(lineContent, x, yBaselineForCurrentLine + fontSize, { align }); // Draw text (y is baseline)
+    // For alignment, jsPDF's text method handles it if x is the center/right point.
+    // However, for splitTextToSize, it's usually left-aligned.
+    // If complex alignment with wrapping is needed, manual calculation per line might be required.
+    // For now, assuming basic alignment works with the provided x.
+    let drawX = x;
+    if (align === 'center') {
+      const textWidth = doc.getTextWidth(lineContent);
+      drawX = x; // doc.text with align 'center' uses x as the center point.
+    } else if (align === 'right') {
+      drawX = x; // doc.text with align 'right' uses x as the right-most point.
+    }
+
+    doc.text(lineContent, drawX, yBaselineForCurrentLine + fontSize, { align }); // Draw text (y is baseline)
     yBaselineForCurrentLine += (fontSize + lineHeightAddition); // Advance baseline for the next line in this block
   });
 
@@ -124,20 +136,23 @@ export function generatePerformaInvoicePdf(
   yPos += SPACE_AFTER_MAIN_TITLE;
 
   // --- EXPORTER & CONSIGNEE ---
-  // Store the starting Y for this dual-column section
   const headerBlockStartY = yPos;
   let exporterEndY = headerBlockStartY;
   let consigneeEndY = headerBlockStartY;
 
-  // Exporter Details
+  // Exporter Label
   exporterEndY = drawTextBlockAndGetEndY(doc, "EXPORTER:", leftColumnX, exporterEndY, FONT_CONTENT_PRIMARY, 'bold', 'normal', LH_PACKED_ADDITION, halfContentWidth);
-  exporterEndY += (FONT_CONTENT_PRIMARY + LH_PACKED_ADDITION); // Add double line space
+  exporterEndY += (FONT_CONTENT_PRIMARY + LH_PACKED_ADDITION); // Add double line space for Exporter
+  
+  // Exporter Details
   exporterEndY = drawTextBlockAndGetEndY(doc, exporter.companyName.toUpperCase(), leftColumnX, exporterEndY, FONT_CONTENT_PRIMARY, 'bold', 'normal', LH_PACKED_ADDITION, halfContentWidth);
   exporterEndY = drawTextBlockAndGetEndY(doc, exporter.address, leftColumnX, exporterEndY, FONT_CONTENT_PRIMARY, 'normal', 'normal', LH_PACKED_ADDITION, halfContentWidth);
 
-  // Consignee Details
+  // Consignee Label
   consigneeEndY = drawTextBlockAndGetEndY(doc, "CONSIGNEE / BUYER:", rightColumnX, consigneeEndY, FONT_CONTENT_PRIMARY, 'bold', 'normal', LH_PACKED_ADDITION, halfContentWidth);
-  consigneeEndY += (FONT_CONTENT_PRIMARY + LH_PACKED_ADDITION); // Add double line space
+  consigneeEndY += (FONT_CONTENT_PRIMARY + LH_PACKED_ADDITION); // Add double line space for Consignee
+
+  // Consignee Details
   consigneeEndY = drawTextBlockAndGetEndY(doc, client.companyName.toUpperCase(), rightColumnX, consigneeEndY, FONT_CONTENT_PRIMARY, 'bold', 'normal', LH_PACKED_ADDITION, halfContentWidth);
   consigneeEndY = drawTextBlockAndGetEndY(doc, client.address, rightColumnX, consigneeEndY, FONT_CONTENT_PRIMARY, 'normal', 'normal', LH_PACKED_ADDITION, halfContentWidth);
   
@@ -278,13 +293,22 @@ export function generatePerformaInvoicePdf(
 
   // Amount in Words
   const amountInWordsStr = amountToWords(invoice.grandTotal || 0, invoice.currencyType);
-  const amountInWordsFullStr = `TOTAL INVOICE AMOUNT IN WORDS: ${amountInWordsStr.toUpperCase()}`;
+  const amountInWordsLabel = "TOTAL INVOICE AMOUNT IN WORDS:";
   const amountWordsLabelX = PAGE_MARGIN_X + totalSqmBlockWidth + 5;
-  const amountWordsValueMaxWidth = contentWidth - totalSqmBlockWidth - 5; 
+  const amountWordsLabelWidth = doc.getTextWidth(amountInWordsLabel) + 10; // Width for the label part
+  const amountWordsValueMaxWidth = contentWidth - totalSqmBlockWidth - 5 - amountWordsLabelWidth - 5; // Remaining for the value
 
+
+  // Blue BG for Amount in Words Label
   doc.setFillColor(COLOR_BLUE_RGB[0], COLOR_BLUE_RGB[1], COLOR_BLUE_RGB[2]);
-  doc.rect(amountWordsLabelX, yPos, amountWordsValueMaxWidth, totalSqmBlockHeight, 'F'); 
-  drawTextBlockAndGetEndY(doc, amountInWordsFullStr, amountWordsLabelX + 2, yPos + (totalSqmBlockHeight - FONT_FOOTER_TOTALS_LABEL_BLUE_BG - LH_SINGLE_ADDITION)/2, FONT_FOOTER_TOTALS_LABEL_BLUE_BG, 'bold', 'normal', LH_SINGLE_ADDITION, amountWordsValueMaxWidth - 4, COLOR_BLACK_RGB);
+  doc.rect(amountWordsLabelX, yPos, amountWordsLabelWidth, totalSqmBlockHeight, 'F'); 
+  drawTextBlockAndGetEndY(doc, amountInWordsLabel, amountWordsLabelX + 2, yPos + (totalSqmBlockHeight - FONT_FOOTER_TOTALS_LABEL_BLUE_BG - LH_SINGLE_ADDITION)/2, FONT_FOOTER_TOTALS_LABEL_BLUE_BG, 'bold', 'normal', LH_SINGLE_ADDITION, amountWordsLabelWidth - 4, COLOR_BLACK_RGB);
+
+  // Blue BG for Amount in Words Value
+  const amountWordsValueX = amountWordsLabelX + amountWordsLabelWidth;
+  doc.setFillColor(COLOR_BLUE_RGB[0], COLOR_BLUE_RGB[1], COLOR_BLUE_RGB[2]);
+  doc.rect(amountWordsValueX, yPos, amountWordsValueMaxWidth, totalSqmBlockHeight, 'F');
+  drawTextBlockAndGetEndY(doc, amountInWordsStr.toUpperCase(), amountWordsValueX + 2, yPos + (totalSqmBlockHeight - FONT_FOOTER_TOTALS_LABEL_BLUE_BG - LH_SINGLE_ADDITION)/2, FONT_FOOTER_TOTALS_LABEL_BLUE_BG, 'bold', 'normal', LH_SINGLE_ADDITION, amountWordsValueMaxWidth - 4, COLOR_BLACK_RGB, 'left');
   
   yPos += totalSqmBlockHeight + SPACE_FOOTER_SECTION_GAP;
 
@@ -295,7 +319,7 @@ export function generatePerformaInvoicePdf(
     const noteLines = invoice.note.split('\n');
     noteLines.forEach(line => {
       let style: 'bold' | 'normal' = 'normal';
-      const keywordsToBold = ["TRANSSHIPMENT ALLOWED.", "PARTIAL SHIPMENT ALLOWED.", "SHIPMENT : AS EARLY AS POSSIBLE.", "QUANTITY AND VALUE +/-10% ALLOWED.", "NOT ACCEPTED ANY REFUND OR EXCHANGE .", "ANY TRANSACTION CHARGES WILL BE PAIDED BY CONSIGNEE."]; // Note: original image had "PAIDED"
+      const keywordsToBold = ["TRANSSHIPMENT ALLOWED.", "PARTIAL SHIPMENT ALLOWED.", "SHIPMENT : AS EARLY AS POSSIBLE.", "QUANTITY AND VALUE +/-10% ALLOWED.", "NOT ACCEPTED ANY REFUND OR EXCHANGE.", "ANY TRANSACTION CHARGES WILL BE PAIDED BY CONSIGNEE."]; // Note: original image had "PAIDED"
       if (keywordsToBold.some(kw => line.toUpperCase().trim().startsWith(kw))) {
         style = 'bold';
       }
