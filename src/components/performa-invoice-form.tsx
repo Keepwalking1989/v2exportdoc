@@ -23,7 +23,7 @@ import { Combobox, type ComboboxOption } from "@/components/ui/combobox";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import { format, parseISO } from "date-fns";
-import { CalendarIcon, PlusCircle, Trash2, FileText, Users, DollarSign, Package, Map, Anchor, Ship, Weight, Percent, Edit3, StickyNote, Landmark } from "lucide-react";
+import { CalendarIcon, PlusCircle, Trash2, FileText, Users, DollarSign, Package, Map, Anchor, Ship, Weight, Percent, Edit3, StickyNote, Landmark, XCircle } from "lucide-react";
 import React, { useEffect, useState, useMemo, useCallback } from "react";
 
 import type { PerformaInvoice, PerformaInvoiceItem } from "@/types/performa-invoice";
@@ -34,6 +34,7 @@ import type { Product } from "@/types/product";
 import type { Bank } from "@/types/bank";
 
 const performaInvoiceItemSchema = z.object({
+  id: z.string().optional(), // Keep existing item ID if editing
   sizeId: z.string().min(1, "Size is required"),
   productId: z.string().min(1, "Product is required"),
   boxes: z.coerce.number().min(1, "Boxes must be at least 1"),
@@ -43,12 +44,12 @@ const performaInvoiceItemSchema = z.object({
 
 const formSchema = z.object({
   exporterId: z.string().min(1, "Exporter is required"),
-  invoiceNumber: z.string(),
+  invoiceNumber: z.string(), // Will be read-only, set by logic
   invoiceDate: z.date({ required_error: "Invoice date is required" }),
   clientId: z.string().min(1, "Client is required"),
-  selectedBankId: z.string().min(1, "Beneficiary bank is required"),
+  selectedBankId: z.string().optional().default(""), // Optional for now, can be made mandatory
   finalDestination: z.string().min(2, "Final destination is required"),
-  totalContainer: z.coerce.number().min(0, "Total containers must be non-negative"),
+  totalContainer: z.coerce.number().min(0, "Total containers must be non-negative").default(0),
   containerSize: z.enum(["20 ft", "40 ft"]),
   currencyType: z.enum(["INR", "USD", "Euro"]),
   totalGrossWeight: z.string().min(1, "Total gross weight is required"),
@@ -64,7 +65,10 @@ const formSchema = z.object({
 type PerformaInvoiceFormValues = z.infer<typeof formSchema>;
 
 interface PerformaInvoiceFormProps {
+  initialDataForForm?: PerformaInvoice | null;
+  isEditing: boolean;
   onSave: (invoice: PerformaInvoice) => void;
+  onCancelEdit: () => void;
   nextInvoiceNumber: string;
   exporters: Company[];
   clients: Client[];
@@ -76,8 +80,32 @@ interface PerformaInvoiceFormProps {
 const defaultTerms = "30 % advance and 70% against BL ( against scan copy of BL)";
 const defaultNote = "TRANSSHIPMENT ALLOWED.\nPARTIAL SHIPMENT ALLOWED.\nSHIPMENT : AS EARLY AS POSSIBLE.\nQUANTITY AND VALUE +/-10% ALLOWED.\nNOT ACCEPTED ANY REFUND OR EXCHANGE.\nANY TRANSACTION CHARGES WILL BE PAIDED BY CONSIGNEE.";
 
+const getDefaultFormValues = (invoiceNumber: string): PerformaInvoiceFormValues => ({
+  exporterId: "",
+  invoiceNumber: invoiceNumber,
+  invoiceDate: new Date(),
+  clientId: "",
+  selectedBankId: "",
+  finalDestination: "",
+  totalContainer: 0,
+  containerSize: "20 ft",
+  currencyType: "USD",
+  totalGrossWeight: "NA",
+  freight: 0,
+  discount: 0,
+  notifyPartyLine1: "",
+  notifyPartyLine2: "",
+  termsAndConditions: defaultTerms,
+  note: defaultNote,
+  items: [{ sizeId: "", productId: "", boxes: 1, ratePerSqmt: 0, commission: 0 }],
+});
+
+
 export function PerformaInvoiceForm({
+  initialDataForForm,
+  isEditing,
   onSave,
+  onCancelEdit,
   nextInvoiceNumber,
   exporters,
   clients,
@@ -88,31 +116,36 @@ export function PerformaInvoiceForm({
   const { toast } = useToast();
   const form = useForm<PerformaInvoiceFormValues>({
     resolver: zodResolver(formSchema),
-    defaultValues: {
-      exporterId: "",
-      invoiceNumber: nextInvoiceNumber,
-      invoiceDate: new Date(),
-      clientId: "",
-      selectedBankId: "",
-      finalDestination: "",
-      totalContainer: 0,
-      containerSize: "20 ft",
-      currencyType: "USD",
-      totalGrossWeight: "NA",
-      freight: 0,
-      discount: 0,
-      notifyPartyLine1: "",
-      notifyPartyLine2: "",
-      termsAndConditions: defaultTerms,
-      note: defaultNote,
-      items: [{ sizeId: "", productId: "", boxes: 1, ratePerSqmt: 0, commission: 0 }],
-    },
+    defaultValues: getDefaultFormValues(nextInvoiceNumber),
   });
 
-  const { fields, append, remove } = useFieldArray({
+  const { fields, append, remove, replace } = useFieldArray({
     control: form.control,
     name: "items",
   });
+
+  useEffect(() => {
+    if (isEditing && initialDataForForm) {
+      const formData = {
+        ...initialDataForForm,
+        invoiceDate: new Date(initialDataForForm.invoiceDate), // Ensure date is a Date object
+        items: initialDataForForm.items.map(item => ({ // Ensure items match schema
+            id: item.id,
+            sizeId: item.sizeId,
+            productId: item.productId,
+            boxes: item.boxes,
+            ratePerSqmt: item.ratePerSqmt,
+            commission: item.commission || 0,
+        }))
+      };
+      form.reset(formData);
+      replace(formData.items); // Make sure field array is also reset properly
+    } else {
+      form.reset(getDefaultFormValues(nextInvoiceNumber));
+      replace(getDefaultFormValues(nextInvoiceNumber).items);
+    }
+  }, [isEditing, initialDataForForm, nextInvoiceNumber, form, replace]);
+
 
   const watchedItems = form.watch("items");
   const watchedFreight = form.watch("freight");
@@ -142,13 +175,10 @@ export function PerformaInvoiceForm({
       .map(p => ({ value: p.id, label: p.designName }));
   }, [allProducts]);
 
-  useEffect(() => {
-    form.setValue("invoiceNumber", nextInvoiceNumber);
-  }, [nextInvoiceNumber, form]);
 
   const handleSizeChange = (itemIndex: number, newSizeId: string) => {
     form.setValue(`items.${itemIndex}.sizeId`, newSizeId);
-    form.setValue(`items.${itemIndex}.productId`, ""); // Reset product when size changes
+    form.setValue(`items.${itemIndex}.productId`, ""); 
     const selectedSize = sizes.find(s => s.id === newSizeId);
     if (selectedSize) {
       form.setValue(`items.${itemIndex}.ratePerSqmt`, selectedSize.salesPrice);
@@ -188,9 +218,11 @@ export function PerformaInvoiceForm({
   function onSubmit(values: PerformaInvoiceFormValues) {
     const invoiceToSave: PerformaInvoice = {
       ...values,
-      id: Date.now().toString(),
+      id: isEditing && initialDataForForm ? initialDataForForm.id : Date.now().toString(),
+      invoiceNumber: isEditing && initialDataForForm ? initialDataForForm.invoiceNumber : nextInvoiceNumber,
+      selectedBankId: values.selectedBankId || undefined, // Ensure it's undefined if empty string for type safety
       items: itemsWithCalculations.map(item => ({
-        id: Math.random().toString(36).substring(2, 9),
+        id: item.id || Math.random().toString(36).substring(2, 9), // Preserve existing ID or generate new
         sizeId: item.sizeId,
         productId: item.productId,
         boxes: item.boxes,
@@ -204,38 +236,23 @@ export function PerformaInvoiceForm({
     };
     onSave(invoiceToSave);
     toast({
-      title: "Performa Invoice Saved",
-      description: `Invoice ${values.invoiceNumber} has been successfully saved.`,
+      title: isEditing ? "Performa Invoice Updated" : "Performa Invoice Saved",
+      description: `Invoice ${invoiceToSave.invoiceNumber} has been successfully ${isEditing ? 'updated' : 'saved'}.`,
     });
-    form.reset({
-        invoiceNumber: nextInvoiceNumber,
-        invoiceDate: new Date(),
-        containerSize: "20 ft",
-        currencyType: "USD",
-        totalGrossWeight: "NA",
-        termsAndConditions: defaultTerms,
-        note: defaultNote,
-        items: [{ sizeId: "", productId: "", boxes: 1, ratePerSqmt: 0, commission: 0 }],
-        exporterId: "",
-        clientId: "",
-        selectedBankId: "",
-        finalDestination: "",
-        totalContainer: 0,
-        freight: 0,
-        discount: 0,
-        notifyPartyLine1: "",
-        notifyPartyLine2: ""
-    });
+    // Form reset is handled by useEffect when isEditing/initialDataForForm changes or onCancelEdit
   }
+
+  const currentInvoiceNumber = isEditing && initialDataForForm ? initialDataForForm.invoiceNumber : nextInvoiceNumber;
+
 
   return (
     <Card className="w-full max-w-4xl mx-auto shadow-xl mb-8">
       <CardHeader>
         <CardTitle className="font-headline text-2xl flex items-center gap-2">
           <FileText className="h-6 w-6 text-primary" />
-          Create Performa Invoice
+          {isEditing ? "Edit Performa Invoice" : "Create Performa Invoice"}
         </CardTitle>
-        <CardDescription>Fill in the details to generate a new performa invoice.</CardDescription>
+        <CardDescription>{isEditing ? "Modify the details of the performa invoice." : "Fill in the details to generate a new performa invoice."}</CardDescription>
       </CardHeader>
       <CardContent>
         <Form {...form}>
@@ -260,19 +277,12 @@ export function PerformaInvoiceForm({
                   </FormItem>
                 )}
               />
-              <FormField
-                control={form.control}
-                name="invoiceNumber"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="flex items-center gap-2">Invoice Number</FormLabel>
-                    <FormControl>
-                      <Input {...field} readOnly className="bg-muted/50" />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+              <FormItem>
+                <FormLabel className="flex items-center gap-2">Invoice Number</FormLabel>
+                <FormControl>
+                  <Input value={currentInvoiceNumber} readOnly className="bg-muted/50" />
+                </FormControl>
+              </FormItem>
               <FormField
                 control={form.control}
                 name="invoiceDate"
@@ -290,7 +300,7 @@ export function PerformaInvoiceForm({
                             )}
                           >
                             {field.value ? (
-                              format(field.value, "PPP")
+                              format(new Date(field.value), "PPP") // Ensure field.value is treated as Date
                             ) : (
                               <span>Pick a date</span>
                             )}
@@ -301,7 +311,7 @@ export function PerformaInvoiceForm({
                       <PopoverContent className="w-auto p-0" align="start">
                         <Calendar
                           mode="single"
-                          selected={field.value}
+                          selected={field.value ? new Date(field.value) : undefined}
                           onSelect={field.onChange}
                           initialFocus
                         />
@@ -449,13 +459,13 @@ export function PerformaInvoiceForm({
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                {fields.map((item, index) => {
+                {fields.map((fieldItem, index) => {
                   const currentItemSizeId = form.watch(`items.${index}.sizeId`);
                   const productOptionsForThisItem = getProductOptions(currentItemSizeId);
                   const displayItem = itemsWithCalculations[index] || { quantitySqmt: 0, amount: 0 };
 
                   return (
-                    <div key={item.id} className="p-4 border rounded-md space-y-4 relative bg-card/50">
+                    <div key={fieldItem.id} className="p-4 border rounded-md space-y-4 relative bg-card/50">
                        <Button
                           type="button"
                           variant="destructive"
@@ -633,10 +643,16 @@ export function PerformaInvoiceForm({
                 </FormItem>
               )}
             />
-
-            <Button type="submit" className="w-full bg-accent hover:bg-accent/90 text-accent-foreground font-headline text-lg py-3">
-              Save Performa Invoice
-            </Button>
+            <div className="flex space-x-4">
+                <Button type="submit" className="flex-grow bg-accent hover:bg-accent/90 text-accent-foreground font-headline text-lg py-3">
+                {isEditing ? "Update Performa Invoice" : "Save Performa Invoice"}
+                </Button>
+                {isEditing && (
+                <Button type="button" variant="outline" onClick={onCancelEdit} className="flex-grow font-headline text-lg py-3">
+                    <XCircle className="mr-2 h-5 w-5" /> Cancel Edit
+                </Button>
+                )}
+            </div>
           </form>
         </Form>
       </CardContent>
