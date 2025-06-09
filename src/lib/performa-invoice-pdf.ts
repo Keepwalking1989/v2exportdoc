@@ -11,17 +11,17 @@ import type { Bank } from '@/types/bank';
 import { amountToWords } from '@/lib/utils';
 
 // --- Page & General Layout ---
-const PAGE_MARGIN_TOP = 6; // Reduced
-const PAGE_MARGIN_SIDES = 12; // Slightly Reduced
+const PAGE_MARGIN_TOP = 6;
+const PAGE_MARGIN_SIDES = 12;
 
-// --- Font Sizes (Aggressively Reduced) ---
+// --- Font Sizes (Mimicking Image) ---
 const FONT_SIZE_MAIN_TITLE = 12;
-const FONT_SIZE_SECTION_LABEL = 8; // For "EXPORTER", "CONSIGNEE" etc.
+const FONT_SIZE_SECTION_LABEL = 8;
 const FONT_SIZE_CONTENT_PRIMARY = 8; // For addresses, main text values
 const FONT_SIZE_TABLE_HEAD = 7.5;
 const FONT_SIZE_TABLE_BODY = 7.5;
-const FONT_SIZE_FOOTER_PRIMARY = 7; // For footer labels and main text
-const FONT_SIZE_FOOTER_SECONDARY = 6.5; // For smaller footer text like "Declaration"
+const FONT_SIZE_FOOTER_PRIMARY = 7;
+const FONT_SIZE_FOOTER_SECONDARY = 6.5;
 
 // --- Line Heights (Extremely Tight) ---
 const LH_MAIN_TITLE = FONT_SIZE_MAIN_TITLE + 0.5; // 12.5
@@ -35,14 +35,14 @@ const LH_FOOTER_PACKED = FONT_SIZE_FOOTER_PRIMARY + 0.1; // 7.1
 const LH_FOOTER_SINGLE = FONT_SIZE_FOOTER_PRIMARY + 0.2; // 7.2
 
 // --- Spacing Between Elements (Minimal) ---
-const MINIMAL_SPACING = 0.25; // Smallest gap between lines within a conceptual block
-const SPACE_AFTER_MAIN_TITLE = 1.5;
-const SPACE_AFTER_SECTION_LABEL = 0.2; // Space after a label like "EXPORTER:" before its content
-const SPACE_BETWEEN_BLOCKS = 1.0; // Space between major sections like Exporter and Consignee, after lines
-const SPACE_AROUND_LINE = 0.75; // Space above AND below a horizontal line
-const SPACE_BEFORE_TABLE_CONTENT = 1.0;
-const SPACE_AFTER_TABLE_CONTENT = 1.0;
-const SPACE_BETWEEN_FOOTER_SECTIONS = 1.0;
+const MINIMAL_INTERNAL_SPACING = 0.25; // Smallest gap between lines within a conceptual block (e.g. after a label before its value IF NOT 0)
+const SPACE_AFTER_MAIN_TITLE = 1.0;
+const SPACE_AFTER_SECTION_LABEL = 0.2; // Default space after a section label like "EXPORTER:" before its content - will be overridden to 0 often.
+const SPACE_AFTER_BLOCK_HEADER = 0.5; // Space after a text block (like Exporter details), before the horizontal line below it
+const SPACE_AFTER_HORIZONTAL_LINE = 0.5; // Space after a horizontal line, before the text block below it
+const SPACE_BEFORE_TABLE_CONTENT = 0.5; // Space after the last header block (IEC Code), before the table
+const SPACE_AFTER_TABLE = 1.0;
+const SPACE_BETWEEN_FOOTER_BLOCKS = 1.0;
 const SPACE_BEFORE_SIGNATURE = 2.0;
 
 
@@ -57,6 +57,7 @@ export function generatePerformaInvoicePdf(
   const doc = new jsPDF();
   let yPos = PAGE_MARGIN_TOP;
   const pageWidth = doc.internal.pageSize.getWidth();
+  const contentMaxWidth = pageWidth / 2 - PAGE_MARGIN_SIDES - 2; // Max width for content in left/right columns
 
   const addText = (
     text: string | string[],
@@ -66,16 +67,15 @@ export function generatePerformaInvoicePdf(
       fontSize?: number;
       fontWeight?: 'normal' | 'bold';
       fontStyle?: 'normal' | 'italic';
-      lineHeight?: number; // This will be the effective height taken by EACH line of text
-      spacingAfter?: number; // Additional space AFTER the entire text block
+      lineHeight?: number;
+      spacingAfter?: number;
       align?: 'left' | 'center' | 'right';
       color?: [number, number, number];
       maxWidth?: number;
     } = {}
   ): number => {
     const fontSize = options.fontSize || FONT_SIZE_CONTENT_PRIMARY;
-    // Default to a very tight line height if not specified
-    const effectiveLineHeight = options.lineHeight || (fontSize + 0.2);
+    const effectiveLineHeight = options.lineHeight || (fontSize + 0.2); // Default tight
     const align = options.align || 'left';
     const maxWidth = options.maxWidth;
     const fontWeight = options.fontWeight || 'normal';
@@ -88,7 +88,12 @@ export function generatePerformaInvoicePdf(
 
     doc.setFontSize(fontSize);
     doc.setFont('helvetica', combinedStyle);
-    doc.setTextColor(options.color ? options.color[0] : 0, options.color ? options.color[1] : 0, options.color ? options.color[2] : 0);
+
+    if (options.color) {
+      doc.setTextColor(options.color[0], options.color[1], options.color[2]);
+    } else {
+      doc.setTextColor(0, 0, 0); // Default to black
+    }
 
     let newY = currentY;
     const textToProcess = Array.isArray(text) ? text : [text || ""];
@@ -106,83 +111,71 @@ export function generatePerformaInvoicePdf(
         newY += effectiveLineHeight;
       });
     });
-    // If text was multi-line, newY is already at the start of the *next* line.
-    // If single line, newY is also at start of next.
-    // We want to return the Y position *after* this block, including any specific spacing.
-    // So, if spacingAfter is provided, add it. If not, it's just newY.
     return newY + (options.spacingAfter || 0);
   };
 
-  // --- 1. "PERFORMA INVOICE" Title ---
+  // --- 1. "PROFORMA INVOICE" Title ---
   yPos = addText('PROFORMA INVOICE', pageWidth / 2, yPos, {
     fontSize: FONT_SIZE_MAIN_TITLE, fontWeight: 'bold', align: 'center',
     lineHeight: LH_MAIN_TITLE, spacingAfter: SPACE_AFTER_MAIN_TITLE,
   });
 
-  // --- Shared variables for top layout ---
   const leftColumnX = PAGE_MARGIN_SIDES;
-  const rightColumnX = pageWidth / 2 + 2;
-  const contentMaxWidth = pageWidth / 2 - PAGE_MARGIN_SIDES - 5;
+  const rightColumnX = pageWidth / 2 + 2; // A small gap between columns
 
   let exporterEndY = yPos;
-  let consigneeEndY = yPos; // Will be updated later
+  let consigneeEndY = yPos;
 
   // --- EXPORTER ---
-  exporterEndY = addText('EXPORTER', leftColumnX, exporterEndY, { fontSize: FONT_SIZE_SECTION_LABEL, fontWeight: 'bold', lineHeight: LH_SECTION_LABEL, spacingAfter: SPACE_AFTER_SECTION_LABEL });
-  exporterEndY = addText(exporter.companyName, leftColumnX, exporterEndY, { fontSize: FONT_SIZE_CONTENT_PRIMARY, fontWeight: 'bold', lineHeight: LH_CONTENT_PACKED, spacingAfter: MINIMAL_SPACING, maxWidth: contentMaxWidth });
-  exporterEndY = addText(exporter.address, leftColumnX, exporterEndY, { fontSize: FONT_SIZE_CONTENT_PRIMARY, lineHeight: LH_CONTENT_PACKED, spacingAfter: MINIMAL_SPACING, maxWidth: contentMaxWidth });
-  // The image doesn't show Tel and IEC for exporter, so I'm commenting them for now to match image density
-  // exporterEndY = addText(`TEL: ${exporter.phoneNumber}`, leftColumnX, exporterEndY, { fontSize: FONT_SIZE_CONTENT_PRIMARY, lineHeight: LH_CONTENT_SINGLE, spacingAfter: MINIMAL_SPACING });
-  // exporterEndY = addText(`IEC NO: ${exporter.iecNumber}`, leftColumnX, exporterEndY, { fontSize: FONT_SIZE_CONTENT_PRIMARY, lineHeight: LH_CONTENT_SINGLE, spacingAfter: 0 });
+  exporterEndY = addText('EXPORTER', leftColumnX, exporterEndY, { fontSize: FONT_SIZE_SECTION_LABEL, fontWeight: 'bold', lineHeight: LH_SECTION_LABEL, spacingAfter: 0 });
+  exporterEndY = addText(exporter.companyName, leftColumnX, exporterEndY, { fontSize: FONT_SIZE_CONTENT_PRIMARY, fontWeight: 'bold', lineHeight: LH_CONTENT_PACKED, spacingAfter: 0, maxWidth: contentMaxWidth });
+  // Assuming exporter.address contains newlines for formatting or is wrapped by maxWidth
+  exporterEndY = addText(exporter.address, leftColumnX, exporterEndY, { fontSize: FONT_SIZE_CONTENT_PRIMARY, lineHeight: LH_CONTENT_PACKED, spacingAfter: 0, maxWidth: contentMaxWidth });
+  // Tel and IEC for exporter commented out to match image density; if needed, add here with spacingAfter: 0
 
-
-  // --- CONSIGNEE --- (Drawn parallel to Exporter)
+  // --- CONSIGNEE ---
   consigneeEndY = addText('CONSIGNEE', rightColumnX, consigneeEndY, { fontSize: FONT_SIZE_SECTION_LABEL, fontWeight: 'bold', lineHeight: LH_SECTION_LABEL, spacingAfter: SPACE_AFTER_SECTION_LABEL });
-  consigneeEndY = addText(client.companyName, rightColumnX, consigneeEndY, { fontSize: FONT_SIZE_CONTENT_PRIMARY, fontWeight: 'bold', lineHeight: LH_CONTENT_PACKED, spacingAfter: MINIMAL_SPACING, maxWidth: contentMaxWidth });
+  consigneeEndY = addText(client.companyName, rightColumnX, consigneeEndY, { fontSize: FONT_SIZE_CONTENT_PRIMARY, fontWeight: 'bold', lineHeight: LH_CONTENT_PACKED, spacingAfter: MINIMAL_INTERNAL_SPACING, maxWidth: contentMaxWidth });
   const consigneeAddress = `${client.address}\n${client.city}, ${client.country} - ${client.pinCode}`;
   consigneeEndY = addText(consigneeAddress, rightColumnX, consigneeEndY, { fontSize: FONT_SIZE_CONTENT_PRIMARY, lineHeight: LH_CONTENT_PACKED, spacingAfter: 0, maxWidth: contentMaxWidth });
 
-  yPos = Math.max(exporterEndY, consigneeEndY) + SPACE_BETWEEN_BLOCKS / 2; // Reduced space
-
-  // --- First Horizontal Line ---
+  yPos = Math.max(exporterEndY, consigneeEndY);
+  yPos += SPACE_AFTER_BLOCK_HEADER;
   doc.setLineWidth(0.2);
   doc.line(PAGE_MARGIN_SIDES, yPos, pageWidth - PAGE_MARGIN_SIDES, yPos);
-  yPos += SPACE_AROUND_LINE; // Space after the line
+  yPos += SPACE_AFTER_HORIZONTAL_LINE;
 
   // --- Invoice Date/Number & Final Destination ---
   let invoiceDateNumEndY = yPos;
   let finalDestEndY = yPos;
 
-  invoiceDateNumEndY = addText('Invoice Date And Number', leftColumnX, invoiceDateNumEndY, { fontSize: FONT_SIZE_SECTION_LABEL, fontWeight: 'bold', lineHeight: LH_SECTION_LABEL, spacingAfter: SPACE_AFTER_SECTION_LABEL });
+  invoiceDateNumEndY = addText('Invoice Date And Number', leftColumnX, invoiceDateNumEndY, { fontSize: FONT_SIZE_SECTION_LABEL, fontWeight: 'bold', lineHeight: LH_SECTION_LABEL, spacingAfter: 0 });
   invoiceDateNumEndY = addText(`${invoice.invoiceNumber} / ${format(new Date(invoice.invoiceDate), 'dd-MM-yyyy')}`, leftColumnX, invoiceDateNumEndY, { fontSize: FONT_SIZE_CONTENT_PRIMARY, lineHeight: LH_CONTENT_SINGLE, spacingAfter: 0 });
 
   finalDestEndY = addText('Final Destination', rightColumnX, finalDestEndY, { fontSize: FONT_SIZE_SECTION_LABEL, fontWeight: 'bold', lineHeight: LH_SECTION_LABEL, spacingAfter: SPACE_AFTER_SECTION_LABEL });
   finalDestEndY = addText(invoice.finalDestination, rightColumnX, finalDestEndY, { fontSize: FONT_SIZE_CONTENT_PRIMARY, lineHeight: LH_CONTENT_SINGLE, spacingAfter: 0, maxWidth: contentMaxWidth });
 
-  yPos = Math.max(invoiceDateNumEndY, finalDestEndY) + SPACE_BETWEEN_BLOCKS / 2;
-
-  // --- Second Horizontal Line ---
+  yPos = Math.max(invoiceDateNumEndY, finalDestEndY);
+  yPos += SPACE_AFTER_BLOCK_HEADER;
   doc.line(PAGE_MARGIN_SIDES, yPos, pageWidth - PAGE_MARGIN_SIDES, yPos);
-  yPos += SPACE_AROUND_LINE;
+  yPos += SPACE_AFTER_HORIZONTAL_LINE;
 
   // --- IEC Code & Terms and Conditions ---
   let iecCodeEndY = yPos;
   let termsEndY = yPos;
 
-  // Matching image: IEC Code only if exporter has one
   if (exporter.iecNumber) {
-    iecCodeEndY = addText('IEC. Code', leftColumnX, iecCodeEndY, { fontSize: FONT_SIZE_SECTION_LABEL, fontWeight: 'bold', lineHeight: LH_SECTION_LABEL, spacingAfter: SPACE_AFTER_SECTION_LABEL });
+    iecCodeEndY = addText('IEC. Code', leftColumnX, iecCodeEndY, { fontSize: FONT_SIZE_SECTION_LABEL, fontWeight: 'bold', lineHeight: LH_SECTION_LABEL, spacingAfter: 0 });
     iecCodeEndY = addText(exporter.iecNumber, leftColumnX, iecCodeEndY, { fontSize: FONT_SIZE_CONTENT_PRIMARY, lineHeight: LH_CONTENT_SINGLE, spacingAfter: 0 });
   } else {
-    // If no IEC, create a small empty space to maintain alignment with terms if terms are present
-    iecCodeEndY += LH_SECTION_LABEL + SPACE_AFTER_SECTION_LABEL + LH_CONTENT_SINGLE;
+    iecCodeEndY += (LH_SECTION_LABEL + 0) + (LH_CONTENT_SINGLE + 0); // Allocate space even if empty
   }
-
 
   termsEndY = addText('Terms And Conditions Of Delivery And Payment', rightColumnX, termsEndY, { fontSize: FONT_SIZE_SECTION_LABEL, fontWeight: 'bold', lineHeight: LH_SECTION_LABEL, spacingAfter: SPACE_AFTER_SECTION_LABEL });
   termsEndY = addText(invoice.termsAndConditions, rightColumnX, termsEndY, { fontSize: FONT_SIZE_CONTENT_PRIMARY, lineHeight: LH_CONTENT_PACKED, spacingAfter: 0, maxWidth: contentMaxWidth });
 
-  yPos = Math.max(iecCodeEndY, termsEndY) + SPACE_BEFORE_TABLE_CONTENT;
+  yPos = Math.max(iecCodeEndY, termsEndY);
+  yPos += SPACE_BEFORE_TABLE_CONTENT;
 
 
   // --- Product Table ---
@@ -202,52 +195,46 @@ export function generatePerformaInvoicePdf(
     return [
       index + 1,
       size?.hsnCode || 'N/A',
-      `${product?.designName || 'N/A'} ( ${size?.size || 'N/A'} )`, // Combined description
+      `${product?.designName || 'N/A'} ( ${size?.size || 'N/A'} )`,
       item.quantitySqmt?.toFixed(2) || '0.00',
       item.ratePerSqmt.toFixed(2),
       item.amount?.toFixed(2) || '0.00',
     ];
   });
 
-  // Add empty rows based on item count
   const numberOfItems = invoice.items.length;
-  const numberOfEmptyRows = numberOfItems > 5 ? 0 : (numberOfItems > 3 ? 1 : 2 ); // Adjusted logic for fewer empty rows
+  const numberOfEmptyRows = numberOfItems > 5 ? 0 : (numberOfItems > 3 ? 1 : 2 );
   for (let i = 0; i < numberOfEmptyRows; i++) {
     tableBody.push(['', '', '', '', '', '']);
   }
 
-  // Store yPos before table in case of page break
-  const yPosBeforeTable = yPos;
-
+  let yPosAfterTable = yPos;
   autoTable(doc, {
     head: tableHeader,
     body: tableBody,
     startY: yPos,
-    theme: 'grid', // 'plain' or 'grid' or 'striped'
+    theme: 'grid',
     headStyles: {
-      fillColor: [217, 234, 247], // Light blueish color from image
+      fillColor: [217, 234, 247], // Light blueish color
       textColor: [0,0,0],
       fontStyle: 'bold',
       halign: 'center',
       fontSize: FONT_SIZE_TABLE_HEAD,
-      cellPadding: 0.8, // Reduced
+      cellPadding: 0.8,
       minCellHeight: LH_TABLE_CELL,
       lineWidth: 0.1,
       lineColor: [120, 120, 120]
     },
     bodyStyles: {
       fontSize: FONT_SIZE_TABLE_BODY,
-      cellPadding: 0.8, // Reduced
+      cellPadding: 0.8,
       minCellHeight: LH_TABLE_CELL,
       lineWidth: 0.1,
       lineColor: [150, 150, 150]
     },
     columnStyles: tableColumnStyles,
-    didDrawPage: (data) => {
-        yPos = data.cursor?.y || yPosBeforeTable; // Reset yPos if page break
-    },
-    footStyles: { // For custom footer like totals
-      fillColor: [217, 234, 247],
+    footStyles: {
+      fillColor: [217, 234, 247], // Blue background for totals
       textColor: [0,0,0],
       fontStyle: 'bold',
       fontSize: FONT_SIZE_TABLE_HEAD,
@@ -256,103 +243,107 @@ export function generatePerformaInvoicePdf(
       lineColor: [120,120,120],
       halign: 'right'
     },
-    // --- Adding Totals directly into table footer ---
-    didParseCell: function (data) {
-        // Apply blue background to specific footer labels if needed by targeting column and section
-        if (data.section === 'foot' && data.column.index === 0) { // Example: first column in footer
-            // data.cell.styles.fillColor = [217, 234, 247];
-        }
-    },
-    showFoot: 'lastPage', // Show footer on the last page
-    foot: [ // Define the footer rows
+    showFoot: 'lastPage',
+    foot: [
         [{ content: 'SUB TOTAL', colSpan: 5, styles: { halign: 'right', fontStyle: 'bold' } }, { content: (invoice.subTotal || 0).toFixed(2), styles: { halign: 'right', fontStyle: 'bold'} }],
         [{ content: 'FREIGHT CHARGES', colSpan: 5, styles: { halign: 'right', fontStyle: 'bold' } }, { content: (invoice.freight || 0).toFixed(2), styles: { halign: 'right', fontStyle: 'bold' } }],
-        // Other charges can be added if present, for image match, only subtotal and grand total seem directly under table items.
-        // For "Other Charges" from image
-        [{ content: 'OTHER CHARGES', colSpan: 5, styles: { halign: 'right', fontStyle: 'bold' } }, { content: '0.00', styles: { halign: 'right', fontStyle: 'bold' } }], // Assuming 0.00 for now
+        [{ content: 'OTHER CHARGES', colSpan: 5, styles: { halign: 'right', fontStyle: 'bold' } }, { content: '0.00', styles: { halign: 'right', fontStyle: 'bold' } }],
         [{ content: 'GRAND TOTAL', colSpan: 5, styles: { halign: 'right', fontStyle: 'bold' } }, { content: (invoice.grandTotal || 0).toFixed(2), styles: { halign: 'right', fontStyle: 'bold' } }],
     ],
+    didDrawPage: (data) => {
+        yPosAfterTable = data.cursor?.y ?? yPosAfterTable;
+    }
   });
-  yPos = (doc as any).lastAutoTable.finalY + SPACE_AFTER_TABLE_CONTENT;
+  yPos = yPosAfterTable + SPACE_AFTER_TABLE;
+
 
   // --- Total SQM and Amount in Words (Side-by-side) ---
+  let yPosTemp = yPos; // Temporary yPos for this section
   const totalSqmValue = invoice.items.reduce((sum, item) => sum + (item.quantitySqmt || 0), 0).toFixed(2);
   const amountInWordsStr = amountToWords(invoice.grandTotal || 0, invoice.currencyType);
-  const halfPageWidth = pageWidth / 2 - PAGE_MARGIN_SIDES;
-
-  // Total SQM Label & Value
-  let yPosAfterSQMAndWords = yPos;
-  const totalSQMLabel = "Total SQM";
-  const totalSQMValueText = totalSqmValue;
-  doc.setFontSize(FONT_SIZE_FOOTER_PRIMARY);
-  doc.setFont('helvetica', 'bold');
-  doc.setFillColor(217, 234, 247); // Blue background
-  doc.rect(leftColumnX, yPos, doc.getTextWidth(totalSQMLabel) + 6 , LH_FOOTER_SINGLE + 1, 'F'); // Rect for label
-  addText(totalSQMLabel, leftColumnX + 3, yPos + (LH_FOOTER_SINGLE + 1 - FONT_SIZE_FOOTER_PRIMARY)/2, { fontSize: FONT_SIZE_FOOTER_PRIMARY, fontWeight: 'bold', lineHeight: LH_FOOTER_SINGLE});
-  doc.rect(leftColumnX + doc.getTextWidth(totalSQMLabel) + 6, yPos, doc.getTextWidth(totalSQMValueText) + 6, LH_FOOTER_SINGLE + 1, 'F'); // Rect for value
-  addText(totalSQMValueText, leftColumnX + doc.getTextWidth(totalSQMLabel) + 6 + 3, yPos + (LH_FOOTER_SINGLE + 1 - FONT_SIZE_FOOTER_PRIMARY)/2, { fontSize: FONT_SIZE_FOOTER_PRIMARY, fontWeight: 'bold', lineHeight: LH_FOOTER_SINGLE});
   
-  // Amount in Words Label & Value
-  const amountWordsLabel = "TOTAL INVOICE AMOUNT IN WORDS:";
-  const amountWordsValueX = rightColumnX + doc.getTextWidth(amountWordsLabel) + 1; // +1 for small gap
+  const totalSQMLabel = "Total SQM";
+  const totalSQMLabelWidth = doc.getTextWidth(totalSQMLabel) + 2; // Small padding
+  const totalSQMValueWidth = doc.getTextWidth(totalSqmValue) + 4; // Small padding
+  
   doc.setFillColor(217, 234, 247); // Blue background
-  doc.rect(rightColumnX, yPos, doc.getTextWidth(amountWordsLabel) + 2, LH_FOOTER_SINGLE + 1, 'F');
-  addText(amountWordsLabel, rightColumnX + 1, yPos + (LH_FOOTER_SINGLE + 1 - FONT_SIZE_FOOTER_PRIMARY)/2, { fontSize: FONT_SIZE_FOOTER_PRIMARY, fontWeight: 'bold', lineHeight: LH_FOOTER_SINGLE});
-  yPosAfterSQMAndWords = yPos + LH_FOOTER_SINGLE + 1; // Move yPos down
-  yPosAfterSQMAndWords = addText(amountInWordsStr, rightColumnX, yPosAfterSQMAndWords, {
-    fontSize: FONT_SIZE_FOOTER_SECONDARY, lineHeight: LH_FOOTER_PACKED, spacingAfter: SPACE_BETWEEN_FOOTER_SECTIONS,
-    maxWidth: pageWidth - rightColumnX - PAGE_MARGIN_SIDES, fontWeight: 'bold'
+  doc.rect(leftColumnX, yPosTemp, totalSQMLabelWidth, LH_FOOTER_SINGLE + 0.5, 'F');
+  addText(totalSQMLabel, leftColumnX + 1, yPosTemp + (LH_FOOTER_SINGLE + 0.5 - FONT_SIZE_FOOTER_PRIMARY)/2 + 0.1, { fontSize: FONT_SIZE_FOOTER_PRIMARY, fontWeight: 'bold', lineHeight: LH_FOOTER_SINGLE});
+  
+  doc.rect(leftColumnX + totalSQMLabelWidth, yPosTemp, totalSQMValueWidth, LH_FOOTER_SINGLE + 0.5, 'F');
+  addText(totalSqmValue, leftColumnX + totalSQMLabelWidth + 2, yPosTemp + (LH_FOOTER_SINGLE + 0.5 - FONT_SIZE_FOOTER_PRIMARY)/2 + 0.1, { fontSize: FONT_SIZE_FOOTER_PRIMARY, fontWeight: 'bold', lineHeight: LH_FOOTER_SINGLE});
+  
+  yPosTemp += (LH_FOOTER_SINGLE + 0.5); // Move down for the next line (which is amount in words)
+
+  let yPosAmountWords = yPos; // Start amount in words from original yPos for this section
+  const amountWordsLabel = "TOTAL INVOICE AMOUNT IN WORDS:";
+  const amountWordsLabelWidth = doc.getTextWidth(amountWordsLabel) + 2;
+  
+  doc.setFillColor(217, 234, 247);
+  doc.rect(rightColumnX, yPosAmountWords, amountWordsLabelWidth, LH_FOOTER_SINGLE + 0.5, 'F');
+  addText(amountWordsLabel, rightColumnX + 1, yPosAmountWords + (LH_FOOTER_SINGLE + 0.5 - FONT_SIZE_FOOTER_PRIMARY)/2 + 0.1, { fontSize: FONT_SIZE_FOOTER_PRIMARY, fontWeight: 'bold', lineHeight: LH_FOOTER_SINGLE});
+  
+  yPosAmountWords += (LH_FOOTER_SINGLE + 0.5); // Move yPos down for the value
+  const amountWordsValueY = addText(amountInWordsStr, rightColumnX, yPosAmountWords, {
+    fontSize: FONT_SIZE_FOOTER_SECONDARY, fontWeight: 'bold', lineHeight: LH_FOOTER_PACKED, spacingAfter: 0,
+    maxWidth: pageWidth - rightColumnX - PAGE_MARGIN_SIDES
   });
 
-  yPos = yPosAfterSQMAndWords; // Use the greater Y from the two parallel blocks
+  yPos = Math.max(yPosTemp, amountWordsValueY) + SPACE_BETWEEN_FOOTER_BLOCKS;
+
 
   // --- Note ---
   if (invoice.note) {
-    yPos = addText('Note:', leftColumnX, yPos, { fontSize: FONT_SIZE_FOOTER_PRIMARY, fontWeight: 'bold', lineHeight: LH_FOOTER_SINGLE, spacingAfter: SPACE_AFTER_SECTION_LABEL });
-    const noteText = invoice.note.replace(/<br>/g, '\n').replace(/PAYMENT:/i, 'PAYMENT:').replace(/TRANSSHIPMENT ALLOWED/i, 'TRANSSHIPMENT ALLOWED').replace(/PARTIAL SHIPMENT ALLOWED/i, 'PARTIAL SHIPMENT ALLOWED').replace(/SHIPMENT :/i, 'SHIPMENT :').replace(/QUANTITY AND VALUE/i, 'QUANTITY AND VALUE').replace(/NOT ACCEPTED ANY REFUND OR EXCHANGE/i, 'NOT ACCEPTED ANY REFUND OR EXCHANGE').replace(/ANY TRANSACTION CHARGES WILL BE PAIDED BY CONSIGNEE/i, 'ANY TRANSACTION CHARGES WILL BE PAIDED BY CONSIGNEE');
-
-    yPos = addText(noteText, leftColumnX, yPos, { fontSize: FONT_SIZE_FOOTER_SECONDARY, lineHeight: LH_FOOTER_PACKED, spacingAfter: SPACE_BETWEEN_FOOTER_SECTIONS, maxWidth: pageWidth - (2 * PAGE_MARGIN_SIDES) });
+    yPos = addText('Note:', leftColumnX, yPos, { fontSize: FONT_SIZE_FOOTER_PRIMARY, fontWeight: 'bold', lineHeight: LH_FOOTER_SINGLE, spacingAfter: MINIMAL_INTERNAL_SPACING });
+    const noteText = invoice.note.replace(/<br>/g, '\n');
+    yPos = addText(noteText, leftColumnX, yPos, { fontSize: FONT_SIZE_FOOTER_SECONDARY, lineHeight: LH_FOOTER_PACKED, spacingAfter: 0, maxWidth: pageWidth - (2 * PAGE_MARGIN_SIDES) });
+    yPos += SPACE_BETWEEN_FOOTER_BLOCKS;
   }
 
   // --- Beneficiary Bank Details ---
   if (selectedBank) {
-    yPos = addText('BENEFICIARY DETAILS:', leftColumnX, yPos, { fontSize: FONT_SIZE_FOOTER_PRIMARY, fontWeight: 'bold', lineHeight: LH_FOOTER_SINGLE, spacingAfter: SPACE_AFTER_SECTION_LABEL });
-    yPos = addText(`BENEFICIARY NAME: ${selectedBank.bankName.toUpperCase()}`, leftColumnX, yPos, { fontSize: FONT_SIZE_FOOTER_SECONDARY, lineHeight: LH_FOOTER_PACKED, spacingAfter: MINIMAL_SPACING, maxWidth: contentMaxWidth });
-    // Assuming bank address from image, which seems specific.
-    const bankAddressText = exporter.companyName.includes("HEMITH") ? "HDFC, BRANCH: Rajkot" : selectedBank.bankAddress; // Example condition
-    yPos = addText(`BENEFICIARY BANK ADDRESS: ${bankAddressText.toUpperCase()}`, leftColumnX, yPos, { fontSize: FONT_SIZE_FOOTER_SECONDARY, lineHeight: LH_FOOTER_PACKED, spacingAfter: MINIMAL_SPACING, maxWidth: contentMaxWidth });
-    yPos = addText(`BENEFICIARY A/C No: ${selectedBank.accountNumber}, SWIFT CODE: ${selectedBank.swiftCode.toUpperCase()}, IFSC CODE: ${selectedBank.ifscCode.toUpperCase()}`, leftColumnX, yPos, { fontSize: FONT_SIZE_FOOTER_SECONDARY, lineHeight: LH_FOOTER_PACKED, spacingAfter: SPACE_BETWEEN_FOOTER_SECTIONS, maxWidth: pageWidth - (2*PAGE_MARGIN_SIDES) });
+    yPos = addText('BENEFICIARY DETAILS:', leftColumnX, yPos, { fontSize: FONT_SIZE_FOOTER_PRIMARY, fontWeight: 'bold', lineHeight: LH_FOOTER_SINGLE, spacingAfter: MINIMAL_INTERNAL_SPACING });
+    yPos = addText(`BENEFICIARY NAME: ${selectedBank.bankName.toUpperCase()}`, leftColumnX, yPos, { fontSize: FONT_SIZE_FOOTER_SECONDARY, lineHeight: LH_FOOTER_PACKED, spacingAfter: MINIMAL_INTERNAL_SPACING, maxWidth: contentMaxWidth });
+    
+    // Handle multi-line bank address properly for yPos calculation
+    let bankAddressYAfter = addText(`BENEFICIARY BANK ADDRESS: ${selectedBank.bankAddress.toUpperCase()}`, leftColumnX, yPos, { 
+        fontSize: FONT_SIZE_FOOTER_SECONDARY, lineHeight: LH_FOOTER_PACKED, spacingAfter: MINIMAL_INTERNAL_SPACING, 
+        maxWidth: pageWidth - (2 * PAGE_MARGIN_SIDES) 
+    });
+    yPos = bankAddressYAfter;
+
+    yPos = addText(`BENEFICIARY A/C No: ${selectedBank.accountNumber}, SWIFT CODE: ${selectedBank.swiftCode.toUpperCase()}, IFSC CODE: ${selectedBank.ifscCode.toUpperCase()}`, leftColumnX, yPos, { fontSize: FONT_SIZE_FOOTER_SECONDARY, lineHeight: LH_FOOTER_PACKED, spacingAfter: 0, maxWidth: pageWidth - (2*PAGE_MARGIN_SIDES) });
+    yPos += SPACE_BETWEEN_FOOTER_BLOCKS;
   }
   
   // --- Declaration ---
-  yPos = addText('Declaration:', leftColumnX, yPos, { fontSize: FONT_SIZE_FOOTER_PRIMARY, fontWeight: 'bold', lineHeight: LH_FOOTER_SINGLE, spacingAfter: SPACE_AFTER_SECTION_LABEL });
+  yPos = addText('Declaration:', leftColumnX, yPos, { fontSize: FONT_SIZE_FOOTER_PRIMARY, fontWeight: 'bold', lineHeight: LH_FOOTER_SINGLE, spacingAfter: MINIMAL_INTERNAL_SPACING });
   yPos = addText('Certified that the particulars given above are true and correct.', leftColumnX, yPos, { fontSize: FONT_SIZE_FOOTER_SECONDARY, lineHeight: LH_FOOTER_PACKED, spacingAfter: 0, maxWidth: pageWidth - (2*PAGE_MARGIN_SIDES) });
 
   // --- Signature ---
-  const signatureBlockMinHeight = (LH_FOOTER_SINGLE * 2) + SPACE_BEFORE_SIGNATURE;
-  const spaceLeftOnPage = doc.internal.pageSize.getHeight() - yPos - PAGE_MARGIN_TOP; // Approx. remaining space
-
-  if (spaceLeftOnPage < signatureBlockMinHeight) {
+  const signatureBlockHeightEstimate = (LH_FOOTER_SINGLE * 2) + SPACE_BEFORE_SIGNATURE + 5;
+  if (yPos + signatureBlockHeightEstimate > doc.internal.pageSize.getHeight() - PAGE_MARGIN_TOP) { // Check if signature fits
       doc.addPage();
       yPos = PAGE_MARGIN_TOP;
   }
-  yPos += SPACE_BEFORE_SIGNATURE + 5; // Extra space before signature as in image
+  yPos += SPACE_BEFORE_SIGNATURE + 3; // Slightly less space than image, but enough for visual separation
 
   const signatureText = `FOR, ${exporter.companyName.toUpperCase()}`;
-  const signatureX = pageWidth - PAGE_MARGIN_SIDES - 70; // Keep signature block to the right
+  const signatureX = pageWidth - PAGE_MARGIN_SIDES - 70;
   const signatureLineWidth = 60;
 
   yPos = addText(signatureText, signatureX + signatureLineWidth / 2, yPos, {
-    fontWeight: 'bold', align: 'center', fontSize: FONT_SIZE_FOOTER_PRIMARY,
-    lineHeight: LH_FOOTER_SINGLE, spacingAfter: LH_FOOTER_SINGLE + 2 // More space before line
+    fontWeight: 'bold', align: 'center', fontSize: FONT_SIZE_FOOTER_SECONDARY, // Smaller font for signature text
+    lineHeight: LH_FOOTER_SINGLE, spacingAfter: LH_FOOTER_SINGLE + 1 // Space before line
   });
   doc.setLineWidth(0.3);
-  doc.line(signatureX, yPos, signatureX + signatureLineWidth, yPos); // Line for signature
-  yPos += (LH_FOOTER_SINGLE * 0.5) + 1; // Space between line and "Authorized Signatory"
+  doc.line(signatureX, yPos, signatureX + signatureLineWidth, yPos);
+  yPos += (LH_FOOTER_SINGLE * 0.5) + 0.5;
   addText('AUTHORISED SIGNATURE', signatureX + signatureLineWidth / 2, yPos, {
-    align: 'center', fontSize: FONT_SIZE_FOOTER_PRIMARY, fontWeight: 'bold',
+    align: 'center', fontSize: FONT_SIZE_FOOTER_SECONDARY, fontWeight: 'bold', // Smaller font
     lineHeight: LH_FOOTER_SINGLE
   });
 
   doc.save(`Performa_Invoice_${invoice.invoiceNumber.replace(/\//g, '_')}.pdf`);
 }
+
