@@ -71,7 +71,7 @@ export function generatePerformaInvoicePdf(
   // Invoice Details (Right)
   let invoiceDetailsYPos = exporterStartY; // Start at same height as EXPORTER: heading
   const rightColumnX = pageWidth / 2 + 10;
-  const labelWidth = 35; // Adjusted label width
+  const labelWidth = 35; 
   const valueIndent = 5;
 
   const addDetailRow = (label: string, value: string, yPosition: number, options: {isMultiLine?: boolean, valueMaxWidth?: number} = {}) => {
@@ -85,7 +85,7 @@ export function generatePerformaInvoicePdf(
             doc.text(line, rightColumnX + labelWidth + valueIndent, currentLineY);
             currentLineY += LINE_HEIGHT * 0.8;
         });
-        return currentLineY; // Return Y after last line
+        return currentLineY; 
     } else {
         doc.text(value, rightColumnX + labelWidth + valueIndent, yPosition);
         return yPosition + LINE_HEIGHT;
@@ -94,29 +94,28 @@ export function generatePerformaInvoicePdf(
 
   invoiceDetailsYPos = addDetailRow('Invoice No.', invoice.invoiceNumber, invoiceDetailsYPos);
   invoiceDetailsYPos = addDetailRow('Date', format(new Date(invoice.invoiceDate), 'dd/MM/yyyy'), invoiceDetailsYPos);
-  invoiceDetailsYPos = addDetailRow('Exporter Ref.', '', invoiceDetailsYPos); // Placeholder
-  invoiceDetailsYPos = addDetailRow('Buyer Ref.', '', invoiceDetailsYPos);   // Placeholder
-  invoiceDetailsYPos += LINE_HEIGHT / 2; // Extra space
+  invoiceDetailsYPos = addDetailRow('Exporter Ref.', '', invoiceDetailsYPos); 
+  invoiceDetailsYPos = addDetailRow('Buyer Ref.', '', invoiceDetailsYPos);   
+  invoiceDetailsYPos += LINE_HEIGHT / 2; 
   invoiceDetailsYPos = addDetailRow('Currency', invoice.currencyType.toUpperCase(), invoiceDetailsYPos);
   
   // Payment Terms
   doc.setFont('helvetica', 'bold');
   doc.text('Payment Terms', rightColumnX, invoiceDetailsYPos);
-  invoiceDetailsYPos += LINE_HEIGHT /2 ; // Space for the value to start slightly lower if needed or align
+  invoiceDetailsYPos += LINE_HEIGHT /2 ; 
   doc.setFont('helvetica', 'normal');
   const paymentTermsValueX = rightColumnX + labelWidth + valueIndent;
   const paymentTermsMaxWidth = pageWidth - paymentTermsValueX - PAGE_MARGIN;
   const paymentTermsLines = doc.splitTextToSize(invoice.termsAndConditions, paymentTermsMaxWidth);
   paymentTermsLines.forEach((line: string) => {
       doc.text(line, paymentTermsValueX, invoiceDetailsYPos);
-      invoiceDetailsYPos += LINE_HEIGHT * 0.8; // Use smaller line height for terms
+      invoiceDetailsYPos += LINE_HEIGHT * 0.8; 
   });
   
   const invoiceDetailsYAfter = invoiceDetailsYPos;
 
-  // Align yPos for next section based on which column is longer
   yPos = Math.max(exporterYAfter, invoiceDetailsYAfter);
-  yPos = Math.max(yPos, exporterYAfter); // Ensure yPos is below exporter details if they are longer
+  yPos = Math.max(yPos, exporterYAfter); 
 
 
   // Horizontal Line
@@ -134,11 +133,10 @@ export function generatePerformaInvoicePdf(
   const clientAddressLines = doc.splitTextToSize(client.address, (pageWidth / 2) - PAGE_MARGIN * 2);
   yPos = addText(clientAddressLines, PAGE_MARGIN, yPos, {lineHeight: LINE_HEIGHT * 0.8, spacingAfter: LINE_HEIGHT /2});
   yPos = addText(`${client.city}, ${client.country} - ${client.pinCode}`, PAGE_MARGIN, yPos, {lineHeight: LINE_HEIGHT * 0.8, spacingAfter: LINE_HEIGHT});
-  // Removed CONTACT: client.person, client.contactNumber
   const consigneeYAfter = yPos;
 
   // Notify Party Details (Right)
-  let notifyPartyYPos = consigneeStartY; // Start after the line, aligned with Consignee heading
+  let notifyPartyYPos = consigneeStartY; 
   doc.setFont('helvetica', 'bold');
   notifyPartyYPos = addText('NOTIFY PARTY:', rightColumnX, notifyPartyYPos, {spacingAfter: LINE_HEIGHT/2});
   doc.setFont('helvetica', 'normal');
@@ -162,37 +160,37 @@ export function generatePerformaInvoicePdf(
 
   // Shipment Details (spanning width, split into columns)
   const shipmentCol1X = PAGE_MARGIN;
-  const shipmentCol2X = pageWidth / 2 + 5; // Adjusted for better spacing
-  // const shipmentCol3X = PAGE_MARGIN + 2 * (pageWidth - 2 * PAGE_MARGIN) / 3; // Not used
-  
-  let shipmentDetailsY = yPos;
-  let currentYLeftCol = shipmentDetailsY;
-  let currentYRightCol = shipmentDetailsY;
+  const shipmentCol2X = pageWidth / 2 + 5; 
+  const shipmentLabelOffset = 35; // Offset for the value text from label start
 
+  let currentYLeftCol = yPos;
+  let currentYRightCol = yPos;
+
+  // First row of shipment details
   doc.setFont('helvetica', 'bold');
   doc.text('Port of Loading:', shipmentCol1X, currentYLeftCol);
   doc.setFont('helvetica', 'normal');
-  currentYLeftCol = addText('Mundra', shipmentCol1X + 35, currentYLeftCol, {lineHeight: LINE_HEIGHT, spacingAfter: 0}).currentY - LINE_HEIGHT; // addText returns next line start
+  doc.text('Mundra', shipmentCol1X + shipmentLabelOffset, currentYLeftCol);
 
   doc.setFont('helvetica', 'bold');
   doc.text('Final Destination:', shipmentCol2X, currentYRightCol);
   doc.setFont('helvetica', 'normal');
-  currentYRightCol = addText(invoice.finalDestination, shipmentCol2X + 35, currentYRightCol, {lineHeight: LINE_HEIGHT, spacingAfter: 0}).currentY - LINE_HEIGHT;
+  doc.text(invoice.finalDestination, shipmentCol2X + shipmentLabelOffset, currentYRightCol);
 
-  currentYLeftCol += LINE_HEIGHT; // Move to next line for left column
-  currentYRightCol += LINE_HEIGHT; // Move to next line for right column
+  // Advance Y for the next row of shipment details
+  currentYLeftCol += LINE_HEIGHT;
+  currentYRightCol += LINE_HEIGHT;
 
-
+  // Second row of shipment details
   doc.setFont('helvetica', 'bold');
   doc.text('Container Details:', shipmentCol1X, currentYLeftCol);
   doc.setFont('helvetica', 'normal');
-  currentYLeftCol = addText(`${invoice.totalContainer} x ${invoice.containerSize}`, shipmentCol1X + 35, currentYLeftCol, {lineHeight: LINE_HEIGHT, spacingAfter: 0}).currentY - LINE_HEIGHT;
-
+  doc.text(`${invoice.totalContainer} x ${invoice.containerSize}`, shipmentCol1X + shipmentLabelOffset, currentYLeftCol);
 
   doc.setFont('helvetica', 'bold');
   doc.text('Total Gross Wt:', shipmentCol2X, currentYRightCol);
   doc.setFont('helvetica', 'normal');
-  currentYRightCol = addText(`${invoice.totalGrossWeight} KGS`, shipmentCol2X + 35, currentYRightCol, {lineHeight: LINE_HEIGHT, spacingAfter: 0}).currentY - LINE_HEIGHT;
+  doc.text(`${invoice.totalGrossWeight} KGS`, shipmentCol2X + shipmentLabelOffset, currentYRightCol);
 
   yPos = Math.max(currentYLeftCol, currentYRightCol) + LINE_HEIGHT;
 
@@ -270,11 +268,8 @@ export function generatePerformaInvoicePdf(
   yPos = addText(`Total Invoice amount (in words):`, PAGE_MARGIN, yPos, {fontSize: FONT_SIZE_SMALL, spacingAfter: LINE_HEIGHT / 3});
   doc.setFont('helvetica', 'normal');
   const amountWordsLines = doc.splitTextToSize(amountInWordsStr, pageWidth - 2 * PAGE_MARGIN);
-  // Use a slightly larger line height for amount in words for clarity
   yPos = addText(amountWordsLines, PAGE_MARGIN, yPos, { fontSize: FONT_SIZE_SMALL, lineHeight: LINE_HEIGHT * 0.9, spacingAfter: LINE_HEIGHT });
   
-  // Removed "Terms & Conditions of Delivery & Payment" section from here
-
   // Note
   if (invoice.note) {
     doc.setFont('helvetica', 'bold');
@@ -300,7 +295,7 @@ export function generatePerformaInvoicePdf(
         doc.text(line, bankAddrValueX, bankAddrY);
         bankAddrY += LINE_HEIGHT * 0.8;
     });
-    yPos = bankAddrY; // update yPos to be after the bank address
+    yPos = bankAddrY; 
 
     yPos = addText(`ACCOUNT NO: ${selectedBank.accountNumber}`, PAGE_MARGIN, yPos, { fontSize: FONT_SIZE_SMALL, lineHeight: LINE_HEIGHT * 0.8 });
     yPos = addText(`SWIFT CODE: ${selectedBank.swiftCode}`, PAGE_MARGIN, yPos, { fontSize: FONT_SIZE_SMALL, lineHeight: LINE_HEIGHT * 0.8 });
@@ -311,10 +306,9 @@ export function generatePerformaInvoicePdf(
   // Signature
   const signatureX = pageWidth - PAGE_MARGIN - 70;
   let finalYPos = yPos;
-  // Check if yPos needs to be moved to prevent signature from being too low or on new page alone
   if (finalYPos > doc.internal.pageSize.getHeight() - 40) { 
       doc.addPage();
-      finalYPos = PAGE_MARGIN; // Reset to top margin on new page
+      finalYPos = PAGE_MARGIN; 
   } else {
       finalYPos = Math.max(finalYPos, doc.internal.pageSize.getHeight() - 50); 
   }
@@ -322,7 +316,7 @@ export function generatePerformaInvoicePdf(
 
   doc.setFont('helvetica', 'bold');
   finalYPos = addText(`For ${exporter.companyName}`, signatureX, finalYPos, { align: 'center', fontSize: FONT_SIZE_SMALL, spacingAfter: LINE_HEIGHT * 2.5 });
-  doc.line(signatureX - 25, finalYPos, signatureX + 55, finalYPos); // Signature line
+  doc.line(signatureX - 25, finalYPos, signatureX + 55, finalYPos); 
   finalYPos += (LINE_HEIGHT * 0.8);
   doc.setFont('helvetica', 'normal');
   addText('Authorized Signatory', signatureX, finalYPos, { align: 'center', fontSize: FONT_SIZE_SMALL});
@@ -330,4 +324,3 @@ export function generatePerformaInvoicePdf(
 
   doc.save(`Performa_Invoice_${invoice.invoiceNumber.replace(/\//g, '_')}.pdf`);
 }
-
