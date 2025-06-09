@@ -24,15 +24,14 @@ const LOCAL_STORAGE_PRODUCTS_KEY = "bizform_products";
 
 const PO_PREFIX = "HEM/PO/";
 
-// Helper to get current Indian financial year string (e.g., "24-25")
 function getCurrentIndianFinancialYear(): string {
   const now = new Date();
-  const currentMonth = now.getMonth(); // 0-11 (Jan-Dec)
+  const currentMonth = now.getMonth(); 
   const currentYear = now.getFullYear();
 
-  if (currentMonth >= 3) { // April onwards (e.g., April 2024 is part of FY 24-25)
+  if (currentMonth >= 3) { 
     return `${currentYear.toString().slice(-2)}-${(currentYear + 1).toString().slice(-2)}`;
-  } else { // Jan, Feb, March (e.g., Feb 2024 is part of FY 23-24)
+  } else { 
     return `${(currentYear - 1).toString().slice(-2)}-${currentYear.toString().slice(-2)}`;
   }
 }
@@ -109,7 +108,7 @@ export default function PurchaseOrderPage() {
   }, [toast, getNextPoNumberInternal]);
 
   useEffect(() => {
-    if (isLoading) return; // Wait for data to load
+    if (isLoading) return; 
 
     const sourcePiId = searchParams.get("sourcePiId");
     const editPoId = searchParams.get("editPoId");
@@ -117,27 +116,32 @@ export default function PurchaseOrderPage() {
     if (sourcePiId) {
       const pi = allPerformaInvoices.find(p => p.id === sourcePiId);
       if (pi) {
+        if (pi.items.length === 0 || !pi.items.some(item => item.sizeId && item.sizeId !== "")) {
+           toast({ variant: "destructive", title: "Cannot Generate PO", description: "Source Performa Invoice has no items with sizes. Please edit the PI." });
+           setSourcePiForNewPo(null);
+           router.replace('/purchase-order', { scroll: false }); // Use replace and avoid scroll
+           return;
+        }
         setSourcePiForNewPo(pi);
-        setPoToEdit(null); // Clear any edit state
+        setPoToEdit(null); 
         formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
       } else {
         toast({ variant: "destructive", title: "Error", description: `Performa Invoice with ID ${sourcePiId} not found.` });
         setSourcePiForNewPo(null);
-        router.replace('/purchase-order', undefined); // Remove query param
+        router.replace('/purchase-order', { scroll: false }); 
       }
     } else if (editPoId) {
       const po = purchaseOrders.find(p => p.id === editPoId);
       if (po) {
         setPoToEdit({...po, poDate: new Date(po.poDate)});
-        setSourcePiForNewPo(null); // Clear any new PO state
+        setSourcePiForNewPo(null); 
         formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
       } else {
         toast({ variant: "destructive", title: "Error", description: `Purchase Order with ID ${editPoId} not found.` });
         setPoToEdit(null);
-        router.replace('/purchase-order', undefined); // Remove query param
+        router.replace('/purchase-order', { scroll: false }); 
       }
     } else {
-      // No params, ensure form is hidden
       setSourcePiForNewPo(null);
       setPoToEdit(null);
     }
@@ -150,7 +154,7 @@ export default function PurchaseOrderPage() {
 
     if (isEditingMode) {
       updatedPOs = purchaseOrders.map(po =>
-        po.id === poToEdit!.id ? { ...poData, id: poToEdit!.id, sourcePiId: poToEdit!.sourcePiId } : po // Preserve sourcePiId on edit
+        po.id === poToEdit!.id ? { ...poData, id: poToEdit!.id, sourcePiId: poToEdit!.sourcePiId } : po 
       );
     } else {
       updatedPOs = [...purchaseOrders, poData];
@@ -158,14 +162,10 @@ export default function PurchaseOrderPage() {
     setPurchaseOrders(updatedPOs);
     localStorage.setItem(LOCAL_STORAGE_PO_KEY, JSON.stringify(updatedPOs));
     
-    // Reset form states
     setPoToEdit(null);
     setSourcePiForNewPo(null);
-    router.replace('/purchase-order', undefined); // Clear query params
+    router.replace('/purchase-order', { scroll: false });
 
-    // Update next PO number only if it was a new PO and it might affect the sequence
-    // or if the PO number was manually changed during edit in a way that affects sequence.
-    // For simplicity, always update based on the current list.
     setNextPoNumber(getNextPoNumberInternal(updatedPOs, getCurrentIndianFinancialYear()));
   };
 
@@ -179,18 +179,17 @@ export default function PurchaseOrderPage() {
     localStorage.setItem(LOCAL_STORAGE_PO_KEY, JSON.stringify(updatedPOs));
     setNextPoNumber(getNextPoNumberInternal(updatedPOs, getCurrentIndianFinancialYear()));
     if (poToEdit && poToEdit.id === poIdToDelete) {
-        setPoToEdit(null); // Clear edit state if the edited PO is deleted
-        router.replace('/purchase-order', undefined);
+        setPoToEdit(null); 
+        router.replace('/purchase-order', { scroll: false });
     }
   };
   
   const handleCancelForm = () => {
     setPoToEdit(null);
     setSourcePiForNewPo(null);
-    router.replace('/purchase-order', undefined); // Clear query params
+    router.replace('/purchase-order', { scroll: false }); 
   };
 
-  // Placeholder actions for list items
   const handleDownloadPoPdf = (poId: string) => {
     console.log("Download PDF for PO:", poId);
     toast({ title: "Not Implemented", description: "PDF generation for Purchase Orders is not yet available." });
@@ -211,25 +210,25 @@ export default function PurchaseOrderPage() {
     );
   }
 
-  // Determine if form should be shown
   const showForm = !!sourcePiForNewPo || !!poToEdit;
-
   const canCreateOrEdit = allExporters.length > 0 && allManufacturers.length > 0 && globalSizes.length > 0 && globalProducts.length > 0;
   
-  // Data for the form
   let distinctSizesFromSourcePi: Size[] = [];
   let productsInSourcePi: Product[] = [];
 
   const piForForm = poToEdit ? allPerformaInvoices.find(pi => pi.id === poToEdit.sourcePiId) : sourcePiForNewPo;
 
   if (piForForm && piForForm.items) {
-    const sizeIdsInPi = new Set(piForForm.items.map(item => item.sizeId));
+    const sizeIdsInPi = new Set(piForForm.items.map(item => item.sizeId).filter(id => id && id !== ""));
     distinctSizesFromSourcePi = globalSizes.filter(s => sizeIdsInPi.has(s.id));
-    // Products in source PI (these are already associated with a size in the PI item)
-    productsInSourcePi = piForForm.items.map(piItem => {
-        const productDetail = globalProducts.find(gp => gp.id === piItem.productId && gp.sizeId === piItem.sizeId);
-        return productDetail ? productDetail : {id: piItem.productId, designName: "Unknown Product from PI", sizeId: piItem.sizeId }; // Fallback
-    }).filter(p => p !== null) as Product[]; // Filter out nulls if any
+    
+    productsInSourcePi = piForForm.items.reduce((acc: Product[], piItem) => {
+      const productDetail = globalProducts.find(gp => gp.id === piItem.productId && gp.sizeId === piItem.sizeId);
+      if (productDetail) {
+        acc.push(productDetail);
+      }
+      return acc;
+    }, []);
   }
 
 
@@ -241,9 +240,9 @@ export default function PurchaseOrderPage() {
           {showForm && (
             canCreateOrEdit ? (
               <PurchaseOrderForm
-                key={poToEdit?.id || sourcePiForNewPo?.id || 'new'} // Key to force re-render/reset
+                key={poToEdit?.id || sourcePiForNewPo?.id || 'new'} 
                 initialData={poToEdit}
-                sourcePi={piForForm} // Pass the correct PI context for the form
+                sourcePi={piForForm} 
                 isEditing={!!poToEdit}
                 onSave={handleSavePurchaseOrder}
                 onCancelEdit={handleCancelForm}
@@ -273,6 +272,11 @@ export default function PurchaseOrderPage() {
                   <p className="mt-4 text-sm text-muted-foreground">
                     Please add the required information on the respective pages under the "ADD" menu.
                   </p>
+                  {sourcePiForNewPo && (piForForm?.items.length === 0 || !piForForm?.items.some(item => item.sizeId && item.sizeId !== "")) && (
+                     <p className="mt-4 text-sm text-destructive">
+                        The selected Performa Invoice has no items with sizes. Please edit the Performa Invoice to add items with valid sizes before generating a Purchase Order.
+                    </p>
+                  )}
                 </CardContent>
               </Card>
             )
@@ -296,3 +300,5 @@ export default function PurchaseOrderPage() {
   );
 }
 
+
+    

@@ -2,6 +2,7 @@
 "use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
+import { useRouter } from "next/navigation"; // Import useRouter
 import { Header } from "@/components/layout/header";
 import { PerformaInvoiceForm } from "@/components/performa-invoice-form";
 import { PerformaInvoiceList } from "@/components/performa-invoice-list";
@@ -12,6 +13,7 @@ import type { Size } from "@/types/size";
 import type { Product } from "@/types/product";
 import type { Bank } from "@/types/bank";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { useToast } from "@/hooks/use-toast"; // Import useToast
 
 const LOCAL_STORAGE_PERFORMA_INVOICES_KEY = "bizform_performa_invoices";
 const LOCAL_STORAGE_COMPANIES_KEY = "bizform_companies";
@@ -22,6 +24,9 @@ const LOCAL_STORAGE_BANKS_KEY = "bizform_banks";
 const INVOICE_PREFIX = "HEM/PI/25-26/";
 
 export default function PerformaInvoicePage() {
+  const router = useRouter(); // Initialize useRouter
+  const { toast } = useToast(); // Initialize useToast
+
   const [performaInvoices, setPerformaInvoices] = useState<PerformaInvoice[]>([]);
   const [exporters, setExporters] = useState<Company[]>([]);
   const [clients, setClients] = useState<Client[]>([]);
@@ -71,11 +76,11 @@ export default function PerformaInvoicePage() {
             };
             if (item.quantitySqmt !== undefined && item.quantitySqmt !== null) {
               parsedItem.quantitySqmt = Number(item.quantitySqmt);
-              if (isNaN(parsedItem.quantitySqmt)) parsedItem.quantitySqmt = undefined; // Ensure NaN becomes undefined
+              if (isNaN(parsedItem.quantitySqmt)) parsedItem.quantitySqmt = undefined; 
             }
             if (item.amount !== undefined && item.amount !== null) {
               parsedItem.amount = Number(item.amount);
-              if (isNaN(parsedItem.amount)) parsedItem.amount = undefined; // Ensure NaN becomes undefined
+              if (isNaN(parsedItem.amount)) parsedItem.amount = undefined; 
             }
             return parsedItem;
           });
@@ -136,20 +141,17 @@ export default function PerformaInvoicePage() {
   const handleSavePerformaInvoice = (invoiceData: PerformaInvoice) => {
     let updatedInvoices;
     if (invoiceToEdit) {
-      // Update existing invoice
       updatedInvoices = performaInvoices.map(inv =>
         inv.id === invoiceToEdit.id ? { ...invoiceData, id: invoiceToEdit.id } : inv
       );
-      setInvoiceToEdit(null); // Clear editing state
+      setInvoiceToEdit(null); 
     } else {
-      // Add new invoice
       updatedInvoices = [...performaInvoices, invoiceData];
     }
     setPerformaInvoices(updatedInvoices);
     if (typeof window !== "undefined") {
       localStorage.setItem(LOCAL_STORAGE_PERFORMA_INVOICES_KEY, JSON.stringify(updatedInvoices));
     }
-    // Only update nextInvoiceNumber if it's a new invoice and it's potentially the highest
     if (!invoiceToEdit) {
       setNextInvoiceNumber(getNextInvoiceNumberInternal(updatedInvoices));
     }
@@ -163,7 +165,7 @@ export default function PerformaInvoicePage() {
     }
     setNextInvoiceNumber(getNextInvoiceNumberInternal(updatedInvoices));
     if (invoiceToEdit && invoiceToEdit.id === invoiceIdToDelete) {
-        setInvoiceToEdit(null); // Clear edit state if the edited invoice is deleted
+        setInvoiceToEdit(null); 
     }
   };
 
@@ -172,7 +174,7 @@ export default function PerformaInvoicePage() {
     if (foundInvoice) {
       setInvoiceToEdit({
         ...foundInvoice,
-        invoiceDate: new Date(foundInvoice.invoiceDate) // Ensure date is a Date object
+        invoiceDate: new Date(foundInvoice.invoiceDate) 
       });
       formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
@@ -183,8 +185,24 @@ export default function PerformaInvoicePage() {
   };
 
   const handleGeneratePO = (invoiceIdForPO: string) => {
-    console.log("Generate PO for invoice:", invoiceIdForPO);
-    alert(`Purchase Order generation for invoice ID ${invoiceIdForPO} is not yet implemented.`);
+    const sourcePI = performaInvoices.find(pi => pi.id === invoiceIdForPO);
+    if (!sourcePI) {
+        toast({ variant: "destructive", title: "Error", description: `Performa Invoice with ID ${invoiceIdForPO} not found.` });
+        return;
+    }
+    if (sourcePI.items.length === 0) {
+        toast({ variant: "destructive", title: "Cannot Generate PO", description: "This Performa Invoice has no items. Please add items to it first." });
+        return;
+    }
+    // Check if at least one size is present in the items.
+    // This is important because the PO form requires selecting a size from the PI's items.
+    const hasItemsWithSizes = sourcePI.items.some(item => item.sizeId && item.sizeId !== "");
+    if (!hasItemsWithSizes) {
+       toast({ variant: "destructive", title: "Cannot Generate PO", description: "None of the items in this Performa Invoice have a size specified. Please edit the PI and assign sizes to items." });
+       return;
+    }
+
+    router.push(`/purchase-order?sourcePiId=${invoiceIdForPO}`);
   };
 
 
@@ -260,3 +278,5 @@ export default function PerformaInvoicePage() {
     </div>
   );
 }
+
+    
