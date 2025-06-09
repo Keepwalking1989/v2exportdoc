@@ -5,7 +5,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { Header } from "@/components/layout/header";
 import { PerformaInvoiceForm } from "@/components/performa-invoice-form";
 import { PerformaInvoiceList } from "@/components/performa-invoice-list";
-import type { PerformaInvoice } from "@/types/performa-invoice";
+import type { PerformaInvoice, PerformaInvoiceItem } from "@/types/performa-invoice";
 import type { Company } from "@/types/company";
 import type { Client } from "@/types/client";
 import type { Size } from "@/types/size";
@@ -58,11 +58,48 @@ export default function PerformaInvoicePage() {
       try {
         const storedInvoices = localStorage.getItem(LOCAL_STORAGE_PERFORMA_INVOICES_KEY);
         const currentInvoices = storedInvoices ? JSON.parse(storedInvoices) : [];
-        const parsedInvoices = currentInvoices.map((inv: any) => ({
-          ...inv,
-          invoiceDate: new Date(inv.invoiceDate),
-          items: inv.items.map((item:any) => ({...item}))
-        }));
+        
+        const parsedInvoices: PerformaInvoice[] = currentInvoices.map((inv: any) => {
+          const items: PerformaInvoiceItem[] = inv.items.map((item: any) => {
+            const parsedItem: PerformaInvoiceItem = {
+              id: item.id,
+              sizeId: item.sizeId,
+              productId: item.productId,
+              boxes: Number(item.boxes) || 0,
+              ratePerSqmt: Number(item.ratePerSqmt) || 0,
+              commission: Number(item.commission) || 0,
+            };
+            if (item.quantitySqmt !== undefined && item.quantitySqmt !== null) {
+              parsedItem.quantitySqmt = Number(item.quantitySqmt);
+              if (isNaN(parsedItem.quantitySqmt)) parsedItem.quantitySqmt = undefined; // Ensure NaN becomes undefined
+            }
+            if (item.amount !== undefined && item.amount !== null) {
+              parsedItem.amount = Number(item.amount);
+              if (isNaN(parsedItem.amount)) parsedItem.amount = undefined; // Ensure NaN becomes undefined
+            }
+            return parsedItem;
+          });
+
+          const parsedInv: PerformaInvoice = {
+            ...inv,
+            invoiceDate: new Date(inv.invoiceDate),
+            items,
+            totalContainer: Number(inv.totalContainer) || 0,
+            freight: Number(inv.freight) || 0,
+            discount: Number(inv.discount) || 0,
+          };
+
+          if (inv.subTotal !== undefined && inv.subTotal !== null) {
+            parsedInv.subTotal = Number(inv.subTotal);
+            if (isNaN(parsedInv.subTotal)) parsedInv.subTotal = undefined;
+          }
+          if (inv.grandTotal !== undefined && inv.grandTotal !== null) {
+            parsedInv.grandTotal = Number(inv.grandTotal);
+            if (isNaN(parsedInv.grandTotal)) parsedInv.grandTotal = undefined;
+          }
+          return parsedInv;
+        });
+
         setPerformaInvoices(parsedInvoices);
         setNextInvoiceNumber(getNextInvoiceNumberInternal(parsedInvoices));
 
