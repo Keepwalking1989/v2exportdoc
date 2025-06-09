@@ -165,7 +165,14 @@ export function PerformaInvoiceForm({
       currentSubTotal += amount;
       return { ...item, quantitySqmt, amount };
     });
-    const currentGrandTotal = currentSubTotal - (watchedDiscount || 0) + (watchedFreight || 0);
+
+    const currentDiscountInput = Number(watchedDiscount);
+    const discountAmount = isNaN(currentDiscountInput) ? 0 : currentDiscountInput;
+    
+    const currentFreightInput = Number(watchedFreight);
+    const freightAmount = isNaN(currentFreightInput) ? 0 : currentFreightInput;
+
+    const currentGrandTotal = currentSubTotal - discountAmount + freightAmount;
     return { subTotal: currentSubTotal, grandTotal: currentGrandTotal, itemsWithCalculations: calculatedItems };
   }, [watchedItems, sizes, watchedFreight, watchedDiscount]);
 
@@ -192,7 +199,7 @@ export function PerformaInvoiceForm({
       description: `Invoice ${values.invoiceNumber} has been successfully saved.`,
     });
     form.reset({
-        invoiceNumber: nextInvoiceNumber, // This is now handled by parent, it gets updated via prop
+        invoiceNumber: nextInvoiceNumber, 
         invoiceDate: new Date(),
         containerSize: "20 ft",
         currencyType: "USD",
@@ -209,8 +216,6 @@ export function PerformaInvoiceForm({
         notifyPartyLine1: "",
         notifyPartyLine2: ""
     });
-    // Ensure invoiceNumber field in the form also updates if nextInvoiceNumber prop changes
-    // This is handled by the useEffect for nextInvoiceNumber
   }
 
   return (
@@ -239,6 +244,7 @@ export function PerformaInvoiceForm({
                       placeholder="Select Exporter..."
                       searchPlaceholder="Search Exporters..."
                       emptySearchMessage="No exporter found."
+                      disabled={exporterOptions.length === 0}
                     />
                     <FormMessage />
                   </FormItem>
@@ -311,6 +317,7 @@ export function PerformaInvoiceForm({
                       placeholder="Select Client..."
                       searchPlaceholder="Search Clients..."
                       emptySearchMessage="No client found."
+                      disabled={clientOptions.length === 0}
                     />
                     <FormMessage />
                   </FormItem>
@@ -441,6 +448,7 @@ export function PerformaInvoiceForm({
                               <Select
                                 onValueChange={(value) => handleSizeChange(index, value)}
                                 value={field.value}
+                                disabled={sizeOptions.length === 0}
                               >
                                 <FormControl>
                                   <SelectTrigger>
