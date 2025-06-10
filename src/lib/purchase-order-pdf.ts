@@ -7,7 +7,7 @@ import type { Company } from '@/types/company';
 import type { Manufacturer } from '@/types/manufacturer';
 import type { Size } from '@/types/size';
 import type { Product } from '@/types/product';
-import type { PerformaInvoice } from '@/types/performa-invoice'; // Keep for sourcePi type if needed
+import type { PerformaInvoice } from '@/types/performa-invoice';
 
 // --- Page & General Layout (Using Points) ---
 const PAGE_MARGIN_X = 28.34; // pt (approx 10mm)
@@ -27,10 +27,10 @@ const FONT_CAT2_SIZE = 10;
 const FONT_CAT3_SIZE = 8;
 
 // --- Line Height Additions (pt) ---
-const LINE_HEIGHT_ADDITION = 2.5; // Adjusted for better spacing
+const LINE_HEIGHT_ADDITION = 2.5; 
 
 // --- Cell Padding (pt) ---
-const CELL_PADDING = 4; // Adjusted for better spacing
+const CELL_PADDING = 4; 
 
 interface PdfCellStyle {
   fontStyle: {
@@ -63,7 +63,7 @@ function getPdfCellStyle(category: 1 | 2 | 3): PdfCellStyle {
         fontStyle: { size: FONT_CAT2_SIZE, weight: 'bold', style: 'normal' },
         backgroundColor: COLOR_BLUE_RGB,
         textColor: COLOR_BLACK_RGB,
-        textAlign: 'center', // Default for Cat 2
+        textAlign: 'center', 
         borderColor: COLOR_BORDER_RGB,
         borderWidth: 0.5,
         padding: CELL_PADDING,
@@ -74,7 +74,7 @@ function getPdfCellStyle(category: 1 | 2 | 3): PdfCellStyle {
         fontStyle: { size: FONT_CAT3_SIZE, weight: 'normal', style: 'normal' },
         backgroundColor: COLOR_WHITE_RGB,
         textColor: COLOR_BLACK_RGB,
-        textAlign: 'left', // Default for Cat 3
+        textAlign: 'left', 
         borderColor: COLOR_BORDER_RGB,
         borderWidth: 0.5,
         padding: CELL_PADDING,
@@ -82,9 +82,22 @@ function getPdfCellStyle(category: 1 | 2 | 3): PdfCellStyle {
   }
 }
 
+function calculateNaturalCellHeight(doc: jsPDF, text: string | string[], width: number, category: 1 | 2 | 3): number {
+  const cellStyle = getPdfCellStyle(category);
+  // Set font for measurement
+  doc.setFont('helvetica', `${cellStyle.fontStyle.weight === 'bold' ? 'bold' : ''}${cellStyle.fontStyle.style === 'italic' ? 'italic' : ''}`.replace(/^$/, 'normal') as any);
+  doc.setFontSize(cellStyle.fontStyle.size);
+  
+  const textToProcess = Array.isArray(text) ? text.join('\n') : (text || ' ');
+  const lines = doc.splitTextToSize(textToProcess, width - 2 * cellStyle.padding);
+  
+  const textBlockHeight = lines.length * cellStyle.fontStyle.size + (lines.length > 0 ? (lines.length -1) * LINE_HEIGHT_ADDITION : 0);
+  return textBlockHeight + 2 * cellStyle.padding;
+}
+
 function drawPdfCell(
   doc: jsPDF,
-  text: string | string[], // Allow string array for pre-split lines
+  text: string | string[], 
   x: number,
   y: number,
   width: number,
@@ -103,29 +116,24 @@ function drawPdfCell(
   const textToProcess = Array.isArray(text) ? text.join('\n') : (text || ' ');
   const lines = doc.splitTextToSize(textToProcess, width - 2 * cellStyle.padding);
   
-  const textBlockHeight = lines.length * cellStyle.fontStyle.size + (lines.length > 1 ? (lines.length -1) * LINE_HEIGHT_ADDITION : 0);
-  const cellHeight = fixedHeight !== null ? fixedHeight : textBlockHeight + 2 * cellStyle.padding;
+  const naturalTextHeight = lines.length * cellStyle.fontStyle.size + (lines.length > 0 ? (lines.length -1) * LINE_HEIGHT_ADDITION : 0);
+  const cellHeight = fixedHeight !== null ? fixedHeight : naturalTextHeight + 2 * cellStyle.padding;
 
-  // Draw background
   if (cellStyle.backgroundColor) {
     doc.setFillColor(cellStyle.backgroundColor[0], cellStyle.backgroundColor[1], cellStyle.backgroundColor[2]);
     doc.rect(x, y, width, cellHeight, 'F');
   }
 
-  // Draw border
   doc.setDrawColor(cellStyle.borderColor[0], cellStyle.borderColor[1], cellStyle.borderColor[2]);
   doc.setLineWidth(cellStyle.borderWidth);
   doc.rect(x, y, width, cellHeight, 'S');
 
-  // Draw text
   doc.setTextColor(cellStyle.textColor[0], cellStyle.textColor[1], cellStyle.textColor[2]);
   
-  let startY = y + cellStyle.padding + cellStyle.fontStyle.size; // Baseline of first line
-  // Vertical centering for the text block within the cell
-  if (cellHeight > textBlockHeight + 2 * cellStyle.padding) {
-    startY += (cellHeight - (textBlockHeight + 2 * cellStyle.padding)) / 2;
+  let startYText = y + cellStyle.padding + cellStyle.fontStyle.size; 
+  if (cellHeight > naturalTextHeight + 2 * cellStyle.padding) {
+    startYText += (cellHeight - (naturalTextHeight + 2 * cellStyle.padding)) / 2;
   }
-
 
   lines.forEach((line: string, index: number) => {
     let textX = x + cellStyle.padding;
@@ -136,7 +144,7 @@ function drawPdfCell(
       const lineWidth = doc.getTextWidth(line);
       textX = x + width - lineWidth - cellStyle.padding;
     }
-    doc.text(line, textX, startY + (index * (cellStyle.fontStyle.size + LINE_HEIGHT_ADDITION)));
+    doc.text(line, textX, startYText + (index * (cellStyle.fontStyle.size + LINE_HEIGHT_ADDITION)));
   });
 
   return y + cellHeight;
@@ -148,66 +156,102 @@ export function generatePurchaseOrderPdf(
   manufacturer: Manufacturer,
   poSize: Size | undefined,
   allProducts: Product[],
-  sourcePi: PerformaInvoice | undefined // Optional, for displaying source PI number
+  sourcePi: PerformaInvoice | undefined
 ) {
   const doc = new jsPDF({ unit: 'pt', format: 'a4' });
   let yPos = PAGE_MARGIN_Y_TOP;
   const halfContentWidth = CONTENT_WIDTH / 2;
+  
+  // For the PO Number/Date section, each label/value pair takes half of halfContentWidth
+  const poDetailBoxWidth = halfContentWidth / 2; 
+  // For the Size/HSN/NoC section, each label/value pair takes a third of halfContentWidth
+  const threePartBoxWidth = halfContentWidth / 3;
 
-  // --- Row 1: Exporter Name (as Main Title) ---
   yPos = drawPdfCell(doc, exporter.companyName.toUpperCase(), PAGE_MARGIN_X, yPos, CONTENT_WIDTH, 1);
-
-  // --- Row 2: "PURCHASE ORDER" Title ---
   yPos = drawPdfCell(doc, "PURCHASE ORDER", PAGE_MARGIN_X, yPos, CONTENT_WIDTH, 1);
-  yPos += 5; // Small gap
+  yPos += 5; 
 
-  // --- Row 3: Two Columns for "TO" and "PO Date/Number/Size" Labels ---
   const col1X = PAGE_MARGIN_X;
   const col2X = PAGE_MARGIN_X + halfContentWidth;
-  let yPosCol1 = yPos;
-  let yPosCol2 = yPos;
+  
+  let yPosCol1 = yPos; 
+  let currentYCol2 = yPos; 
 
-  // Column 1 Labels
+  // Column 1: Manufacturer Details
+  const initialYCol1 = yPosCol1;
   yPosCol1 = drawPdfCell(doc, "TO", col1X, yPosCol1, halfContentWidth, 2);
-  const manufacturerDetails = [
+  const manufacturerDetailsText = [
     manufacturer.companyName,
     manufacturer.address,
     `GSTIN: ${manufacturer.gstNumber}`,
     `PIN: ${manufacturer.pinCode}`
   ].filter(Boolean).join('\n');
-  yPosCol1 = drawPdfCell(doc, manufacturerDetails, col1X, yPosCol1, halfContentWidth, 3, null, 'left');
+  const manDetailsHeight = calculateNaturalCellHeight(doc, manufacturerDetailsText, halfContentWidth, 3);
+  yPosCol1 = drawPdfCell(doc, manufacturerDetailsText, col1X, yPosCol1, halfContentWidth, 3, manDetailsHeight, 'left');
+  const heightCol1 = yPosCol1 - initialYCol1;
 
 
-  // Column 2 Labels and Data
-  yPosCol2 = drawPdfCell(doc, "PO Date And Number", col2X, yPosCol2, halfContentWidth, 2);
-  yPosCol2 = drawPdfCell(doc, po.poNumber, col2X, yPosCol2, halfContentWidth, 3, null, 'left');
-  yPosCol2 = drawPdfCell(doc, format(new Date(po.poDate), 'dd/MM/yyyy'), col2X, yPosCol2, halfContentWidth, 3, null, 'left');
-  
-  yPosCol2 = drawPdfCell(doc, "Size", col2X, yPosCol2, halfContentWidth, 2);
-  yPosCol2 = drawPdfCell(doc, poSize?.size || "N/A", col2X, yPosCol2, halfContentWidth, 3, null, 'left');
-  
-  yPosCol2 = drawPdfCell(doc, "HSN Code", col2X, yPosCol2, halfContentWidth, 2);
-  yPosCol2 = drawPdfCell(doc, poSize?.hsnCode || "N/A", col2X, yPosCol2, halfContentWidth, 3, null, 'left');
-  
-  yPosCol2 = drawPdfCell(doc, "No. of Containers", col2X, yPosCol2, halfContentWidth, 2);
-  yPosCol2 = drawPdfCell(doc, po.numberOfContainers.toString(), col2X, yPosCol2, halfContentWidth, 3, null, 'left');
+  // Column 2: PO Details
+  const initialYCol2 = currentYCol2;
 
+  // --- PO Number & PO Date section ---
+  const poNumLabelH = calculateNaturalCellHeight(doc, "PO Number", poDetailBoxWidth, 2);
+  const poDateLabelH = calculateNaturalCellHeight(doc, "PO Date", poDetailBoxWidth, 2);
+  const fixedLabelH1 = Math.max(poNumLabelH, poDateLabelH);
+  drawPdfCell(doc, "PO Number", col2X, currentYCol2, poDetailBoxWidth, 2, fixedLabelH1, 'center');
+  drawPdfCell(doc, "PO Date", col2X + poDetailBoxWidth, currentYCol2, poDetailBoxWidth, 2, fixedLabelH1, 'center');
+  currentYCol2 += fixedLabelH1;
+
+  const poNumValText = po.poNumber;
+  const poDateValText = format(new Date(po.poDate), 'dd/MM/yyyy');
+  const poNumValH = calculateNaturalCellHeight(doc, poNumValText, poDetailBoxWidth, 3);
+  const poDateValH = calculateNaturalCellHeight(doc, poDateValText, poDetailBoxWidth, 3);
+  const fixedValueH1 = Math.max(poNumValH, poDateValH);
+  drawPdfCell(doc, poNumValText, col2X, currentYCol2, poDetailBoxWidth, 3, fixedValueH1, 'left');
+  drawPdfCell(doc, poDateValText, col2X + poDetailBoxWidth, currentYCol2, poDetailBoxWidth, 3, fixedValueH1, 'left');
+  currentYCol2 += fixedValueH1;
+
+  // --- Size, HSN Code, No. of Containers section ---
+  const sizeLabelH = calculateNaturalCellHeight(doc, "Size", threePartBoxWidth, 2);
+  const hsnLabelH = calculateNaturalCellHeight(doc, "HSN Code", threePartBoxWidth, 2);
+  const noContLabelH = calculateNaturalCellHeight(doc, "No. of Containers", threePartBoxWidth, 2);
+  const fixedLabelH2 = Math.max(sizeLabelH, hsnLabelH, noContLabelH);
+  drawPdfCell(doc, "Size", col2X, currentYCol2, threePartBoxWidth, 2, fixedLabelH2, 'center');
+  drawPdfCell(doc, "HSN Code", col2X + threePartBoxWidth, currentYCol2, threePartBoxWidth, 2, fixedLabelH2, 'center');
+  drawPdfCell(doc, "No. of Containers", col2X + 2 * threePartBoxWidth, currentYCol2, threePartBoxWidth, 2, fixedLabelH2, 'center');
+  currentYCol2 += fixedLabelH2;
+
+  const sizeValText = poSize?.size || "N/A";
+  const hsnValText = poSize?.hsnCode || "N/A";
+  const noContValText = po.numberOfContainers.toString();
+  const sizeValH = calculateNaturalCellHeight(doc, sizeValText, threePartBoxWidth, 3);
+  const hsnValH = calculateNaturalCellHeight(doc, hsnValText, threePartBoxWidth, 3);
+  const noContValH = calculateNaturalCellHeight(doc, noContValText, threePartBoxWidth, 3);
+  const fixedValueH2 = Math.max(sizeValH, hsnValH, noContValH);
+  drawPdfCell(doc, sizeValText, col2X, currentYCol2, threePartBoxWidth, 3, fixedValueH2, 'left');
+  drawPdfCell(doc, hsnValText, col2X + threePartBoxWidth, currentYCol2, threePartBoxWidth, 3, fixedValueH2, 'left');
+  drawPdfCell(doc, noContValText, col2X + 2 * threePartBoxWidth, currentYCol2, threePartBoxWidth, 3, fixedValueH2, 'left');
+  currentYCol2 += fixedValueH2;
+  
   if (sourcePi) {
-      yPosCol2 = drawPdfCell(doc, "Ref. PI No.", col2X, yPosCol2, halfContentWidth, 2);
-      yPosCol2 = drawPdfCell(doc, sourcePi.invoiceNumber, col2X, yPosCol2, halfContentWidth, 3, null, 'left');
+    const piLabelH = calculateNaturalCellHeight(doc, "Ref. PI No.", halfContentWidth, 2);
+    currentYCol2 = drawPdfCell(doc, "Ref. PI No.", col2X, currentYCol2, halfContentWidth, 2, piLabelH, 'left');
+    
+    const piValText = sourcePi.invoiceNumber;
+    const piValH = calculateNaturalCellHeight(doc, piValText, halfContentWidth, 3);
+    currentYCol2 = drawPdfCell(doc, piValText, col2X, currentYCol2, halfContentWidth, 3, piValH, 'left');
   }
-  
-  yPos = Math.max(yPosCol1, yPosCol2);
-  yPos += 5; // Small gap before instruction
+  const heightCol2 = currentYCol2 - initialYCol2;
 
-  // Instruction Text (Not a cell, plain text)
+  // Align yPos to the bottom of the taller of the two columns
+  yPos = Math.max(initialYCol1 + heightCol1, initialYCol2 + heightCol2);
+  yPos += 5; 
+
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(FONT_CAT3_SIZE);
   doc.text("Please supply the following goods as per terms and conditions mentioned below:", PAGE_MARGIN_X, yPos);
   yPos += FONT_CAT3_SIZE * 1.2 + 5;
 
-
-  // --- Product Items Table ---
   const tableHead = [['SR', 'DESCRIPTION OF GOODS', 'Design Image Ref.', 'WEIGHT/BOX (Kg)', 'BOXES', 'THICKNESS', 'TOTAL WEIGHT (Kg)']];
   let totalBoxesOverall = 0;
   let totalWeightOverall = 0;
@@ -231,10 +275,13 @@ export function generatePurchaseOrderPdf(
 
   const tableFooter = [
     [
-      { content: 'Total Box:', styles: { halign: 'right', fontStyle: 'bold', fillColor: COLOR_BLUE_RGB, textColor: COLOR_BLACK_RGB, fontSize: FONT_CAT2_SIZE } },
-      { content: totalBoxesOverall.toString(), colSpan: 2, styles: { halign: 'center', fontStyle: 'normal', fillColor: COLOR_WHITE_RGB, textColor: COLOR_BLACK_RGB, fontSize: FONT_CAT3_SIZE } },
-      { content: 'Total Weight (Kg):', styles: { halign: 'right', fontStyle: 'bold', fillColor: COLOR_BLUE_RGB, textColor: COLOR_BLACK_RGB, fontSize: FONT_CAT2_SIZE } },
-      { content: totalWeightOverall.toFixed(2), colSpan: 2, styles: { halign: 'center', fontStyle: 'normal', fillColor: COLOR_WHITE_RGB, textColor: COLOR_BLACK_RGB, fontSize: FONT_CAT3_SIZE } },
+      { content: 'Total Box:', styles: { halign: 'right', fontStyle: 'bold', fillColor: COLOR_BLUE_RGB, textColor: COLOR_BLACK_RGB, fontSize: FONT_CAT2_SIZE, cellPadding: CELL_PADDING } },
+      { content: totalBoxesOverall.toString(), styles: { halign: 'center', fontStyle: 'normal', fillColor: COLOR_WHITE_RGB, textColor: COLOR_BLACK_RGB, fontSize: FONT_CAT3_SIZE, cellPadding: CELL_PADDING } },
+      { content: '', styles: {fillColor: COLOR_WHITE_RGB} }, // Empty cell to span for layout
+      { content: 'Total Weight (Kg):', styles: { halign: 'right', fontStyle: 'bold', fillColor: COLOR_BLUE_RGB, textColor: COLOR_BLACK_RGB, fontSize: FONT_CAT2_SIZE, cellPadding: CELL_PADDING } },
+      { content: totalWeightOverall.toFixed(2), styles: { halign: 'center', fontStyle: 'normal', fillColor: COLOR_WHITE_RGB, textColor: COLOR_BLACK_RGB, fontSize: FONT_CAT3_SIZE, cellPadding: CELL_PADDING } },
+      { content: '', styles: {fillColor: COLOR_WHITE_RGB} }, // Empty cell
+      { content: '', styles: {fillColor: COLOR_WHITE_RGB} }, // Empty cell
     ]
   ];
   
@@ -243,7 +290,7 @@ export function generatePurchaseOrderPdf(
     body: tableBody,
     foot: tableFooter,
     startY: yPos,
-    theme: 'grid', // 'grid' theme ensures all borders
+    theme: 'grid', 
     margin: { left: PAGE_MARGIN_X, right: PAGE_MARGIN_X },
     styles: {
       lineWidth: 0.5,
@@ -279,45 +326,54 @@ export function generatePurchaseOrderPdf(
       5: { halign: 'center', cellWidth: 70 }, // Thickness
       6: { halign: 'right', cellWidth: 70 }, // Total Weight
     },
+    didParseCell: function (data) {
+        // For footer, ensure the empty cells used for spanning are truly white
+        if (data.section === 'foot') {
+            if (data.cell.raw === '') { // Check if it's one of our placeholder empty cells
+                data.cell.styles.fillColor = COLOR_WHITE_RGB;
+                data.cell.styles.lineWidth = 0.5; // ensure border
+                data.cell.styles.lineColor = COLOR_BORDER_RGB;
+            }
+        }
+    },
     didDrawPage: (data) => {
       // @ts-ignore
       yPos = data.cursor?.y ?? yPos;
     }
   });
-  yPos += 10; // Space after table
+  yPos += 10; 
 
-  // --- Terms and Conditions Section ---
   const terms = [
     "1. GOODS ONCE SOLD WILL NOT BE TAKEN BACK OR EXCHANGED.",
     "2. SUBJECT TO MORBI JURISDICTION."
   ];
-  yPos = drawPdfCell(doc, "Terms & Conditions:", PAGE_MARGIN_X, yPos, CONTENT_WIDTH, 2, null, 'left');
+  const termsHeaderH = calculateNaturalCellHeight(doc, "Terms & Conditions:", CONTENT_WIDTH, 2);
+  yPos = drawPdfCell(doc, "Terms & Conditions:", PAGE_MARGIN_X, yPos, CONTENT_WIDTH, 2, termsHeaderH, 'left');
   terms.forEach(term => {
-    yPos = drawPdfCell(doc, term, PAGE_MARGIN_X, yPos, CONTENT_WIDTH, 3, null, 'left');
+    const termH = calculateNaturalCellHeight(doc, term, CONTENT_WIDTH, 3);
+    yPos = drawPdfCell(doc, term, PAGE_MARGIN_X, yPos, CONTENT_WIDTH, 3, termH, 'left');
   });
   yPos += 10;
 
-  // --- Signature Section ---
-  // Try to position signature block towards the bottom, but after terms
-  const signatureBlockHeight = (FONT_CAT2_SIZE + 2 * CELL_PADDING) * 2 + 40; // Approx height for 2 lines + signing space
+  const signatureBlockHeight = (FONT_CAT2_SIZE + 2 * CELL_PADDING) * 2 + 40; 
   const availableSpace = doc.internal.pageSize.getHeight() - PAGE_MARGIN_Y_BOTTOM - yPos;
   
   if (availableSpace < signatureBlockHeight) {
     doc.addPage();
     yPos = PAGE_MARGIN_Y_TOP;
   }
-  // Align signature to the right part of the page
+  
   const signatureX = PAGE_MARGIN_X + CONTENT_WIDTH / 2;
   const signatureWidth = CONTENT_WIDTH / 2;
   let signatureY = doc.internal.pageSize.getHeight() - PAGE_MARGIN_Y_BOTTOM - signatureBlockHeight;
-  if (signatureY < yPos) signatureY = yPos; // Ensure it doesn't overlap if content is already low
+  if (signatureY < yPos) signatureY = yPos; 
 
+  const forExporterH = calculateNaturalCellHeight(doc, `FOR ${exporter.companyName.toUpperCase()}`, signatureWidth, 2);
+  const authSignH = calculateNaturalCellHeight(doc, "Authorised Signatory", signatureWidth, 2);
+  const fixedSigLineHeight = Math.max(forExporterH, authSignH) + 15; // 15 for signing space
 
-  drawPdfCell(doc, `FOR ${exporter.companyName.toUpperCase()}`, signatureX, signatureY, signatureWidth, 2, (FONT_CAT2_SIZE + 2 * CELL_PADDING) + 30, 'center'); // Extra height for signing
-  drawPdfCell(doc, "Authorised Signatory", signatureX, signatureY + (FONT_CAT2_SIZE + 2 * CELL_PADDING) + 30 , signatureWidth, 2, null, 'center');
+  drawPdfCell(doc, `FOR ${exporter.companyName.toUpperCase()}`, signatureX, signatureY, signatureWidth, 2, fixedSigLineHeight, 'center');
+  drawPdfCell(doc, "Authorised Signatory", signatureX, signatureY + fixedSigLineHeight , signatureWidth, 2, authSignH, 'center');
   
   doc.save(`Purchase_Order_${po.poNumber.replace(/\//g, '_')}.pdf`);
 }
-
-
-    
