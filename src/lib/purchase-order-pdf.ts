@@ -28,8 +28,8 @@ const FONT_CAT3_SIZE = 8;
 
 // --- Line Height Additions (pt) ---
 const LINE_HEIGHT_ADDITION = 2.5; // For general text
-const MANUFACTURER_NAME_LINE_HEIGHT_ADDITION = 3.0; // Slightly more for 14pt bold
-const MANUFACTURER_ADDRESS_LINE_HEIGHT_ADDITION = 2.0; // For 8pt regular
+const MANUFACTURER_NAME_LINE_HEIGHT_ADDITION = 3.0; 
+const MANUFACTURER_ADDRESS_LINE_HEIGHT_ADDITION = 2.0; 
 
 // --- Cell Padding (pt) ---
 const CELL_PADDING = 4;
@@ -194,9 +194,8 @@ export function generatePurchaseOrderPdf(
 
   // --- Column 1: Manufacturer Details in a single box ---
   const initialYCol1 = yPosCol1;
-  yPosCol1 = drawPdfCell(doc, "TO", col1X, yPosCol1, halfContentWidth, 2); // "TO" Label
+  yPosCol1 = drawPdfCell(doc, "TO", col1X, yPosCol1, halfContentWidth, 2); 
 
-  // Prepare Manufacturer Name and Address text with spacing
   const manufacturerNameText = manufacturer.companyName.toUpperCase();
   const manufacturerAddressDetailsText = [
     manufacturer.address,
@@ -204,16 +203,13 @@ export function generatePurchaseOrderPdf(
     `PIN: ${manufacturer.pinCode}`
   ].filter(Boolean).join('\n');
 
-  // Calculate height for manufacturer name
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(FONT_CAT1_SIZE);
   const nameLines = doc.splitTextToSize(manufacturerNameText, halfContentWidth - 2 * CELL_PADDING);
   const nameBlockHeight = nameLines.length * FONT_CAT1_SIZE + (nameLines.length > 0 ? (nameLines.length - 1) * MANUFACTURER_NAME_LINE_HEIGHT_ADDITION : 0);
 
-  // Double line space (approx one 14pt line height)
   const doubleLineSpaceHeight = FONT_CAT1_SIZE + MANUFACTURER_NAME_LINE_HEIGHT_ADDITION;
 
-  // Calculate height for manufacturer address
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(FONT_CAT3_SIZE);
   const addressLines = doc.splitTextToSize(manufacturerAddressDetailsText, halfContentWidth - 2 * CELL_PADDING);
@@ -222,12 +218,10 @@ export function generatePurchaseOrderPdf(
   const totalInternalContentHeight = nameBlockHeight + doubleLineSpaceHeight + addressBlockHeight;
   const combinedManufacturerCellHeight = totalInternalContentHeight + 2 * CELL_PADDING;
 
-  // Draw the single border for the combined manufacturer cell
   doc.setDrawColor(COLOR_BORDER_RGB[0], COLOR_BORDER_RGB[1], COLOR_BORDER_RGB[2]);
-  doc.setLineWidth(getPdfCellStyle(3).borderWidth); // Use Category 3 border style
+  doc.setLineWidth(getPdfCellStyle(3).borderWidth); 
   doc.rect(col1X, yPosCol1, halfContentWidth, combinedManufacturerCellHeight, 'S');
 
-  // Draw Manufacturer Name inside the box
   let currentYInCombinedCell = yPosCol1 + CELL_PADDING;
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(FONT_CAT1_SIZE);
@@ -236,19 +230,16 @@ export function generatePurchaseOrderPdf(
     doc.text(line, col1X + CELL_PADDING, currentYInCombinedCell + FONT_CAT1_SIZE + (index * (FONT_CAT1_SIZE + MANUFACTURER_NAME_LINE_HEIGHT_ADDITION)));
   });
   currentYInCombinedCell += nameBlockHeight;
-
-  // Add double line space
   currentYInCombinedCell += doubleLineSpaceHeight;
 
-  // Draw Manufacturer Address inside the box
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(FONT_CAT3_SIZE);
   addressLines.forEach((line: string, index: number) => {
     doc.text(line, col1X + CELL_PADDING, currentYInCombinedCell + FONT_CAT3_SIZE + (index * (FONT_CAT3_SIZE + MANUFACTURER_ADDRESS_LINE_HEIGHT_ADDITION)));
   });
   
-  yPosCol1 += combinedManufacturerCellHeight; // Update yPosCol1 to after the combined cell
-  yPosCol1 += 5; // Extra line after manufacturer address block
+  yPosCol1 += combinedManufacturerCellHeight;
+  yPosCol1 += 5; 
   const heightCol1 = yPosCol1 - initialYCol1;
 
 
@@ -303,26 +294,22 @@ export function generatePurchaseOrderPdf(
   const heightCol2 = currentYCol2 - initialYCol2;
 
   yPos = Math.max(yPosCol1, initialYCol2 + heightCol2);
-  // yPos += 5; // Removed extra space as per combination
 
-  const tableHead = [['SR', 'DESCRIPTION OF GOODS', 'Design Image Ref.', 'WEIGHT/BOX (Kg)', 'BOXES', 'THICKNESS', 'TOTAL WEIGHT (Kg)']];
+  const tableHead = [['SR', 'DESCRIPTION OF GOODS', 'Design Image Ref.', 'WEIGHT/BOX (Kg)', 'BOXES', 'THICKNESS']];
   let totalBoxesOverall = 0;
-  let totalWeightOverall = 0;
 
   const actualTableBodyItems = po.items.map((item, index) => {
     const productDetail = allProducts.find(p => p.id === item.productId);
     const productName = productDetail?.designName || "Unknown Product";
-    const itemTotalWeight = item.weightPerBox * item.boxes;
+    const goodsDesc = `${poSize?.size || ''} ${productName}`.trim();
     totalBoxesOverall += item.boxes;
-    totalWeightOverall += itemTotalWeight;
     return [
       (index + 1).toString(),
-      productName,
+      goodsDesc,
       item.designImage || "AS PER SAMPLE",
       item.weightPerBox.toFixed(2),
       item.boxes.toString(),
       item.thickness,
-      itemTotalWeight.toFixed(2)
     ];
   });
 
@@ -336,13 +323,9 @@ export function generatePurchaseOrderPdf(
 
   const tableFooter = [
     [
-      { content: 'Total Box:', styles: { halign: 'right', fontStyle: 'bold', fillColor: COLOR_BLUE_RGB, textColor: COLOR_BLACK_RGB, fontSize: FONT_CAT2_SIZE, cellPadding: CELL_PADDING } },
+      { content: 'Total Box:', colSpan: 4, styles: { halign: 'right', fontStyle: 'bold', fillColor: COLOR_BLUE_RGB, textColor: COLOR_BLACK_RGB, fontSize: FONT_CAT2_SIZE, cellPadding: CELL_PADDING } },
       { content: totalBoxesOverall.toString(), styles: { halign: 'center', fontStyle: 'normal', fillColor: COLOR_WHITE_RGB, textColor: COLOR_BLACK_RGB, fontSize: FONT_CAT3_SIZE, cellPadding: CELL_PADDING } },
-      { content: '', styles: { fillColor: COLOR_WHITE_RGB } }, 
-      { content: 'Total Weight (Kg):', styles: { halign: 'right', fontStyle: 'bold', fillColor: COLOR_BLUE_RGB, textColor: COLOR_BLACK_RGB, fontSize: FONT_CAT2_SIZE, cellPadding: CELL_PADDING } },
-      { content: totalWeightOverall.toFixed(2), styles: { halign: 'center', fontStyle: 'normal', fillColor: COLOR_WHITE_RGB, textColor: COLOR_BLACK_RGB, fontSize: FONT_CAT3_SIZE, cellPadding: CELL_PADDING } },
-      { content: '', styles: { fillColor: COLOR_WHITE_RGB } }, 
-      { content: '', styles: { fillColor: COLOR_WHITE_RGB } }, 
+      { content: '', styles: { fillColor: COLOR_WHITE_RGB } } // For the THICKNESS column
     ]
   ];
 
@@ -385,18 +368,18 @@ export function generatePurchaseOrderPdf(
       3: { halign: 'right', cellWidth: 70 }, 
       4: { halign: 'right', cellWidth: 50 }, 
       5: { halign: 'center', cellWidth: 70 }, 
-      6: { halign: 'right', cellWidth: 70 }, 
     },
     didParseCell: function (data) {
       if (data.section === 'foot') {
-        if (data.cell.raw === '') { // Style empty cells in footer to be white
+        // Style empty cells in footer to be white and have border
+        if (data.cell.raw === '' || data.cell.raw === undefined || (typeof data.cell.raw === 'object' && data.cell.raw && 'content' in data.cell.raw && data.cell.raw.content === '')) {
           data.cell.styles.fillColor = COLOR_WHITE_RGB;
           data.cell.styles.lineWidth = 0.5; 
           data.cell.styles.lineColor = COLOR_BORDER_RGB;
         }
       }
       if (data.section === 'body' && (data.cell.raw === ' ' || data.cell.raw === '')) {
-         data.cell.styles.fillColor = COLOR_WHITE_RGB; // Ensure empty body rows are white
+         data.cell.styles.fillColor = COLOR_WHITE_RGB; 
       }
     },
     didDrawPage: (data) => {
@@ -406,16 +389,13 @@ export function generatePurchaseOrderPdf(
   });
   yPos += 10; 
 
-  // Display Terms & Conditions from PO data
   const termsHeaderH = calculateNaturalCellHeight(doc, "Terms & Conditions:", CONTENT_WIDTH, 2);
   yPos = drawPdfCell(doc, "Terms & Conditions:", PAGE_MARGIN_X, yPos, CONTENT_WIDTH, 2, termsHeaderH, 'left');
   
   const poTermsText = po.termsAndConditions || "Ø Tiles should be stamped with MADE IN INDIA, & No any punch should be there on the back side of tiles.\nØ Dispatch Immediately.\nØ Quality check under supervision by seller and exporter.";
-  const poTermsHeight = calculateNaturalCellHeight(doc, poTermsText, CONTENT_WIDTH, 3);
-  yPos = drawPdfCell(doc, poTermsText, PAGE_MARGIN_X, yPos, CONTENT_WIDTH, 3, poTermsHeight, 'left');
-  yPos += 15; // Space after terms
-
-  // Removed "Please supply..." line
+  const poTermsHeight = calculateNaturalCellHeight(doc, poTermsText.split('\n'), CONTENT_WIDTH, 3); // Pass as array for multi-line
+  yPos = drawPdfCell(doc, poTermsText.split('\n'), PAGE_MARGIN_X, yPos, CONTENT_WIDTH, 3, poTermsHeight, 'left');
+  yPos += 15; 
 
   const signatureBlockHeight = (FONT_CAT2_SIZE + 2 * CELL_PADDING) * 2 + 40; 
   const availableSpace = doc.internal.pageSize.getHeight() - PAGE_MARGIN_Y_BOTTOM - yPos;
@@ -433,7 +413,6 @@ export function generatePurchaseOrderPdf(
   }
 
   const forExporterText = `FOR ${exporter.companyName.toUpperCase()}`;
-  // Recalculate height for signature lines with specific font styles
   const forExporterLabelStyle = { size: FONT_CAT2_SIZE, weight: 'bold', style: 'normal', lineHeightAddition: LINE_HEIGHT_ADDITION } as const;
   const forExporterH = calculateNaturalCellHeight(doc, forExporterText, signatureWidth, 2, forExporterLabelStyle);
 
@@ -448,3 +427,4 @@ export function generatePurchaseOrderPdf(
   doc.save(`Purchase_Order_${po.poNumber.replace(/\//g, '_')}.pdf`);
 }
 
+    
