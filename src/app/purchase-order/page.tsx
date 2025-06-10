@@ -14,7 +14,7 @@ import type { Size } from "@/types/size";
 import type { Product } from "@/types/product";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { generatePurchaseOrderPdf } from "@/lib/purchase-order-pdf"; // Import PDF generator
+import { generatePurchaseOrderPdf } from "@/lib/purchase-order-pdf"; 
 
 const LOCAL_STORAGE_PO_KEY = "bizform_purchase_orders";
 const LOCAL_STORAGE_PI_KEY = "bizform_performa_invoices";
@@ -79,7 +79,8 @@ export default function PurchaseOrderPage() {
         const storedPOs = localStorage.getItem(LOCAL_STORAGE_PO_KEY);
         const currentPOs: PurchaseOrder[] = storedPOs ? JSON.parse(storedPOs).map((po: any) => ({
           ...po,
-          poDate: new Date(po.poDate) 
+          poDate: new Date(po.poDate),
+          // termsAndConditions will be spread if it exists, otherwise undefined
         })) : [];
         setPurchaseOrders(currentPOs);
         setNextPoNumber(getNextPoNumberInternal(currentPOs, getCurrentIndianFinancialYear()));
@@ -134,7 +135,7 @@ export default function PurchaseOrderPage() {
     } else if (editPoIdParam) {
       const po = purchaseOrders.find(p => p.id === editPoIdParam);
       if (po) {
-        setPoToEdit({...po, poDate: new Date(po.poDate)});
+        setPoToEdit({...po, poDate: new Date(po.poDate)}); // Spread ensures all fields, incl. termsAndConditions, are set
         setSourcePiForNewPo(null); 
         formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
       } else {
@@ -143,23 +144,29 @@ export default function PurchaseOrderPage() {
         router.replace('/purchase-order', { scroll: false }); 
       }
     } else {
-      // Clear form state if no relevant query params
       setSourcePiForNewPo(null);
       setPoToEdit(null);
     }
   }, [searchParams, allPerformaInvoices, purchaseOrders, router, toast, isLoading]);
 
 
-  const handleSavePurchaseOrder = (poData: PurchaseOrder) => {
+  const handleSavePurchaseOrder = (poData: PurchaseOrderFormValues) => { // Type is PurchaseOrderFormValues from the form
     let updatedPOs;
     const isEditingMode = !!poToEdit;
 
+    const poToSave: PurchaseOrder = {
+      ...poData, // This spread includes termsAndConditions from the form
+      id: isEditingMode && poToEdit ? poToEdit.id : Date.now().toString(),
+      poDate: new Date(poData.poDate), // Ensure poDate is a Date object
+      sourcePiId: (isEditingMode && poToEdit ? poToEdit.sourcePiId : sourcePiForNewPo?.id) || "",
+    };
+
     if (isEditingMode) {
       updatedPOs = purchaseOrders.map(po =>
-        po.id === poToEdit!.id ? { ...poData, id: poToEdit!.id, sourcePiId: poToEdit!.sourcePiId } : po 
+        po.id === poToEdit!.id ? poToSave : po 
       );
     } else {
-      updatedPOs = [...purchaseOrders, poData];
+      updatedPOs = [...purchaseOrders, poToSave];
     }
     setPurchaseOrders(updatedPOs);
     localStorage.setItem(LOCAL_STORAGE_PO_KEY, JSON.stringify(updatedPOs));
@@ -203,8 +210,8 @@ export default function PurchaseOrderPage() {
     const poSizeDetails = globalSizes.find(s => s.id === poToPrint.sizeId);
     const sourcePiDetails = allPerformaInvoices.find(pi => pi.id === poToPrint.sourcePiId);
 
-    if (!exporter || !manufacturer || !poSizeDetails) {
-      toast({ variant: "destructive", title: "Error Generating PDF", description: "Missing data (Exporter, Manufacturer, or Size) for this PO." });
+    if (!exporter || !manufacturer ) { // Size can be missing if it was a placeholder
+      toast({ variant: "destructive", title: "Error Generating PDF", description: "Missing data (Exporter or Manufacturer) for this PO." });
       return;
     }
     
@@ -231,7 +238,9 @@ export default function PurchaseOrderPage() {
   const canCreateOrEdit = allExporters.length > 0 && allManufacturers.length > 0 && globalSizes.length > 0 && globalProducts.length > 0;
   
   let distinctSizesFromSourcePi: Size[] = [];
-  let productsInSourcePi: Product[] = [];
+  // productsInSourcePi is primarily for guiding new PO creation from PI.
+  // The form itself uses globalProducts for item dropdowns in edit mode.
+  let productsInSourcePi: Product[] = []; 
 
   const piForForm = poToEdit ? allPerformaInvoices.find(pi => pi.id === poToEdit.sourcePiId) : sourcePiForNewPo;
 
@@ -242,7 +251,6 @@ export default function PurchaseOrderPage() {
     productsInSourcePi = piForForm.items.reduce((acc: Product[], piItem) => {
       const productDetail = globalProducts.find(gp => gp.id === piItem.productId && gp.sizeId === piItem.sizeId);
       if (productDetail) {
-        // Ensure we only add unique products, even if they appear multiple times in PI items (e.g. for different rates, though unlikely)
         if (!acc.find(p => p.id === productDetail.id)) {
           acc.push(productDetail);
         }
@@ -261,18 +269,18 @@ export default function PurchaseOrderPage() {
             canCreateOrEdit ? (
               <PurchaseOrderForm
                 key={poToEdit?.id || sourcePiForNewPo?.id || 'new'} 
-                initialData={poToEdit}
+                initialData={poToEdit} // This will pass termsAndConditions if present in poToEdit
                 sourcePi={piForForm} 
                 isEditing={!!poToEdit}
-                onSave={handleSavePurchaseOrder}
+                onSave={handleSavePurchaseOrder} // This will receive termsAndConditions from form
                 onCancelEdit={handleCancelForm}
                 defaultPoNumber={poToEdit ? poToEdit.poNumber : nextPoNumber}
                 allExporters={allExporters}
                 allManufacturers={allManufacturers}
-                distinctSizesFromSourcePi={distinctSizesFromSourcePi}
-                productsInSourcePi={productsInSourcePi}
-                globalSizes={globalSizes}
-                globalProducts={globalProducts}
+                distinctSizesFromSourcePi={distinctSizesFromSourcePi} // For contextual options
+                productsInSourcePi={productsInSourcePi} // For contextual options when new from PI
+                globalSizes={globalSizes} // Essential for form's own size/product logic
+                globalProducts={globalProducts} // Essential for form's own size/product logic
               />
             ) : (
               <Card className="w-full max-w-2xl mx-auto shadow-xl mb-8">
@@ -319,5 +327,6 @@ export default function PurchaseOrderPage() {
     </div>
   );
 }
+    
 
     
