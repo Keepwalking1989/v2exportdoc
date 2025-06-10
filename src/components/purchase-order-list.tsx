@@ -2,6 +2,7 @@
 "use client";
 
 import { useState, useMemo, useEffect } from "react";
+import { useRouter } from "next/navigation"; // Import useRouter
 import type { PurchaseOrder } from "@/types/purchase-order";
 import type { Company } from "@/types/company";
 import type { Manufacturer } from "@/types/manufacturer";
@@ -17,7 +18,7 @@ import {
 } from "@/components/ui/table";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
-import { Search, ChevronLeft, ChevronRight, FileText, FilePenLine, Trash2, Download, FileType } from "lucide-react";
+import { Search, ChevronLeft, ChevronRight, FileText, FilePenLine, Trash2, Download, FileType, FilePlus2 } from "lucide-react"; // Added FilePlus2
 import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
 
@@ -27,8 +28,9 @@ interface PurchaseOrderListProps {
   allManufacturers: Manufacturer[];
   onEditPo: (poId: string) => void;
   onDeletePo: (poId: string) => void;
-  onDownloadPdf: (poId: string) => void; // Placeholder
-  onGenerateDoc: (poId: string) => void; // Placeholder
+  onDownloadPdf: (poId: string) => void; 
+  onGenerateDoc?: (poId: string) => void; // Made optional as it wasn't fully implemented
+  // onGenerateExportDoc: (poId: string) => void; // No longer needed, will use router directly
 }
 
 const ITEMS_PER_PAGE = 5;
@@ -42,6 +44,7 @@ export function PurchaseOrderList({
   onDownloadPdf,
   onGenerateDoc,
 }: PurchaseOrderListProps) {
+  const router = useRouter(); // Initialize useRouter
   const [purchaseOrders, setPurchaseOrders] = useState<PurchaseOrder[]>(initialPurchaseOrders);
   const [searchTerm, setSearchTerm] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
@@ -89,22 +92,25 @@ export function PurchaseOrderList({
     });
   };
 
+  const handleGenerateExportDoc = (poId: string) => {
+    router.push(`/export-document?sourcePoId=${poId}`);
+  };
+  
   const handleDownloadPdfClick = (poId: string, poNumber: string) => {
     onDownloadPdf(poId);
-    toast({
-        title: "PDF Generation",
-        description: `PDF generation for PO ${poNumber} is not yet implemented.`,
-        variant: "default"
-    });
+    // toast from page is better as it knows if PDF generation is implemented.
   }
 
   const handleGenerateDocClick = (poId: string, poNumber: string) => {
-    onGenerateDoc(poId);
-     toast({
-        title: "Document Generation",
-        description: `DOC generation for PO ${poNumber} is not yet implemented.`,
-        variant: "default"
-    });
+    if (onGenerateDoc) {
+      onGenerateDoc(poId);
+    } else {
+      toast({
+          title: "Document Generation",
+          description: `DOC generation for PO ${poNumber} is not yet implemented.`,
+          variant: "default"
+      });
+    }
   }
 
 
@@ -151,13 +157,13 @@ export function PurchaseOrderList({
                     <TableCell>{po.exporterName}</TableCell>
                     <TableCell className="hidden md:table-cell">{po.manufacturerName}</TableCell>
                     <TableCell className="text-right space-x-1">
-                      <Button variant="ghost" size="icon" onClick={() => onEditPo(po.id)} className="hover:text-primary">
+                      <Button variant="ghost" size="icon" onClick={() => onEditPo(po.id)} className="hover:text-primary" title="Edit PO">
                         <FilePenLine className="h-4 w-4" />
                         <span className="sr-only">Edit</span>
                       </Button>
                        <AlertDialog>
                         <AlertDialogTrigger asChild>
-                           <Button variant="ghost" size="icon" className="hover:text-destructive">
+                           <Button variant="ghost" size="icon" className="hover:text-destructive" title="Delete PO">
                             <Trash2 className="h-4 w-4" />
                             <span className="sr-only">Delete</span>
                           </Button>
@@ -177,13 +183,19 @@ export function PurchaseOrderList({
                           </AlertDialogFooter>
                         </AlertDialogContent>
                       </AlertDialog>
-                      <Button variant="ghost" size="icon" onClick={() => handleDownloadPdfClick(po.id, po.poNumber)} className="hover:text-blue-600">
+                      <Button variant="ghost" size="icon" onClick={() => handleDownloadPdfClick(po.id, po.poNumber)} className="hover:text-blue-600" title="Download PO PDF">
                         <Download className="h-4 w-4" />
                         <span className="sr-only">Download PDF</span>
                       </Button>
-                       <Button variant="ghost" size="icon" onClick={() => handleGenerateDocClick(po.id, po.poNumber)} className="hover:text-purple-600">
-                        <FileType className="h-4 w-4" />
-                        <span className="sr-only">Generate DOC</span>
+                       {onGenerateDoc && (
+                        <Button variant="ghost" size="icon" onClick={() => handleGenerateDocClick(po.id, po.poNumber)} className="hover:text-purple-600" title="Generate PO DOC">
+                            <FileType className="h-4 w-4" />
+                            <span className="sr-only">Generate DOC</span>
+                        </Button>
+                       )}
+                       <Button variant="ghost" size="icon" onClick={() => handleGenerateExportDoc(po.id)} className="hover:text-green-600" title="Create Export Document">
+                        <FilePlus2 className="h-4 w-4" />
+                         <span className="sr-only">Create Export Document</span>
                       </Button>
                     </TableCell>
                   </TableRow>
@@ -226,5 +238,3 @@ export function PurchaseOrderList({
     </Card>
   );
 }
-
-    
