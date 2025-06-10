@@ -4,7 +4,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { Header } from "@/components/layout/header";
 import { ExportDocumentForm } from "@/components/export-document-form";
-// We'll add ExportDocumentList later if needed, for now, just the form.
+import { ExportDocumentList } from "@/components/export-document-list"; // Import the list component
 import type { ExportDocument } from "@/types/export-document";
 import type { PurchaseOrder } from "@/types/purchase-order";
 import type { PerformaInvoice } from "@/types/performa-invoice";
@@ -46,14 +46,6 @@ export default function ExportDocumentPage() {
   const [docToEdit, setDocToEdit] = useState<ExportDocument | null>(null);
   const formRef = useRef<HTMLDivElement>(null);
 
-  // Placeholder for next invoice number generation if needed
-  // const getNextExportInvoiceNumber = useCallback((docs: ExportDocument[]): string => {
-  //   // Implement logic if auto-numbering is desired, e.g., EXP/24-25/001
-  //   return `EXP/${new Date().getFullYear().toString().slice(-2)}-${(new Date().getFullYear() + 1).toString().slice(-2)}/${docs.length + 1}`;
-  // }, []);
-  // const [nextExportInvoiceNumber, setNextExportInvoiceNumber] = useState("");
-
-
   useEffect(() => {
     setIsClient(true);
     if (typeof window !== "undefined") {
@@ -68,7 +60,6 @@ export default function ExportDocumentPage() {
           })),
         })) : [];
         setExportDocuments(currentDocs);
-        // setNextExportInvoiceNumber(getNextExportInvoiceNumber(currentDocs));
 
         // Load master data
         setAllPOs(JSON.parse(localStorage.getItem(LOCAL_STORAGE_PO_KEY) || "[]").map((po:any)=>({...po, poDate: new Date(po.poDate)})));
@@ -84,15 +75,13 @@ export default function ExportDocumentPage() {
         console.error("Failed to parse data from localStorage", error);
         toast({ variant: "destructive", title: "Error", description: "Could not load data. Check console." });
         setExportDocuments([]);
-        // setNextExportInvoiceNumber(getNextExportInvoiceNumber([]));
-        // Reset master data states on error
         setAllPOs([]); setAllPIs([]); setAllExporters([]); setAllClients([]);
         setAllManufacturers([]); setAllSizes([]); setAllProducts([]); setAllBanks([]);
       } finally {
         setIsLoading(false);
       }
     }
-  }, [toast]); // Removed getNextExportInvoiceNumber from deps for now
+  }, [toast]);
 
   const handleSaveExportDocument = (docData: ExportDocument) => {
     let updatedDocs;
@@ -108,15 +97,46 @@ export default function ExportDocumentPage() {
     if (typeof window !== "undefined") {
       localStorage.setItem(LOCAL_STORAGE_EXPORT_DOCS_KEY, JSON.stringify(updatedDocs));
     }
-    // if (!docToEdit) {
-    //   setNextExportInvoiceNumber(getNextExportInvoiceNumber(updatedDocs));
-    // }
   };
   
-  // Placeholder for Edit/Delete logic if a list is added later
-  // const handleEditDocument = (docIdToEdit: string) => { ... };
-  // const handleDeleteDocument = (docIdToDelete: string) => { ... };
-  // const handleCancelEdit = () => { setDocToEdit(null); };
+  // Placeholder for Edit/Delete logic
+  const handleEditDocument = (docIdToEdit: string) => {
+    const foundDoc = exportDocuments.find(doc => doc.id === docIdToEdit);
+    if (foundDoc) {
+      setDocToEdit(foundDoc);
+      formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      toast({ title: "Editing Document", description: `Editing Export Document: ${foundDoc.exportInvoiceNumber}. Form pre-filled.`});
+    } else {
+      toast({ variant: "destructive", title: "Error", description: "Document not found for editing." });
+    }
+  };
+
+  const handleDeleteDocument = (docIdToDelete: string) => {
+    const updatedDocs = exportDocuments.filter(doc => doc.id !== docIdToDelete);
+    setExportDocuments(updatedDocs);
+    if (typeof window !== "undefined") {
+      localStorage.setItem(LOCAL_STORAGE_EXPORT_DOCS_KEY, JSON.stringify(updatedDocs));
+    }
+    if (docToEdit && docToEdit.id === docIdToDelete) {
+        setDocToEdit(null); 
+    }
+    toast({ title: "Document Deleted", description: "Export Document has been deleted." });
+  };
+
+  const handleCancelEdit = () => { 
+    setDocToEdit(null); 
+    toast({ title: "Edit Cancelled", description: "Editing has been cancelled." });
+  };
+
+  const handleDownloadPdf = (docId: string) => {
+    toast({title: "Not Implemented", description: "PDF download for Export Documents is not yet implemented."});
+    // Placeholder for actual PDF generation
+    // const docToDownload = exportDocuments.find(doc => doc.id === docId);
+    // if (docToDownload) {
+    //   generateExportDocumentPdf(docToDownload, allExporters, allClients, ...);
+    // }
+  }
+
 
   if (!isClient || isLoading) {
     return (
@@ -129,7 +149,6 @@ export default function ExportDocumentPage() {
     );
   }
   
-  // Check if essential master data for form is available
   const canCreateOrEdit = allPOs.length > 0 && allExporters.length > 0 && allClients.length > 0 && allManufacturers.length > 0 && allSizes.length > 0 && allProducts.length > 0 && allBanks.length > 0;
 
   return (
@@ -139,13 +158,10 @@ export default function ExportDocumentPage() {
         <div ref={formRef}>
           {canCreateOrEdit ? (
             <ExportDocumentForm
-              // initialData={docToEdit} // Enable when edit functionality is complete
-              // isEditing={!!docToEdit} // Enable when edit functionality is complete
-              initialData={null} // For now, always new
-              isEditing={false} // For now, always new
+              initialData={docToEdit}
+              isEditing={!!docToEdit}
               onSave={handleSaveExportDocument}
-              // onCancelEdit={handleCancelEdit} // Enable when edit functionality is complete
-              // nextExportInvoiceNumber={nextExportInvoiceNumber} // Pass if auto-numbering is used
+              onCancelEdit={handleCancelEdit}
             />
           ) : (
              <Card className="w-full max-w-2xl mx-auto shadow-xl mb-8">
@@ -173,14 +189,16 @@ export default function ExportDocumentPage() {
             </Card>
           )}
         </div>
-        {/* 
+        
         <ExportDocumentList 
           documents={exportDocuments}
-          // Pass necessary lookup data (exporters, clients, etc.)
-          // onDeleteDocument={handleDeleteDocument}
-          // onEditDocument={handleEditDocument}
+          allExporters={allExporters}
+          allClients={allClients}
+          onDeleteDocument={handleDeleteDocument}
+          onEditDocument={handleEditDocument}
+          onDownloadPdf={handleDownloadPdf}
         /> 
-        */}
+        
       </main>
       <footer className="py-6 text-center text-sm text-muted-foreground border-t">
         © {new Date().getFullYear()} BizForm. All rights reserved.
@@ -188,4 +206,6 @@ export default function ExportDocumentPage() {
     </div>
   );
 }
+    
+
     
