@@ -4,12 +4,11 @@ export interface ExportDocumentProductItem {
   sizeId: string;
   productId: string;
   boxes: number;
-  ratePerSqmt: number; // Editable, pre-filled from Size master data's salesPrice
-  // Calculated fields
+  ratePerSqmt: number;
   quantitySqmt?: number;
   amount?: number;
-  netWtKgs?: number; // Calculated: boxes * size.boxWeight
-  grossWtKgs?: number; // Editable, defaults to netWtKgs
+  netWtKgs?: number;
+  grossWtKgs?: number;
 }
 
 export interface ExportDocumentContainerItem {
@@ -21,53 +20,66 @@ export interface ExportDocumentContainerItem {
   tareWeight?: number; // Kgs
   startPalletNo?: string;
   endPalletNo?: string;
-  description?: string; // General description of goods in this container
-  weighingDateTime?: Date | string; // Allow string for initial input, convert to Date
+  description?: string;
+  weighingDateTime?: Date | string;
   weighingSlipNo?: string;
   truckNumber?: string;
   biltiNo?: string;
   products: ExportDocumentProductItem[];
-  // Calculated per container
   totalNetWeightContainer?: number;
   totalGrossWeightContainer?: number;
   totalBoxesContainer?: number;
 }
 
 export interface ExportDocument {
-  id: string; // Unique ID for the export document
-  purchaseOrderId?: string; // Reference to the source Purchase Order, if selected
-  performaInvoiceId?: string; // Reference to the source Performa Invoice (if available via PO)
-  
-  exportInvoiceNumber: string; // Editable
-  exportInvoiceDate: Date;
-  
-  exporterId?: string; // From PO
-  clientId?: string; // From PI (via PO)
-  manufacturerId?: string; // From PO (to get Manufacturer's GST)
+  id: string;
+  purchaseOrderId?: string;
+  performaInvoiceId?: string; // For reference and pre-filling PI-specific data
 
+  // User-selectable IDs
+  exporterId?: string;
+  clientId?: string;
+  manufacturerId?: string;
+  transporterId?: string; // New
+
+  // Manufacturer specific invoice details
+  manufacturerInvoiceNumber?: string; // New
+  manufacturerInvoiceDate?: Date; // New
+
+  // Main Export Invoice details
+  exportInvoiceNumber: string; // Will be auto-generated, editable
+  exportInvoiceDate: Date; // New, distinct from manufacturerInvoiceDate
+
+  // Shipment details
   vesselFlightNo?: string;
-  portOfLoading?: string;
-  portOfDischarge?: string;
-  finalDestination?: string; // From PI
-  countryOfOrigin?: string; 
-  countryOfFinalDestination?: string; // From PI
+  portOfLoading?: string; // Will be pre-filled "Mundra", editable
+  // portOfDischarge: removed
+  finalDestination?: string; // From PI, editable
+  countryOfOrigin?: string;
+  countryOfFinalDestination?: string; // Pre-filled "India", editable
 
   shippingMarks?: string;
-  // manufacturerGST is not stored here; it's fetched and displayed from Manufacturer data
+  stuffingPermissionNumber?: string; // New, from selected Manufacturer
 
-  currencyType?: "INR" | "USD" | "Euro"; // From PI
-  selectedBankId?: string; // From PI's bank
+  // Financials
+  currencyType?: "INR" | "USD" | "Euro"; // From PI, editable
+  conversionRate?: number; // New
+  exchangeRateNotificationNumber?: string; // New
+  exchangeRateDate?: Date; // New
+  freightAmount?: number; // New, from PI's freight, editable
+  // selectedBankId: removed
+  // notifyPartyLine1: removed
+  // notifyPartyLine2: removed
 
-  notifyPartyLine1?: string; // From PI
-  notifyPartyLine2?: string; // From PI
+  termsOfDeliveryAndPayment?: string; // New, from PI's terms, editable
 
   containers: ExportDocumentContainerItem[];
-  
-  // Overall totals (calculated on save/display)
+
+  // Overall totals (calculated)
   totalInvoiceValue?: number;
   overallTotalNetWeight?: number;
   overallTotalGrossWeight?: number;
   overallTotalBoxes?: number;
   overallTareWeight?: number;
-  overallFinalGrossWeight?: number; // overallGrossWeight + overallTareWeight
+  overallFinalGrossWeight?: number;
 }
