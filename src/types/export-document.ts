@@ -1,49 +1,66 @@
 
-export interface ExportDocumentItem {
-  id: string; // Unique ID for the line item itself
+export interface ExportDocumentProductItem {
+  id: string; // Unique ID for the product line item within a container
   sizeId: string;
   productId: string;
   boxes: number;
-  rate: number; // Rate per unit (e.g., Sqmt or Box, context dependent)
-  // Calculated fields
-  quantitySqmt?: number; // If applicable based on size
+  ratePerSqmt: number; // Editable, pre-filled from Size master data's salesPrice
+  // Calculated fields (will be displayed, not directly part of form submission if always derived on display/save)
+  quantitySqmt?: number;
   amount?: number;
+  netWtKgs?: number; // Calculated: boxes * size.boxWeight
+  grossWtKgs?: number; // Editable, defaults to netWtKgs
+}
+
+export interface ExportDocumentContainerItem {
+  id: string; // Unique ID for the container item
+  bookingNo?: string;
+  containerNo?: string;
+  lineSeal?: string;
+  rfidSeal?: string;
+  tareWeight?: number; // Kgs
+  startPalletNo?: string;
+  endPalletNo?: string;
+  description?: string; // General description of goods in this container
+  weighingDateTime?: Date | string; // Allow string for initial input, convert to Date
+  weighingSlipNo?: string;
+  truckNumber?: string;
+  biltiNo?: string;
+  products: ExportDocumentProductItem[];
 }
 
 export interface ExportDocument {
   id: string; // Unique ID for the export document
-  purchaseOrderId: string; // Reference to the source Purchase Order
+  purchaseOrderId?: string; // Reference to the source Purchase Order, if selected
   performaInvoiceId?: string; // Reference to the source Performa Invoice (if available via PO)
   
   exportInvoiceNumber: string; // Editable
   exportInvoiceDate: Date;
   
-  exporterId: string;
-  clientId: string;
-  manufacturerId: string; // To get Manufacturer's GST
+  exporterId?: string; // From PO
+  clientId?: string; // From PI (via PO)
+  manufacturerId?: string; // From PO (to get Manufacturer's GST)
 
   vesselFlightNo?: string;
   portOfLoading?: string;
   portOfDischarge?: string;
-  finalDestination: string; // From PI
-  countryOfOrigin?: string; // Typically Exporter's country
-  countryOfFinalDestination?: string; // From PI, can be reconfirmed
+  finalDestination?: string; // From PI
+  countryOfOrigin?: string; 
+  countryOfFinalDestination?: string; // From PI
 
   shippingMarks?: string;
-  gstNumber: string; // Manufacturer's GST
+  manufacturerGST?: string; // Fetched from Manufacturer (via PO), display only
 
-  currencyType: "INR" | "USD" | "Euro"; // From PI
+  currencyType?: "INR" | "USD" | "Euro"; // From PI
   selectedBankId?: string; // From PI's bank
 
   notifyPartyLine1?: string; // From PI
   notifyPartyLine2?: string; // From PI
 
-  items: ExportDocumentItem[];
+  containers: ExportDocumentContainerItem[];
   
-  // Calculated overall totals
-  subTotal?: number;
-  grandTotal?: number; // Total invoice value for export
-
-  // Add any other specific export document fields as needed
-  // e.g., terms of delivery (FOB, CIF), packing details, etc.
+  // Overall totals (calculated on save/display)
+  totalInvoiceValue?: number;
+  overallTotalGrossWeight?: number;
+  overallTotalBoxes?: number;
 }
