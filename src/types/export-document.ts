@@ -5,7 +5,7 @@ export interface ExportDocumentProductItem {
   productId: string;
   boxes: number;
   ratePerSqmt: number; // Editable, pre-filled from Size master data's salesPrice
-  // Calculated fields (will be displayed, not directly part of form submission if always derived on display/save)
+  // Calculated fields
   quantitySqmt?: number;
   amount?: number;
   netWtKgs?: number; // Calculated: boxes * size.boxWeight
@@ -27,6 +27,10 @@ export interface ExportDocumentContainerItem {
   truckNumber?: string;
   biltiNo?: string;
   products: ExportDocumentProductItem[];
+  // Calculated per container
+  totalNetWeightContainer?: number;
+  totalGrossWeightContainer?: number;
+  totalBoxesContainer?: number;
 }
 
 export interface ExportDocument {
@@ -49,7 +53,7 @@ export interface ExportDocument {
   countryOfFinalDestination?: string; // From PI
 
   shippingMarks?: string;
-  manufacturerGST?: string; // Fetched from Manufacturer (via PO), display only
+  // manufacturerGST is not stored here; it's fetched and displayed from Manufacturer data
 
   currencyType?: "INR" | "USD" | "Euro"; // From PI
   selectedBankId?: string; // From PI's bank
@@ -61,6 +65,9 @@ export interface ExportDocument {
   
   // Overall totals (calculated on save/display)
   totalInvoiceValue?: number;
+  overallTotalNetWeight?: number;
   overallTotalGrossWeight?: number;
   overallTotalBoxes?: number;
+  overallTareWeight?: number;
+  overallFinalGrossWeight?: number; // overallGrossWeight + overallTareWeight
 }
