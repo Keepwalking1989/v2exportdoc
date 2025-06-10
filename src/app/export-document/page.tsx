@@ -16,6 +16,7 @@ import type { Product } from "@/types/product";
 import type { Bank } from "@/types/bank";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
+import { generateExportDocumentPdf } from "@/lib/export-document-pdf"; // Import the PDF generator
 
 const LOCAL_STORAGE_EXPORT_DOCS_KEY = "bizform_export_documents";
 const LOCAL_STORAGE_PO_KEY = "bizform_purchase_orders";
@@ -99,7 +100,6 @@ export default function ExportDocumentPage() {
     }
   };
   
-  // Placeholder for Edit/Delete logic
   const handleEditDocument = (docIdToEdit: string) => {
     const foundDoc = exportDocuments.find(doc => doc.id === docIdToEdit);
     if (foundDoc) {
@@ -129,12 +129,33 @@ export default function ExportDocumentPage() {
   };
 
   const handleDownloadPdf = (docId: string) => {
-    toast({title: "Not Implemented", description: "PDF download for Export Documents is not yet implemented."});
-    // Placeholder for actual PDF generation
-    // const docToDownload = exportDocuments.find(doc => doc.id === docId);
-    // if (docToDownload) {
-    //   generateExportDocumentPdf(docToDownload, allExporters, allClients, ...);
-    // }
+    const docToDownload = exportDocuments.find(doc => doc.id === docId);
+    if (!docToDownload) {
+      toast({ variant: "destructive", title: "Error", description: "Export Document not found for download." });
+      return;
+    }
+
+    const exporterDetails = allExporters.find(e => e.id === docToDownload.exporterId);
+    const clientDetails = allClients.find(c => c.id === docToDownload.clientId);
+    const manufacturerDetails = allManufacturers.find(m => m.id === docToDownload.manufacturerId);
+    const bankDetails = allBanks.find(b => b.id === docToDownload.selectedBankId);
+
+    try {
+      generateExportDocumentPdf(
+        docToDownload,
+        exporterDetails,
+        clientDetails,
+        manufacturerDetails,
+        bankDetails,
+        allSizes,
+        allProducts
+      );
+      // Optionally, add a success toast here
+      // toast({ title: "PDF Generated", description: `PDF for ${docToDownload.exportInvoiceNumber} is being downloaded.`});
+    } catch (error) {
+        console.error("Error generating PDF:", error);
+        toast({ variant: "destructive", title: "PDF Generation Error", description: "Could not generate PDF. See console for details."});
+    }
   }
 
 
