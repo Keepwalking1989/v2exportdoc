@@ -14,26 +14,26 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Combobox, type ComboboxOption } from "@/components/ui/combobox";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
-import { CalendarIcon, PlusCircle, Trash2, Package, Factory, FileText, Rss, Users, Scale, PackagePlus, ImageOff, Box, CheckSquare } from "lucide-react";
+import { CalendarIcon, PlusCircle, Trash2, Package, Factory, FileText, Rss, Users, Scale, PackagePlus, ImageOff, Box, CheckSquare, Edit3 } from "lucide-react";
 import React, { useEffect, useMemo, useCallback } from "react";
 
 import type { PurchaseOrder, PurchaseOrderItem } from "@/types/purchase-order";
-import type { PerformaInvoice, PerformaInvoiceItem as PIItem } from "@/types/performa-invoice";
+import type { PerformaInvoice } from "@/types/performa-invoice";
 import type { Company } from "@/types/company";
 import type { Manufacturer } from "@/types/manufacturer";
 import type { Size } from "@/types/size";
 import type { Product } from "@/types/product";
 
 const purchaseOrderItemSchema = z.object({
-  id: z.string().optional(), // For existing items when editing
+  id: z.string().optional(), 
   productId: z.string().min(1, "Product is required"),
   designImage: z.string().optional().default("AS PER SAMPLE"),
   weightPerBox: z.coerce.number().positive({ message: "Weight per box must be a positive number." }),
@@ -41,14 +41,19 @@ const purchaseOrderItemSchema = z.object({
   thickness: z.string().min(1, "Thickness is required").default("8.5 MM to 9.0 MM"),
 });
 
+const defaultPOTerms = `Ø Tiles should be stamped with MADE IN INDIA, & No any punch should be there on the back side of tiles.
+Ø Dispatch Immediately.
+Ø Quality check under supervision by seller and exporter.`;
+
 const purchaseOrderFormSchema = z.object({
   exporterId: z.string().min(1, "Exporter is required"),
   manufacturerId: z.string().min(1, "Manufacturer is required"),
   poNumber: z.string().min(1, "PO Number is required"),
   poDate: z.date({ required_error: "PO date is required" }),
-  sizeId: z.string().min(1, "Size is required for the PO"), // The single size for this PO
+  sizeId: z.string().min(1, "Size is required for the PO"), 
   numberOfContainers: z.coerce.number().min(0, "Number of containers must be non-negative"),
   items: z.array(purchaseOrderItemSchema).min(1, "At least one product item is required"),
+  termsAndConditions: z.string().min(1, "Terms & Conditions are required.").default(defaultPOTerms),
 });
 
 export type PurchaseOrderFormValues = z.infer<typeof purchaseOrderFormSchema>;
@@ -59,17 +64,12 @@ interface PurchaseOrderFormProps {
   isEditing: boolean;
   onSave: (poData: PurchaseOrder) => void;
   onCancelEdit?: () => void;
-  defaultPoNumber: string; // Always provide this: for new POs it's the next generated, for editing it's current
+  defaultPoNumber: string; 
   allExporters: Company[];
   allManufacturers: Manufacturer[];
-  // For the PO-level size dropdown, these are the distinct sizes found *in the source PI*.
-  // If not creating from PI (e.g. future direct creation or error), this might be empty or all system sizes.
-  distinctSizesFromSourcePi: Size[];
-  // These are all products that were *in the source PI*. They will be filtered by the PO-level sizeId.
-  productsInSourcePi: Product[];
-  // Global list of all sizes in the system, needed to get details like boxWeight.
+  distinctSizesFromSourcePi: Size[]; 
+  productsInSourcePi: Product[]; 
   globalSizes: Size[];
-  // Global list of all products in the system, needed to get product names.
   globalProducts: Product[];
 }
 
@@ -81,6 +81,7 @@ const getDefaultFormValues = (poNumber: string): PurchaseOrderFormValues => ({
   sizeId: "",
   numberOfContainers: 0,
   items: [{ productId: "", designImage: "AS PER SAMPLE", weightPerBox: 0, boxes: 1, thickness: "8.5 MM to 9.0 MM" }],
+  termsAndConditions: defaultPOTerms,
 });
 
 
@@ -116,12 +117,12 @@ export function PurchaseOrderForm({
       form.reset({
         ...initialData,
         poDate: new Date(initialData.poDate),
+        termsAndConditions: initialData.termsAndConditions || defaultPOTerms,
         items: initialData.items.map(item => ({
             ...item,
-            weightPerBox: item.weightPerBox || 0 // Ensure numeric
+            weightPerBox: item.weightPerBox || 0 
         }))
       });
-      // Ensure field array is also reset properly
       if (initialData.items && initialData.items.length > 0) {
         replace(initialData.items.map(item => ({ ...item, weightPerBox: item.weightPerBox || 0 })));
       } else {
@@ -132,13 +133,10 @@ export function PurchaseOrderForm({
       form.reset({
         ...defaultValuesForNew,
         exporterId: sourcePi.exporterId,
-        poNumber: defaultPoNumber, // Use the generated one
-        // sizeId will be selected by user
-        // items will be added by user
+        poNumber: defaultPoNumber, 
       });
       replace(defaultValuesForNew.items);
     } else if (!isEditing) {
-      // General new form, not from PI (though current logic implies always from PI)
       form.reset(getDefaultFormValues(defaultPoNumber));
       replace(getDefaultFormValues(defaultPoNumber).items);
     }
@@ -155,26 +153,58 @@ export function PurchaseOrderForm({
     [allManufacturers]
   );
 
-  const poSizeOptions: ComboboxOption[] = useMemo(() =>
-    distinctSizesFromSourcePi.map(s => ({ value: s.id, label: `${s.size} (HSN: ${s.hsnCode})` })),
-    [distinctSizesFromSourcePi]
-  );
+  const poSizeOptions: ComboboxOption[] = useMemo(() => {
+    // In edit mode, ensure the PO's current size is in the options if not already from PI
+    if (isEditing && initialData && initialData.sizeId) {
+      const poCurrentSizeInList = distinctSizesFromSourcePi.find(s => s.id === initialData.sizeId);
+      if (!poCurrentSizeInList) {
+        const poCurrentSizeDetails = globalSizes.find(s => s.id === initialData.sizeId);
+        if (poCurrentSizeDetails) {
+          // Add it to the list for the dropdown
+          return [
+            ...distinctSizesFromSourcePi.map(s => ({ value: s.id, label: `${s.size} (HSN: ${s.hsnCode})` })),
+            { value: poCurrentSizeDetails.id, label: `${poCurrentSizeDetails.size} (HSN: ${poCurrentSizeDetails.hsnCode})` }
+          ].filter((option, index, self) => index === self.findIndex(o => o.value === option.value)); // Ensure unique
+        }
+      }
+    }
+    return distinctSizesFromSourcePi.map(s => ({ value: s.id, label: `${s.size} (HSN: ${s.hsnCode})` }));
+  }, [distinctSizesFromSourcePi, isEditing, initialData, globalSizes]);
+
 
   const getProductOptionsForPoSize = useCallback((poSizeId: string): ComboboxOption[] => {
-    if (!poSizeId || !productsInSourcePi || productsInSourcePi.length === 0) return [];
-    return productsInSourcePi
-      .filter(p => p.sizeId === poSizeId)
-      .map(p => {
-        const globalProductDetails = globalProducts.find(gp => gp.id === p.id);
-        return { value: p.id, label: globalProductDetails?.designName || "Unknown Product" };
+    if (!poSizeId) return [];
+
+    let availableProducts: Product[] = [];
+
+    if (isEditing && initialData && initialData.sizeId === poSizeId) {
+      // In edit mode, if the PO's size matches the current poSizeId,
+      // start with global products filtered by this size, then ensure current items are there.
+      availableProducts = globalProducts.filter(p => p.sizeId === poSizeId);
+      
+      // Ensure currently selected products in the form items are options if they match the sizeId
+      initialData.items.forEach(poItem => {
+        if (poItem.productId && !availableProducts.find(p => p.id === poItem.productId)) {
+          const productDetail = globalProducts.find(gp => gp.id === poItem.productId && gp.sizeId === poSizeId);
+          if (productDetail) {
+            availableProducts.push(productDetail);
+          }
+        }
       });
-  }, [productsInSourcePi, globalProducts]);
+    } else {
+      // For new PO or if size changes, use products from source PI filtered by selected size.
+      availableProducts = productsInSourcePi.filter(p => p.sizeId === poSizeId);
+    }
+    
+    return availableProducts.map(p => ({ value: p.id, label: p.designName || "Unknown Product" }))
+                           .filter((option, index, self) => index === self.findIndex(o => o.value === option.value)); // Ensure unique
+  }, [productsInSourcePi, globalProducts, isEditing, initialData]);
 
 
   const handleProductChange = (itemIndex: number, newProductId: string) => {
     form.setValue(`items.${itemIndex}.productId`, newProductId);
-    const productInPi = productsInSourcePi.find(p => p.id === newProductId);
-    const globalSizeDetails = globalSizes.find(s => s.id === productInPi?.sizeId);
+    const productSizeId = selectedPoSizeId; // Product must belong to the PO's selected size
+    const globalSizeDetails = globalSizes.find(s => s.id === productSizeId);
 
     if (globalSizeDetails) {
       form.setValue(`items.${itemIndex}.weightPerBox`, globalSizeDetails.boxWeight);
@@ -182,13 +212,13 @@ export function PurchaseOrderForm({
       form.setValue(`items.${itemIndex}.weightPerBox`, 0);
     }
 
-    // Pre-fill boxes from source PI if product matches
-    if (sourcePi && productInPi) {
-        const piItem = sourcePi.items.find(piItem => piItem.productId === newProductId && piItem.sizeId === selectedPoSizeId);
+    if (sourcePi && newProductId) {
+        const piItem = sourcePi.items.find(piItm => piItm.productId === newProductId && piItm.sizeId === productSizeId);
         if (piItem) {
             form.setValue(`items.${itemIndex}.boxes`, piItem.boxes);
         } else {
-            form.setValue(`items.${itemIndex}.boxes`, 1); // Default if not found in PI items
+             // If not found in source PI (e.g., product added manually during PO edit, or size changed)
+            form.setValue(`items.${itemIndex}.boxes`, 1);
         }
     } else {
         form.setValue(`items.${itemIndex}.boxes`, 1);
@@ -199,7 +229,7 @@ export function PurchaseOrderForm({
     const poToSave: PurchaseOrder = {
       ...values,
       id: isEditing && initialData ? initialData.id : Date.now().toString(),
-      // poNumber is already in values from form field
+      sourcePiId: (isEditing && initialData ? initialData.sourcePiId : sourcePi?.id) || "", // Ensure sourcePiId is set
     };
     onSave(poToSave);
     toast({
@@ -207,7 +237,7 @@ export function PurchaseOrderForm({
       description: `PO ${poToSave.poNumber} has been successfully ${isEditing ? 'updated' : 'saved'}.`,
     });
      if (!isEditing) {
-       form.reset(getDefaultFormValues(defaultPoNumber)); // Reset with the *next* PO number potentially
+       form.reset(getDefaultFormValues(defaultPoNumber)); 
        replace(getDefaultFormValues(defaultPoNumber).items);
      }
   }
@@ -222,14 +252,13 @@ export function PurchaseOrderForm({
           {isEditing ? "Edit Purchase Order" : "Create Purchase Order"}
         </CardTitle>
         <CardDescription>
-          {isEditing ? "Modify the details of the purchase order." : 
+          {isEditing ? `Editing PO: ${initialData?.poNumber}` : 
            (sourcePi ? `Generating PO from Performa Invoice: ${sourcePi.invoiceNumber}` : "Fill in the details for a new purchase order.")}
         </CardDescription>
       </CardHeader>
       <CardContent>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
-            {/* Part 1 */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <FormField
                 control={form.control}
@@ -321,14 +350,13 @@ export function PurchaseOrderForm({
                       value={field.value}
                       onChange={(value) => {
                         field.onChange(value);
-                        // Reset items when PO size changes as product list depends on it
                         replace([{ productId: "", designImage: "AS PER SAMPLE", weightPerBox: 0, boxes: 1, thickness: "8.5 MM to 9.0 MM" }]);
                       }}
                       placeholder="Select Size for PO..."
-                      disabled={poSizeOptions.length === 0 || !sourcePi}
+                      disabled={poSizeOptions.length === 0 && !isEditing} // Allow if editing even if initial PI sizes were empty
                     />
                     <FormMessage />
-                    {!sourcePi && <p className="text-xs text-muted-foreground">Size selection requires a source Performa Invoice.</p>}
+                    {poSizeOptions.length === 0 && !isEditing && <p className="text-xs text-muted-foreground">Source Performa Invoice has no items with sizes.</p>}
                   </FormItem>
                 )}
               />
@@ -345,7 +373,6 @@ export function PurchaseOrderForm({
               />
             </div>
 
-            {/* Part 2 - Product Items */}
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center justify-between">
@@ -443,6 +470,24 @@ export function PurchaseOrderForm({
               </CardContent>
             </Card>
 
+            <FormField
+              control={form.control}
+              name="termsAndConditions"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="flex items-center gap-2"><Edit3 className="h-4 w-4 text-muted-foreground" />Terms & Conditions</FormLabel>
+                  <FormControl>
+                    <Textarea
+                      rows={5}
+                      placeholder="Enter terms and conditions..."
+                      {...field}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
             <div className="flex space-x-4">
               <Button type="submit" className="flex-grow bg-accent hover:bg-accent/90 text-accent-foreground font-headline text-lg py-3">
                 {isEditing ? "Update Purchase Order" : "Save Purchase Order"}
@@ -459,5 +504,3 @@ export function PurchaseOrderForm({
     </Card>
   );
 }
-
-    
