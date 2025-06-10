@@ -2,132 +2,213 @@
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { format } from 'date-fns';
-import type { PurchaseOrder, PurchaseOrderItem } from '@/types/purchase-order';
+import type { PurchaseOrder } from '@/types/purchase-order';
 import type { Company } from '@/types/company';
 import type { Manufacturer } from '@/types/manufacturer';
 import type { Size } from '@/types/size';
-import type { Product } from '@/types/product'; // Assuming product name comes from global products
-import type { PerformaInvoice } from '@/types/performa-invoice';
+import type { Product } from '@/types/product';
+import type { PerformaInvoice } from '@/types/performa-invoice'; // Keep for sourcePi type if needed
 
-// Page Layout (Points)
-const PAGE_MARGIN = 36; // Approx 12.7mm
-const CONTENT_WIDTH = 595.28 - 2 * PAGE_MARGIN; // A4 width in points - margins
+// --- Page & General Layout (Using Points) ---
+const PAGE_MARGIN_X = 28.34; // pt (approx 10mm)
+const PAGE_MARGIN_Y_TOP = 28.34; // pt (approx 10mm)
+const PAGE_MARGIN_Y_BOTTOM = 28.34; // pt (approx 10mm)
+const CONTENT_WIDTH = 595.28 - 2 * PAGE_MARGIN_X; // A4 width in points - margins
 
-// Font Sizes
-const FONT_TITLE = 16;
-const FONT_HEADER = 12;
-const FONT_SUBHEADER = 10;
-const FONT_BODY = 10;
-const FONT_TABLE_HEAD = 9;
-const FONT_TABLE_BODY = 8;
-const FONT_FOOTER = 10;
+// --- Colors ---
+const COLOR_BLUE_RGB = [217, 234, 247]; // Light blue for backgrounds
+const COLOR_WHITE_RGB = [255, 255, 255];
+const COLOR_BLACK_RGB = [0, 0, 0];
+const COLOR_BORDER_RGB = [0, 0, 0]; // Black border for cells
 
-// Line Heights (as a multiplier of font size)
-const LINE_SPACING_FACTOR = 1.2;
+// --- Font Size Categories (pt) ---
+const FONT_CAT1_SIZE = 14;
+const FONT_CAT2_SIZE = 10;
+const FONT_CAT3_SIZE = 8;
 
-// Helper to add text and move Y position
-function addText(doc: jsPDF, text: string, x: number, y: number, fontSize: number, fontWeight: 'normal' | 'bold' = 'normal', align: 'left' | 'center' | 'right' = 'left'): number {
-  doc.setFontSize(fontSize);
-  doc.setFont('helvetica', fontWeight);
-  const textWidth = doc.getTextWidth(text);
-  let textX = x;
-  if (align === 'center') {
-    textX = x + (CONTENT_WIDTH / 2) - (textWidth / 2); // Assuming x is PAGE_MARGIN for full width centering
-    if (x !== PAGE_MARGIN) textX = x + ( (doc.internal.pageSize.getWidth() - 2*PAGE_MARGIN) / 2) - (textWidth / 2); // more general case
-  } else if (align === 'right') {
-    textX = x + CONTENT_WIDTH - textWidth; // Assuming x is PAGE_MARGIN for full width right align
-     if (x !== PAGE_MARGIN) textX = x + ( (doc.internal.pageSize.getWidth() - 2*PAGE_MARGIN) / 2) - textWidth; // for half width cells
-  }
+// --- Line Height Additions (pt) ---
+const LINE_HEIGHT_ADDITION = 2.5; // Adjusted for better spacing
 
-  doc.text(text, textX, y);
-  return y + fontSize * LINE_SPACING_FACTOR;
+// --- Cell Padding (pt) ---
+const CELL_PADDING = 4; // Adjusted for better spacing
+
+interface PdfCellStyle {
+  fontStyle: {
+    size: number;
+    weight: 'normal' | 'bold';
+    style: 'normal' | 'italic';
+  };
+  backgroundColor: number[] | null;
+  textColor: number[];
+  textAlign: 'left' | 'center' | 'right';
+  borderColor: number[];
+  borderWidth: number;
+  padding: number;
 }
 
+function getPdfCellStyle(category: 1 | 2 | 3): PdfCellStyle {
+  switch (category) {
+    case 1: // Main Titles
+      return {
+        fontStyle: { size: FONT_CAT1_SIZE, weight: 'bold', style: 'normal' },
+        backgroundColor: COLOR_BLUE_RGB,
+        textColor: COLOR_BLACK_RGB,
+        textAlign: 'center',
+        borderColor: COLOR_BORDER_RGB,
+        borderWidth: 0.5,
+        padding: CELL_PADDING,
+      };
+    case 2: // Fixed Labels / Sub-headers
+      return {
+        fontStyle: { size: FONT_CAT2_SIZE, weight: 'bold', style: 'normal' },
+        backgroundColor: COLOR_BLUE_RGB,
+        textColor: COLOR_BLACK_RGB,
+        textAlign: 'center', // Default for Cat 2
+        borderColor: COLOR_BORDER_RGB,
+        borderWidth: 0.5,
+        padding: CELL_PADDING,
+      };
+    case 3: // Dynamic Data / Values
+    default:
+      return {
+        fontStyle: { size: FONT_CAT3_SIZE, weight: 'normal', style: 'normal' },
+        backgroundColor: COLOR_WHITE_RGB,
+        textColor: COLOR_BLACK_RGB,
+        textAlign: 'left', // Default for Cat 3
+        borderColor: COLOR_BORDER_RGB,
+        borderWidth: 0.5,
+        padding: CELL_PADDING,
+      };
+  }
+}
+
+function drawPdfCell(
+  doc: jsPDF,
+  text: string | string[], // Allow string array for pre-split lines
+  x: number,
+  y: number,
+  width: number,
+  category: 1 | 2 | 3,
+  fixedHeight: number | null = null,
+  overrideTextAlign: 'left' | 'center' | 'right' | null = null
+): number {
+  const cellStyle = getPdfCellStyle(category);
+  if (overrideTextAlign) {
+    cellStyle.textAlign = overrideTextAlign;
+  }
+
+  doc.setFont('helvetica', `${cellStyle.fontStyle.weight === 'bold' ? 'bold' : ''}${cellStyle.fontStyle.style === 'italic' ? 'italic' : ''}`.replace(/^$/, 'normal') as any);
+  doc.setFontSize(cellStyle.fontStyle.size);
+
+  const textToProcess = Array.isArray(text) ? text.join('\n') : (text || ' ');
+  const lines = doc.splitTextToSize(textToProcess, width - 2 * cellStyle.padding);
+  
+  const textBlockHeight = lines.length * cellStyle.fontStyle.size + (lines.length > 1 ? (lines.length -1) * LINE_HEIGHT_ADDITION : 0);
+  const cellHeight = fixedHeight !== null ? fixedHeight : textBlockHeight + 2 * cellStyle.padding;
+
+  // Draw background
+  if (cellStyle.backgroundColor) {
+    doc.setFillColor(cellStyle.backgroundColor[0], cellStyle.backgroundColor[1], cellStyle.backgroundColor[2]);
+    doc.rect(x, y, width, cellHeight, 'F');
+  }
+
+  // Draw border
+  doc.setDrawColor(cellStyle.borderColor[0], cellStyle.borderColor[1], cellStyle.borderColor[2]);
+  doc.setLineWidth(cellStyle.borderWidth);
+  doc.rect(x, y, width, cellHeight, 'S');
+
+  // Draw text
+  doc.setTextColor(cellStyle.textColor[0], cellStyle.textColor[1], cellStyle.textColor[2]);
+  
+  let startY = y + cellStyle.padding + cellStyle.fontStyle.size; // Baseline of first line
+  // Vertical centering for the text block within the cell
+  if (cellHeight > textBlockHeight + 2 * cellStyle.padding) {
+    startY += (cellHeight - (textBlockHeight + 2 * cellStyle.padding)) / 2;
+  }
+
+
+  lines.forEach((line: string, index: number) => {
+    let textX = x + cellStyle.padding;
+    if (cellStyle.textAlign === 'center') {
+      const lineWidth = doc.getTextWidth(line);
+      textX = x + (width - lineWidth) / 2;
+    } else if (cellStyle.textAlign === 'right') {
+      const lineWidth = doc.getTextWidth(line);
+      textX = x + width - lineWidth - cellStyle.padding;
+    }
+    doc.text(line, textX, startY + (index * (cellStyle.fontStyle.size + LINE_HEIGHT_ADDITION)));
+  });
+
+  return y + cellHeight;
+}
 
 export function generatePurchaseOrderPdf(
   po: PurchaseOrder,
   exporter: Company,
   manufacturer: Manufacturer,
-  poSize: Size | undefined, // The specific size for this PO
-  allProducts: Product[], // To get product names
-  sourcePi: PerformaInvoice | undefined // Optional: To display source PI number
+  poSize: Size | undefined,
+  allProducts: Product[],
+  sourcePi: PerformaInvoice | undefined // Optional, for displaying source PI number
 ) {
   const doc = new jsPDF({ unit: 'pt', format: 'a4' });
-  let yPos = PAGE_MARGIN;
+  let yPos = PAGE_MARGIN_Y_TOP;
+  const halfContentWidth = CONTENT_WIDTH / 2;
 
-  // Title
-  yPos = addText(doc, "PURCHASE ORDER", PAGE_MARGIN, yPos, FONT_TITLE, 'bold', 'center');
-  yPos += FONT_TITLE * 0.5; // Extra space after title
+  // --- Row 1: Exporter Name (as Main Title) ---
+  yPos = drawPdfCell(doc, exporter.companyName.toUpperCase(), PAGE_MARGIN_X, yPos, CONTENT_WIDTH, 1);
 
-  // PO Details Section (Two Columns)
-  const col1X = PAGE_MARGIN;
-  const col2X = PAGE_MARGIN + CONTENT_WIDTH / 2 + 10; // 10pt gutter
-  const colWidth = CONTENT_WIDTH / 2 - 5; // Adjust for gutter
+  // --- Row 2: "PURCHASE ORDER" Title ---
+  yPos = drawPdfCell(doc, "PURCHASE ORDER", PAGE_MARGIN_X, yPos, CONTENT_WIDTH, 1);
+  yPos += 5; // Small gap
 
+  // --- Row 3: Two Columns for "TO" and "PO Date/Number/Size" Labels ---
+  const col1X = PAGE_MARGIN_X;
+  const col2X = PAGE_MARGIN_X + halfContentWidth;
   let yPosCol1 = yPos;
   let yPosCol2 = yPos;
 
-  // --- Column 1: Exporter & Manufacturer ---
-  yPosCol1 = addText(doc, "Exporter:", col1X, yPosCol1, FONT_SUBHEADER, 'bold');
-  yPosCol1 = addText(doc, exporter.companyName, col1X, yPosCol1, FONT_BODY);
-  const exporterAddressLines = doc.splitTextToSize(exporter.address, colWidth);
-  exporterAddressLines.forEach((line: string) => {
-    yPosCol1 = addText(doc, line, col1X, yPosCol1, FONT_BODY);
-  });
-  if (exporter.iecNumber) {
-    yPosCol1 = addText(doc, `IEC: ${exporter.iecNumber}`, col1X, yPosCol1, FONT_BODY);
-  }
-  yPosCol1 += FONT_BODY * 0.5;
+  // Column 1 Labels
+  yPosCol1 = drawPdfCell(doc, "TO", col1X, yPosCol1, halfContentWidth, 2);
+  const manufacturerDetails = [
+    manufacturer.companyName,
+    manufacturer.address,
+    `GSTIN: ${manufacturer.gstNumber}`,
+    `PIN: ${manufacturer.pinCode}`
+  ].filter(Boolean).join('\n');
+  yPosCol1 = drawPdfCell(doc, manufacturerDetails, col1X, yPosCol1, halfContentWidth, 3, null, 'left');
 
 
-  yPosCol1 = addText(doc, "To (Manufacturer):", col1X, yPosCol1, FONT_SUBHEADER, 'bold');
-  yPosCol1 = addText(doc, manufacturer.companyName, col1X, yPosCol1, FONT_BODY);
-  const manufacturerAddressLines = doc.splitTextToSize(manufacturer.address, colWidth);
-  manufacturerAddressLines.forEach((line: string) => {
-    yPosCol1 = addText(doc, line, col1X, yPosCol1, FONT_BODY);
-  });
-  if (manufacturer.gstNumber) {
-     yPosCol1 = addText(doc, `GSTIN: ${manufacturer.gstNumber}`, col1X, yPosCol1, FONT_BODY);
-  }
-   if (manufacturer.pinCode) {
-     yPosCol1 = addText(doc, `PIN: ${manufacturer.pinCode}`, col1X, yPosCol1, FONT_BODY);
-  }
-
-
-  // --- Column 2: PO Info ---
-  yPosCol2 = addText(doc, "PO No.:", col2X, yPosCol2, FONT_SUBHEADER, 'bold');
-  yPosCol2 = addText(doc, po.poNumber, col2X, yPosCol2, FONT_BODY);
-  yPosCol2 += FONT_BODY * 0.5;
-
-  yPosCol2 = addText(doc, "PO Date:", col2X, yPosCol2, FONT_SUBHEADER, 'bold');
-  yPosCol2 = addText(doc, format(new Date(po.poDate), 'dd/MM/yyyy'), col2X, yPosCol2, FONT_BODY);
-  yPosCol2 += FONT_BODY * 0.5;
+  // Column 2 Labels and Data
+  yPosCol2 = drawPdfCell(doc, "PO Date And Number", col2X, yPosCol2, halfContentWidth, 2);
+  yPosCol2 = drawPdfCell(doc, po.poNumber, col2X, yPosCol2, halfContentWidth, 3, null, 'left');
+  yPosCol2 = drawPdfCell(doc, format(new Date(po.poDate), 'dd/MM/yyyy'), col2X, yPosCol2, halfContentWidth, 3, null, 'left');
+  
+  yPosCol2 = drawPdfCell(doc, "Size", col2X, yPosCol2, halfContentWidth, 2);
+  yPosCol2 = drawPdfCell(doc, poSize?.size || "N/A", col2X, yPosCol2, halfContentWidth, 3, null, 'left');
+  
+  yPosCol2 = drawPdfCell(doc, "HSN Code", col2X, yPosCol2, halfContentWidth, 2);
+  yPosCol2 = drawPdfCell(doc, poSize?.hsnCode || "N/A", col2X, yPosCol2, halfContentWidth, 3, null, 'left');
+  
+  yPosCol2 = drawPdfCell(doc, "No. of Containers", col2X, yPosCol2, halfContentWidth, 2);
+  yPosCol2 = drawPdfCell(doc, po.numberOfContainers.toString(), col2X, yPosCol2, halfContentWidth, 3, null, 'left');
 
   if (sourcePi) {
-    yPosCol2 = addText(doc, "Ref. PI No.:", col2X, yPosCol2, FONT_SUBHEADER, 'bold');
-    yPosCol2 = addText(doc, sourcePi.invoiceNumber, col2X, yPosCol2, FONT_BODY);
-    yPosCol2 += FONT_BODY * 0.5;
+      yPosCol2 = drawPdfCell(doc, "Ref. PI No.", col2X, yPosCol2, halfContentWidth, 2);
+      yPosCol2 = drawPdfCell(doc, sourcePi.invoiceNumber, col2X, yPosCol2, halfContentWidth, 3, null, 'left');
   }
-
-  yPosCol2 = addText(doc, "Size:", col2X, yPosCol2, FONT_SUBHEADER, 'bold');
-  yPosCol2 = addText(doc, poSize?.size || "N/A", col2X, yPosCol2, FONT_BODY);
-  yPosCol2 += FONT_BODY * 0.5;
   
-  yPosCol2 = addText(doc, "HSN Code:", col2X, yPosCol2, FONT_SUBHEADER, 'bold');
-  yPosCol2 = addText(doc, poSize?.hsnCode || "N/A", col2X, yPosCol2, FONT_BODY);
-  yPosCol2 += FONT_BODY * 0.5;
+  yPos = Math.max(yPosCol1, yPosCol2);
+  yPos += 5; // Small gap before instruction
 
-  yPosCol2 = addText(doc, "No. of Containers:", col2X, yPosCol2, FONT_SUBHEADER, 'bold');
-  yPosCol2 = addText(doc, po.numberOfContainers.toString(), col2X, yPosCol2, FONT_BODY);
+  // Instruction Text (Not a cell, plain text)
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(FONT_CAT3_SIZE);
+  doc.text("Please supply the following goods as per terms and conditions mentioned below:", PAGE_MARGIN_X, yPos);
+  yPos += FONT_CAT3_SIZE * 1.2 + 5;
 
-  yPos = Math.max(yPosCol1, yPosCol2) + FONT_HEADER; // Space before table
 
-  // Instruction Text
-  yPos = addText(doc, "Please supply the following goods:", PAGE_MARGIN, yPos, FONT_BODY);
-  yPos += FONT_BODY * 0.5;
-
-  // Product Items Table
-  const tableHead = [['SR', 'Product Name (Design)', 'Design Image Ref.', 'Weight/Box (kg)', 'Boxes', 'Thickness', 'Total Weight (kg)']];
+  // --- Product Items Table ---
+  const tableHead = [['SR', 'DESCRIPTION OF GOODS', 'Design Image Ref.', 'WEIGHT/BOX (Kg)', 'BOXES', 'THICKNESS', 'TOTAL WEIGHT (Kg)']];
   let totalBoxesOverall = 0;
   let totalWeightOverall = 0;
 
@@ -148,61 +229,95 @@ export function generatePurchaseOrderPdf(
     ];
   });
 
+  const tableFooter = [
+    [
+      { content: 'Total Box:', styles: { halign: 'right', fontStyle: 'bold', fillColor: COLOR_BLUE_RGB, textColor: COLOR_BLACK_RGB, fontSize: FONT_CAT2_SIZE } },
+      { content: totalBoxesOverall.toString(), colSpan: 2, styles: { halign: 'center', fontStyle: 'normal', fillColor: COLOR_WHITE_RGB, textColor: COLOR_BLACK_RGB, fontSize: FONT_CAT3_SIZE } },
+      { content: 'Total Weight (Kg):', styles: { halign: 'right', fontStyle: 'bold', fillColor: COLOR_BLUE_RGB, textColor: COLOR_BLACK_RGB, fontSize: FONT_CAT2_SIZE } },
+      { content: totalWeightOverall.toFixed(2), colSpan: 2, styles: { halign: 'center', fontStyle: 'normal', fillColor: COLOR_WHITE_RGB, textColor: COLOR_BLACK_RGB, fontSize: FONT_CAT3_SIZE } },
+    ]
+  ];
+  
   autoTable(doc, {
     head: tableHead,
     body: tableBody,
+    foot: tableFooter,
     startY: yPos,
-    theme: 'grid',
-    margin: { left: PAGE_MARGIN, right: PAGE_MARGIN },
-    styles: { fontSize: FONT_TABLE_BODY, cellPadding: 3 },
-    headStyles: { fontSize: FONT_TABLE_HEAD, fontStyle: 'bold', fillColor: [220, 220, 220], halign: 'center' },
+    theme: 'grid', // 'grid' theme ensures all borders
+    margin: { left: PAGE_MARGIN_X, right: PAGE_MARGIN_X },
+    styles: {
+      lineWidth: 0.5,
+      lineColor: COLOR_BORDER_RGB,
+      cellPadding: CELL_PADDING,
+    },
+    headStyles: {
+      fillColor: COLOR_BLUE_RGB,
+      textColor: COLOR_BLACK_RGB,
+      fontStyle: 'bold',
+      fontSize: FONT_CAT2_SIZE,
+      halign: 'center',
+      valign: 'middle',
+    },
+    bodyStyles: {
+      fillColor: COLOR_WHITE_RGB,
+      textColor: COLOR_BLACK_RGB,
+      fontSize: FONT_CAT3_SIZE,
+      valign: 'middle',
+    },
+    footStyles: { // General foot styles, specific overrides in foot content
+      lineWidth: 0.5,
+      lineColor: COLOR_BORDER_RGB,
+      cellPadding: CELL_PADDING,
+      valign: 'middle',
+    },
     columnStyles: {
       0: { halign: 'center', cellWidth: 30 }, // SR
-      1: { cellWidth: 'auto' }, // Product Name
-      2: { cellWidth: 'auto' }, // Design Image Ref
-      3: { halign: 'right', cellWidth: 60 }, // Weight/Box
-      4: { halign: 'right', cellWidth: 40 }, // Boxes
+      1: { halign: 'left', cellWidth: 'auto' }, // Product Name
+      2: { halign: 'left', cellWidth: 'auto' }, // Design Image Ref
+      3: { halign: 'right', cellWidth: 70 }, // Weight/Box
+      4: { halign: 'right', cellWidth: 50 }, // Boxes
       5: { halign: 'center', cellWidth: 70 }, // Thickness
       6: { halign: 'right', cellWidth: 70 }, // Total Weight
     },
     didDrawPage: (data) => {
-        // @ts-ignore
-      yPos = data.cursor?.y ?? yPos; // Update yPos after table
+      // @ts-ignore
+      yPos = data.cursor?.y ?? yPos;
     }
   });
+  yPos += 10; // Space after table
+
+  // --- Terms and Conditions Section ---
+  const terms = [
+    "1. GOODS ONCE SOLD WILL NOT BE TAKEN BACK OR EXCHANGED.",
+    "2. SUBJECT TO MORBI JURISDICTION."
+  ];
+  yPos = drawPdfCell(doc, "Terms & Conditions:", PAGE_MARGIN_X, yPos, CONTENT_WIDTH, 2, null, 'left');
+  terms.forEach(term => {
+    yPos = drawPdfCell(doc, term, PAGE_MARGIN_X, yPos, CONTENT_WIDTH, 3, null, 'left');
+  });
+  yPos += 10;
+
+  // --- Signature Section ---
+  // Try to position signature block towards the bottom, but after terms
+  const signatureBlockHeight = (FONT_CAT2_SIZE + 2 * CELL_PADDING) * 2 + 40; // Approx height for 2 lines + signing space
+  const availableSpace = doc.internal.pageSize.getHeight() - PAGE_MARGIN_Y_BOTTOM - yPos;
   
-  yPos += FONT_BODY; // Space after table
-
-  // Totals Section
-  yPos = addText(doc, `Total Boxes: ${totalBoxesOverall}`, PAGE_MARGIN, yPos, FONT_BODY, 'bold');
-  yPos = addText(doc, `Approx. Total Order Weight: ${totalWeightOverall.toFixed(2)} kg`, PAGE_MARGIN, yPos, FONT_BODY, 'bold');
-  yPos += FONT_HEADER;
-
-
-  // Signature Section (position towards bottom)
-  const finalYPosForSignature = doc.internal.pageSize.getHeight() - PAGE_MARGIN - (FONT_FOOTER * 3 * LINE_SPACING_FACTOR);
-  if (yPos > finalYPosForSignature - (FONT_FOOTER * 2 * LINE_SPACING_FACTOR)) { // Check if enough space or add new page
-      doc.addPage();
-      yPos = PAGE_MARGIN;
-  } else {
-      yPos = finalYPosForSignature;
+  if (availableSpace < signatureBlockHeight) {
+    doc.addPage();
+    yPos = PAGE_MARGIN_Y_TOP;
   }
+  // Align signature to the right part of the page
+  const signatureX = PAGE_MARGIN_X + CONTENT_WIDTH / 2;
+  const signatureWidth = CONTENT_WIDTH / 2;
+  let signatureY = doc.internal.pageSize.getHeight() - PAGE_MARGIN_Y_BOTTOM - signatureBlockHeight;
+  if (signatureY < yPos) signatureY = yPos; // Ensure it doesn't overlap if content is already low
+
+
+  drawPdfCell(doc, `FOR ${exporter.companyName.toUpperCase()}`, signatureX, signatureY, signatureWidth, 2, (FONT_CAT2_SIZE + 2 * CELL_PADDING) + 30, 'center'); // Extra height for signing
+  drawPdfCell(doc, "Authorised Signatory", signatureX, signatureY + (FONT_CAT2_SIZE + 2 * CELL_PADDING) + 30 , signatureWidth, 2, null, 'center');
   
-  const signatureX = PAGE_MARGIN + (CONTENT_WIDTH / 2); // Start from mid-page for right alignment
-
-  doc.setFontSize(FONT_FOOTER);
-  doc.setFont('helvetica', 'bold');
-  const forExporterText = `For ${exporter.companyName}`;
-  const forExporterTextWidth = doc.getTextWidth(forExporterText);
-  doc.text(forExporterText, signatureX + (CONTENT_WIDTH / 2) - forExporterTextWidth , yPos);
-  yPos += FONT_FOOTER * LINE_SPACING_FACTOR * 2.5; // More space for signature
-
-  doc.setFontSize(FONT_FOOTER);
-  doc.setFont('helvetica', 'bold');
-  const authSignText = "Authorised Signature";
-  const authSignTextWidth = doc.getTextWidth(authSignText);
-  doc.text(authSignText, signatureX + (CONTENT_WIDTH / 2) - authSignTextWidth, yPos);
-
-
   doc.save(`Purchase_Order_${po.poNumber.replace(/\//g, '_')}.pdf`);
 }
+
+
+    
