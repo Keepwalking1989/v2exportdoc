@@ -1,14 +1,14 @@
 
 "use client";
 
-import { useState, useEffect, useCallback, useRef } from "react";
-import { useSearchParams, useRouter } from "next/navigation"; // Added useRouter
+import { useState, useEffect, useRef } from "react";
+import { useSearchParams, useRouter } from "next/navigation";
 import { Header } from "@/components/layout/header";
-// import { ExportDocumentForm } from "@/components/export-document-form"; // Will be created next
-// import { ExportDocumentList } from "@/components/export-document-list"; // Will be created next
+import { ExportDocumentForm, type ExportDocumentFormValues } from "@/components/export-document-form";
+import { ExportDocumentList } from "@/components/export-document-list";
 import type { ExportDocument } from "@/types/export-document";
 import type { PurchaseOrder } from "@/types/purchase-order";
-import type { Company } from "@/types/company"; // Exporters / Exporters
+import type { Company } from "@/types/company"; // Exporters
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 
@@ -23,7 +23,6 @@ export default function ExportDocumentPage() {
   const formRef = useRef<HTMLDivElement>(null);
 
   const [exportDocuments, setExportDocuments] = useState<ExportDocument[]>([]);
-  // Master data states
   const [allPOs, setAllPOs] = useState<PurchaseOrder[]>([]);
   const [allExporters, setAllExporters] = useState<Company[]>([]);
   
@@ -40,7 +39,6 @@ export default function ExportDocumentPage() {
         const currentDocs: ExportDocument[] = storedDocs ? JSON.parse(storedDocs) : [];
         setExportDocuments(currentDocs);
 
-        // Load minimal master data
         setAllPOs(JSON.parse(localStorage.getItem(LOCAL_STORAGE_PO_KEY) || "[]").map((po:any)=>({...po, poDate: new Date(po.poDate)})));
         setAllExporters(JSON.parse(localStorage.getItem(LOCAL_STORAGE_COMPANIES_KEY) || "[]"));
 
@@ -66,23 +64,23 @@ export default function ExportDocumentPage() {
       const poExists = allPOs.find(po => po.id === poIdFromUrl);
       if (poExists) {
         setSourcePoIdForNewDoc(poIdFromUrl);
-        setDocToEdit(null); // Ensure not in edit mode if creating from PO
+        setDocToEdit(null); 
         formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        toast({ title: "New Export Document", description: `Source Purchase Order ID: ${poIdFromUrl}.`});
+        toast({ title: "New Export Document", description: `Source Purchase Order ID: ${poIdFromUrl}. Select an exporter.`});
       } else {
         toast({ variant: "destructive", title: "Error", description: `Source Purchase Order ID ${poIdFromUrl} not found.` });
-        router.replace('/export-document', { scroll: false }); // Clear invalid param
+        router.replace('/export-document', { scroll: false }); 
       }
     } else if (editDocIdFromUrl) {
       const foundDoc = exportDocuments.find(doc => doc.id === editDocIdFromUrl);
       if (foundDoc) {
         setDocToEdit(foundDoc);
-        setSourcePoIdForNewDoc(null); // Ensure not in new PO mode if editing
+        setSourcePoIdForNewDoc(null); 
         formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        toast({ title: "Editing Document", description: `Editing Export Document ID: ${foundDoc.id}.`});
+        toast({ title: "Editing Document", description: `Editing Export Document ID: ED-${foundDoc.id.slice(-6)}.`});
       } else {
         toast({ variant: "destructive", title: "Error", description: "Document not found for editing." });
-        router.replace('/export-document', { scroll: false }); // Clear invalid param
+        router.replace('/export-document', { scroll: false }); 
       }
     } else {
       setSourcePoIdForNewDoc(null);
@@ -91,10 +89,10 @@ export default function ExportDocumentPage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams, isLoading, isClient, exportDocuments, allPOs, router]);
 
-  const handleSaveExportDocument = (docData: Omit<ExportDocument, 'id' | 'purchaseOrderId'> & { exporterId: string }) => {
+  const handleSaveExportDocument = (formData: ExportDocumentFormValues) => {
     let updatedDocs;
     const finalDocData: ExportDocument = {
-        ...docData,
+        exporterId: formData.exporterId,
         id: docToEdit ? docToEdit.id : Date.now().toString(),
         purchaseOrderId: docToEdit ? docToEdit.purchaseOrderId : sourcePoIdForNewDoc || undefined,
     };
@@ -112,18 +110,19 @@ export default function ExportDocumentPage() {
     }
     
     const action = docToEdit ? "updated" : "saved";
-    toast({ title: `Document ${action}`, description: `Export Document has been successfully ${action}.` });
+    toast({ title: `Document ${action}`, description: `Export Document ED-${finalDocData.id.slice(-6)} has been successfully ${action}.` });
     
     setDocToEdit(null);
     setSourcePoIdForNewDoc(null); 
-    router.replace('/export-document', { scroll: false }); // Clear params from URL
+    router.replace('/export-document', { scroll: false }); 
   };
   
   const handleEditDocument = (docIdToEdit: string) => {
-    router.push(`/export-document?editDocId=${docIdToEdit}`);
+    router.push(`/export-document?editDocId=${docIdToEdit}`, { scroll: false });
   };
 
   const handleDeleteDocument = (docIdToDelete: string) => {
+    const deletedDocIdShort = docIdToDelete.slice(-6);
     const updatedDocs = exportDocuments.filter(doc => doc.id !== docIdToDelete);
     setExportDocuments(updatedDocs);
     if (typeof window !== "undefined") {
@@ -133,7 +132,7 @@ export default function ExportDocumentPage() {
         setDocToEdit(null); 
         router.replace('/export-document', { scroll: false });
     }
-    toast({ title: "Document Deleted", description: "Export Document has been deleted." });
+    toast({ title: "Document Deleted", description: `Export Document ED-${deletedDocIdShort} has been deleted.` });
   };
 
   const handleCancelEdit = () => { 
@@ -149,8 +148,7 @@ export default function ExportDocumentPage() {
       toast({ variant: "destructive", title: "Error", description: "Export Document not found for download." });
       return;
     }
-    toast({ title: "PDF Generation", description: "PDF generation for export documents is not yet implemented."});
-    // PDF generation logic will be added later based on the simplified structure
+    toast({ title: "PDF Generation (Simplified)", description: `PDF generation for ED-${docId.slice(-6)} is not yet implemented.`});
   }
 
   if (!isClient || isLoading) {
@@ -165,6 +163,7 @@ export default function ExportDocumentPage() {
   }
   
   const canCreateOrEdit = allExporters.length > 0;
+  // Show form if creating new (with or without PO ID) or if editing
   const showForm = sourcePoIdForNewDoc || docToEdit || (!sourcePoIdForNewDoc && !docToEdit);
 
   return (
@@ -173,17 +172,16 @@ export default function ExportDocumentPage() {
       <main className="flex-grow container mx-auto px-4 py-8">
         <div ref={formRef}>
           {showForm && canCreateOrEdit ? (
-            // <ExportDocumentForm
-            //   key={docToEdit?.id || sourcePoIdForNewDoc || 'new-export-doc-v2-simplified'}
-            //   initialData={docToEdit} // Will pass { exporterId, purchaseOrderId } if editing
-            //   sourcePoId={sourcePoIdForNewDoc} // Pass the source PO ID for new docs
-            //   isEditing={!!docToEdit}
-            //   onSave={handleSaveExportDocument} // Expects { exporterId }
-            //   onCancelEdit={handleCancelEdit}
-            //   allExporters={allExporters}
-            // />
-            <Card><CardHeader><CardTitle>Export Document Form Placeholder (Simplified)</CardTitle></CardHeader><CardContent><p>The ExportDocumentForm component (simplified) will be created and integrated here.</p></CardContent></Card>
-          ) : !canCreateOrEdit ? (
+            <ExportDocumentForm
+              key={docToEdit?.id || sourcePoIdForNewDoc || 'new-export-doc-v2-simplified'}
+              initialData={docToEdit}
+              sourcePoId={sourcePoIdForNewDoc}
+              isEditing={!!docToEdit}
+              onSave={handleSaveExportDocument}
+              onCancelEdit={handleCancelEdit}
+              allExporters={allExporters}
+            />
+          ) : !canCreateOrEdit && showForm ? ( // Only show "cannot create" if the form was supposed to be shown but deps are missing
              <Card className="w-full max-w-2xl mx-auto shadow-xl mb-8">
               <CardHeader>
                 <CardTitle className="font-headline text-2xl">Cannot Create or Edit Export Document</CardTitle>
@@ -192,25 +190,21 @@ export default function ExportDocumentPage() {
                 <p className="text-muted-foreground">
                   To create or edit an Export Document, please ensure you have added at least one Exporter.
                 </p>
-                <ul className="list-disc list-inside mt-2 text-muted-foreground">
-                  {allExporters.length === 0 && <li>Exporter (on the main page)</li>}
-                </ul>
                  <p className="mt-4 text-sm text-muted-foreground">
-                  Please add Exporter information on the main page.
+                  Please add Exporter information on the main (Exporter) page.
                 </p>
               </CardContent>
             </Card>
           ) : null }
         </div>
         
-        {/* <ExportDocumentList 
+        <ExportDocumentList 
           documents={exportDocuments}
-          allExporters={allExporters} // Pass necessary data for display
+          allExporters={allExporters}
           onDeleteDocument={handleDeleteDocument}
-          onEditDocument={handleEditDocument} // Uses router.push
+          onEditDocument={handleEditDocument}
           onDownloadPdf={handleDownloadPdf}
-        />  */}
-        <Card className="mt-8"><CardHeader><CardTitle>Export Document List Placeholder (Simplified)</CardTitle></CardHeader><CardContent><p>The ExportDocumentList component (simplified) will be created and integrated here later.</p></CardContent></Card>
+        />
         
       </main>
       <footer className="py-6 text-center text-sm text-muted-foreground border-t">
