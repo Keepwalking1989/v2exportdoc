@@ -18,4 +18,6 @@ export interface PurchaseOrder {
   sizeId: string; // Selected from dropdown (distinct sizes from the source PI's items)
   numberOfContainers: number; // User input
   items: PurchaseOrderItem[]; // Array of product items for this PO
+  termsAndConditions: string; // New field for terms and conditions
 }
+
