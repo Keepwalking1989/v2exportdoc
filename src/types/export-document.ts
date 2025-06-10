@@ -4,11 +4,12 @@ export interface ExportDocumentProductItem {
   sizeId: string;
   productId: string;
   boxes: number;
-  ratePerSqmt: number;
+  ratePerSqmt: number; // From PI/PO, potentially editable in ED form for adjustments
+  // Calculated fields, populated during form submission or display
   quantitySqmt?: number;
   amount?: number;
   netWtKgs?: number;
-  grossWtKgs?: number;
+  grossWtKgs?: number; // Could be netWtKgs + packing, or manually entered
 }
 
 export interface ExportDocumentContainerItem {
@@ -17,69 +18,67 @@ export interface ExportDocumentContainerItem {
   containerNo?: string;
   lineSeal?: string;
   rfidSeal?: string;
-  tareWeight?: number; // Kgs
+  tareWeight?: number; // Kgs, user input
   startPalletNo?: string;
   endPalletNo?: string;
-  description?: string;
-  weighingDateTime?: Date | string;
+  description?: string; // Default "VITRIFIED TILES AS PER INVOICE"
+  weighingDateTime?: Date | string; // Date object or string representation
   weighingSlipNo?: string;
   truckNumber?: string;
   biltiNo?: string;
   products: ExportDocumentProductItem[];
+  // Calculated fields for this container
   totalNetWeightContainer?: number;
   totalGrossWeightContainer?: number;
   totalBoxesContainer?: number;
 }
 
 export interface ExportDocument {
-  id: string;
-  purchaseOrderId?: string;
-  performaInvoiceId?: string; // For reference and pre-filling PI-specific data
+  id: string; // Unique ID for the Export Document
+  purchaseOrderId?: string; // ID of the source Purchase Order for pre-filling
+  performaInvoiceId?: string; // ID of the source Performa Invoice (via PO) for pre-filling
 
-  // User-selectable IDs
+  // Selected master data IDs
   exporterId?: string;
   clientId?: string;
   manufacturerId?: string;
-  transporterId?: string; // New
+  transporterId?: string; // New: ID of the selected transporter
 
-  // Manufacturer specific invoice details
-  manufacturerInvoiceNumber?: string; // New
-  manufacturerInvoiceDate?: Date; // New
+  // Manufacturer-related details (editable on the form, pre-filled from selected manufacturer if applicable)
+  manufacturerInvoiceNumber?: string; // New: User input for manufacturer's invoice number
+  manufacturerInvoiceDate?: Date;     // New: User input for manufacturer's invoice date
+  manufacturerGstNumber?: string;     // Pre-filled from selected Manufacturer, editable on the form
+  stuffingPermissionNumber?: string;  // Pre-filled from selected Manufacturer, stored with the document
 
-  // Main Export Invoice details
-  exportInvoiceNumber: string; // Will be auto-generated, editable
-  exportInvoiceDate: Date; // New, distinct from manufacturerInvoiceDate
+  // Export Invoice details (the actual export document's invoice)
+  exportInvoiceNumber: string; // Auto-generated based on a new pattern, editable
+  exportInvoiceDate: Date;     // Defaults to current date, editable
 
   // Shipment details
   vesselFlightNo?: string;
-  portOfLoading?: string; // Will be pre-filled "Mundra", editable
-  // portOfDischarge: removed
-  finalDestination?: string; // From PI, editable
-  countryOfOrigin?: string;
-  countryOfFinalDestination?: string; // Pre-filled "India", editable
+  portOfLoading?: string;     // Default "MUNDRA PORT, INDIA", editable
+  finalDestination?: string;  // Pre-filled from PI (e.g., "JEBEL ALI, UAE"), editable
+  countryOfOrigin?: string;   // Default "INDIA", editable
+  countryOfFinalDestination?: string; // Pre-filled from Client's country (via PI)
 
-  shippingMarks?: string;
-  stuffingPermissionNumber?: string; // New, from selected Manufacturer
+  shippingMarks?: string;     // Default "AS PER INVOICE", editable
 
-  // Financials
-  currencyType?: "INR" | "USD" | "Euro"; // From PI, editable
-  conversionRate?: number; // New
-  exchangeRateNotificationNumber?: string; // New
-  exchangeRateDate?: Date; // New
-  freightAmount?: number; // New, from PI's freight, editable
-  // selectedBankId: removed
-  // notifyPartyLine1: removed
-  // notifyPartyLine2: removed
+  // Financial details
+  currencyType?: "INR" | "USD" | "Euro"; // Pre-filled from PI
+  conversionRate?: number;    // New: User input for currency conversion rate
+  exchangeRateNotificationNumber?: string; // New: User input
+  exchangeRateDate?: Date;    // New: User input, defaults to current date
 
-  termsOfDeliveryAndPayment?: string; // New, from PI's terms, editable
+  freightAmount?: number;     // Pre-filled from PI's freight, editable
+  termsOfDeliveryAndPayment?: string; // Pre-filled from PI's terms, editable
 
   containers: ExportDocumentContainerItem[];
 
-  // Overall totals (calculated)
+  // Overall calculated totals for the document
   totalInvoiceValue?: number;
   overallTotalNetWeight?: number;
   overallTotalGrossWeight?: number;
   overallTotalBoxes?: number;
   overallTareWeight?: number;
-  overallFinalGrossWeight?: number;
+  overallFinalGrossWeight?: number; // overallTotalGrossWeight + overallTareWeight
 }
