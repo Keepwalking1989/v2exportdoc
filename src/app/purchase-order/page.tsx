@@ -14,6 +14,7 @@ import type { Size } from "@/types/size";
 import type { Product } from "@/types/product";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
+import { generatePurchaseOrderPdf } from "@/lib/purchase-order-pdf"; // Import PDF generator
 
 const LOCAL_STORAGE_PO_KEY = "bizform_purchase_orders";
 const LOCAL_STORAGE_PI_KEY = "bizform_performa_invoices";
@@ -110,38 +111,39 @@ export default function PurchaseOrderPage() {
   useEffect(() => {
     if (isLoading) return; 
 
-    const sourcePiId = searchParams.get("sourcePiId");
-    const editPoId = searchParams.get("editPoId");
+    const sourcePiIdParam = searchParams.get("sourcePiId");
+    const editPoIdParam = searchParams.get("editPoId");
 
-    if (sourcePiId) {
-      const pi = allPerformaInvoices.find(p => p.id === sourcePiId);
+    if (sourcePiIdParam) {
+      const pi = allPerformaInvoices.find(p => p.id === sourcePiIdParam);
       if (pi) {
         if (pi.items.length === 0 || !pi.items.some(item => item.sizeId && item.sizeId !== "")) {
            toast({ variant: "destructive", title: "Cannot Generate PO", description: "Source Performa Invoice has no items with sizes. Please edit the PI." });
            setSourcePiForNewPo(null);
-           router.replace('/purchase-order', { scroll: false }); // Use replace and avoid scroll
+           router.replace('/purchase-order', { scroll: false }); 
            return;
         }
         setSourcePiForNewPo(pi);
         setPoToEdit(null); 
         formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
       } else {
-        toast({ variant: "destructive", title: "Error", description: `Performa Invoice with ID ${sourcePiId} not found.` });
+        toast({ variant: "destructive", title: "Error", description: `Performa Invoice with ID ${sourcePiIdParam} not found.` });
         setSourcePiForNewPo(null);
         router.replace('/purchase-order', { scroll: false }); 
       }
-    } else if (editPoId) {
-      const po = purchaseOrders.find(p => p.id === editPoId);
+    } else if (editPoIdParam) {
+      const po = purchaseOrders.find(p => p.id === editPoIdParam);
       if (po) {
         setPoToEdit({...po, poDate: new Date(po.poDate)});
         setSourcePiForNewPo(null); 
         formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
       } else {
-        toast({ variant: "destructive", title: "Error", description: `Purchase Order with ID ${editPoId} not found.` });
+        toast({ variant: "destructive", title: "Error", description: `Purchase Order with ID ${editPoIdParam} not found.` });
         setPoToEdit(null);
         router.replace('/purchase-order', { scroll: false }); 
       }
     } else {
+      // Clear form state if no relevant query params
       setSourcePiForNewPo(null);
       setPoToEdit(null);
     }
@@ -191,9 +193,24 @@ export default function PurchaseOrderPage() {
   };
 
   const handleDownloadPoPdf = (poId: string) => {
-    console.log("Download PDF for PO:", poId);
-    toast({ title: "Not Implemented", description: "PDF generation for Purchase Orders is not yet available." });
+    const poToPrint = purchaseOrders.find(po => po.id === poId);
+    if (!poToPrint) {
+      toast({ variant: "destructive", title: "Error", description: "Purchase Order not found." });
+      return;
+    }
+    const exporter = allExporters.find(e => e.id === poToPrint.exporterId);
+    const manufacturer = allManufacturers.find(m => m.id === poToPrint.manufacturerId);
+    const poSizeDetails = globalSizes.find(s => s.id === poToPrint.sizeId);
+    const sourcePiDetails = allPerformaInvoices.find(pi => pi.id === poToPrint.sourcePiId);
+
+    if (!exporter || !manufacturer || !poSizeDetails) {
+      toast({ variant: "destructive", title: "Error Generating PDF", description: "Missing data (Exporter, Manufacturer, or Size) for this PO." });
+      return;
+    }
+    
+    generatePurchaseOrderPdf(poToPrint, exporter, manufacturer, poSizeDetails, globalProducts, sourcePiDetails);
   };
+
   const handleGeneratePoDoc = (poId: string) => {
     console.log("Generate DOC for PO:", poId);
     toast({ title: "Not Implemented", description: "DOC generation for Purchase Orders is not yet available." });
@@ -225,7 +242,10 @@ export default function PurchaseOrderPage() {
     productsInSourcePi = piForForm.items.reduce((acc: Product[], piItem) => {
       const productDetail = globalProducts.find(gp => gp.id === piItem.productId && gp.sizeId === piItem.sizeId);
       if (productDetail) {
-        acc.push(productDetail);
+        // Ensure we only add unique products, even if they appear multiple times in PI items (e.g. for different rates, though unlikely)
+        if (!acc.find(p => p.id === productDetail.id)) {
+          acc.push(productDetail);
+        }
       }
       return acc;
     }, []);
@@ -299,6 +319,5 @@ export default function PurchaseOrderPage() {
     </div>
   );
 }
-
 
     
