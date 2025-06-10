@@ -2,20 +2,18 @@
 "use client";
 
 import type { ExportDocument } from "@/types/export-document";
-import type { Company } from "@/types/company";
-import type { Client } from "@/types/client";
+import type { Company } from "@/types/company"; // For Exporter
+// No longer need PurchaseOrder type here if just displaying the ID from ExportDocument
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { FileText, Edit, Trash2, Download } from "lucide-react";
-import { format } from "date-fns";
 
 interface ExportDocumentListProps {
   documents: ExportDocument[];
   allExporters: Company[];
-  allClients: Client[];
   onEditDocument: (docId: string) => void;
   onDeleteDocument: (docId: string) => void;
   onDownloadPdf: (docId: string) => void;
@@ -24,7 +22,6 @@ interface ExportDocumentListProps {
 export function ExportDocumentList({
   documents,
   allExporters,
-  allClients,
   onEditDocument,
   onDeleteDocument,
   onDownloadPdf,
@@ -63,44 +60,35 @@ export function ExportDocumentList({
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead className="font-headline">Export Inv #</TableHead>
-                <TableHead className="font-headline hidden sm:table-cell">Date</TableHead>
-                <TableHead className="font-headline hidden md:table-cell">PO #</TableHead>
-                <TableHead className="font-headline">Client</TableHead>
-                <TableHead className="font-headline hidden lg:table-cell">Destination</TableHead>
+                <TableHead className="font-headline">Doc ID</TableHead>
+                <TableHead className="font-headline">Exporter</TableHead>
+                <TableHead className="font-headline">PO ID</TableHead>
                 <TableHead className="font-headline text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {documents.map((doc) => {
-                const clientName = allClients.find(c => c.id === doc.clientId)?.companyName || "N/A";
-                // const exporterName = allExporters.find(e => e.id === doc.exporterId)?.companyName || "N/A";
-                // PO number can be derived if stored or fetched, for now just showing PI
-                const poReference = doc.purchaseOrderId ? `PO-${doc.purchaseOrderId.slice(-4)}` : (doc.performaInvoiceId ? `PI-${doc.performaInvoiceId.slice(-4)}` : "N/A");
-                
+                const exporterName = allExporters.find(e => e.id === doc.exporterId)?.companyName || "N/A";
                 return (
                   <TableRow key={doc.id}>
-                    <TableCell className="font-medium">{doc.exportInvoiceNumber}</TableCell>
-                    <TableCell className="hidden sm:table-cell">{format(new Date(doc.exportInvoiceDate), "dd/MM/yyyy")}</TableCell>
-                    <TableCell className="hidden md:table-cell">{poReference}</TableCell>
-                    <TableCell>{clientName}</TableCell>
-                    <TableCell className="hidden lg:table-cell">{doc.finalDestination || "N/A"}</TableCell>
+                    <TableCell className="font-medium">ED-{doc.id.slice(-6)}</TableCell>
+                    <TableCell>{exporterName}</TableCell>
+                    <TableCell>{doc.purchaseOrderId ? `PO-${doc.purchaseOrderId.slice(-6)}` : "N/A"}</TableCell>
                     <TableCell className="text-right space-x-1">
                       <Button variant="ghost" size="icon" onClick={() => onEditDocument(doc.id)} className="hover:text-primary" title="Edit">
                         <Edit className="h-4 w-4" />
                       </Button>
                       <AlertDialog>
                         <AlertDialogTrigger asChild>
-                           <Button variant="ghost" size="icon" className="hover:text-destructive">
+                           <Button variant="ghost" size="icon" className="hover:text-destructive" title="Delete">
                             <Trash2 className="h-4 w-4" />
-                            <span className="sr-only">Delete</span>
                           </Button>
                         </AlertDialogTrigger>
                         <AlertDialogContent>
                           <AlertDialogHeader>
                             <AlertDialogTitle>Are you sure?</AlertDialogTitle>
                             <AlertDialogDescription>
-                              This action cannot be undone. This will permanently delete the Export Document "{doc.exportInvoiceNumber}".
+                              This action cannot be undone. This will permanently delete the Export Document ED-{doc.id.slice(-6)}.
                             </AlertDialogDescription>
                           </AlertDialogHeader>
                           <AlertDialogFooter>
@@ -125,6 +113,3 @@ export function ExportDocumentList({
     </Card>
   );
 }
-
-
-    
