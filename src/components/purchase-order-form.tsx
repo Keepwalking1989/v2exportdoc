@@ -22,7 +22,7 @@ import { Combobox, type ComboboxOption } from "@/components/ui/combobox";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
-import { CalendarIcon, PlusCircle, Trash2, Package, Factory, FileText, Rss, Users, Scale, PackagePlus, ImageOff, Box, CheckSquare, Edit3 } from "lucide-react";
+import { CalendarIcon, PlusCircle, Trash2, Package, Factory, FileText, Rss, Users, Scale, PackagePlus, ImageOff, Box, CheckSquare, Edit3, XCircle } from "lucide-react";
 import React, { useEffect, useMemo, useCallback } from "react";
 
 import type { PurchaseOrder, PurchaseOrderItem } from "@/types/purchase-order";
@@ -68,8 +68,6 @@ interface PurchaseOrderFormProps {
   allExporters: Company[];
   allManufacturers: Manufacturer[];
   distinctSizesFromSourcePi: Size[]; 
-  // productsInSourcePi prop is kept for potential future use if PI-specific product filtering is needed for new POs,
-  // but current logic for product options primarily uses globalProducts.
   productsInSourcePi: Product[]; 
   globalSizes: Size[];
   globalProducts: Product[];
@@ -97,7 +95,7 @@ export function PurchaseOrderForm({
   allExporters,
   allManufacturers,
   distinctSizesFromSourcePi,
-  productsInSourcePi, // Kept for consistency, though less critical for product options now
+  productsInSourcePi,
   globalSizes,
   globalProducts,
 }: PurchaseOrderFormProps) {
@@ -136,11 +134,13 @@ export function PurchaseOrderForm({
         ...defaultValuesForNew,
         exporterId: sourcePi.exporterId,
         poNumber: defaultPoNumber, 
+        termsAndConditions: defaultPOTerms, // Ensure default terms for new PO
       });
       replace(defaultValuesForNew.items);
     } else if (!isEditing) {
-      form.reset(getDefaultFormValues(defaultPoNumber));
-      replace(getDefaultFormValues(defaultPoNumber).items);
+      const defaultValues = getDefaultFormValues(defaultPoNumber);
+      form.reset(defaultValues);
+      replace(defaultValues.items);
     }
   }, [isEditing, initialData, sourcePi, defaultPoNumber, form, replace]);
 
@@ -156,45 +156,38 @@ export function PurchaseOrderForm({
   );
 
   const poSizeOptions: ComboboxOption[] = useMemo(() => {
-    let availableSizes = [...distinctSizesFromSourcePi];
+    let availableSizes: Size[] = distinctSizesFromSourcePi ? [...distinctSizesFromSourcePi] : [];
+    let poCurrentSizeDetails: Size | undefined = undefined;
+
     if (isEditing && initialData && initialData.sizeId) {
-      const poCurrentSizeInList = availableSizes.find(s => s.id === initialData.sizeId);
-      if (!poCurrentSizeInList) {
-        const poCurrentSizeDetails = globalSizes.find(s => s.id === initialData.sizeId);
-        if (poCurrentSizeDetails) {
-          availableSizes.push(poCurrentSizeDetails);
-        }
+      poCurrentSizeDetails = globalSizes.find(s => s.id === initialData.sizeId);
+      const poCurrentSizeIsAlreadyAnOption = availableSizes.some(s => s.id === initialData.sizeId);
+      if (!poCurrentSizeIsAlreadyAnOption && poCurrentSizeDetails) {
+        availableSizes.push(poCurrentSizeDetails);
       }
     }
-    // Ensure unique sizes
+    
     availableSizes = availableSizes.filter((size, index, self) => index === self.findIndex(s => s.id === size.id));
-    return availableSizes.map(s => ({ value: s.id, label: `${s.size} (HSN: ${s.hsnCode})` }));
+    
+    const options = availableSizes.map(s => ({ value: s.id, label: `${s.size} (HSN: ${s.hsnCode})` }));
+
+    // If editing and the PO's current size was not found in globalSizes (e.g. deleted),
+    // but we have initialData.sizeId, add a placeholder option to show what was saved.
+    if (isEditing && initialData && initialData.sizeId && !poCurrentSizeDetails && !options.some(opt => opt.value === initialData.sizeId)) {
+        options.unshift({ value: initialData.sizeId, label: `Saved Size ID: ${initialData.sizeId} (Details Missing)` });
+    }
+    
+    return options;
   }, [distinctSizesFromSourcePi, isEditing, initialData, globalSizes]);
 
 
   const getProductOptionsForPoSize = useCallback((poSizeIdForOptions: string): ComboboxOption[] => {
     if (!poSizeIdForOptions || !globalProducts) return [];
-
-    let filteredProducts = globalProducts.filter(p => p.sizeId === poSizeIdForOptions);
-    
-    // In edit mode, ensure products currently in the PO's items for the selected size are options,
-    // even if they were theoretically removed from globalProducts (highly unlikely but robust).
-    // This is mainly to ensure the currently saved product ID in an item can be resolved to a label.
-    if (isEditing && initialData && initialData.items) {
-        initialData.items.forEach(poItem => {
-            if (poItem.productId && poItem.sizeId === poSizeIdForOptions && !filteredProducts.find(p => p.id === poItem.productId)) {
-                const productDetailFromGlobal = globalProducts.find(gp => gp.id === poItem.productId && gp.sizeId === poSizeIdForOptions);
-                if (productDetailFromGlobal) {
-                    filteredProducts.push(productDetailFromGlobal);
-                }
-            }
-        });
-    }
-    
-    return filteredProducts
+    return globalProducts
+        .filter(p => p.sizeId === poSizeIdForOptions)
         .map(p => ({ value: p.id, label: p.designName || "Unknown Product" }))
-        .filter((option, index, self) => index === self.findIndex(o => o.value === option.value)); // Ensure unique
-  }, [globalProducts, isEditing, initialData]);
+        .filter((option, index, self) => index === self.findIndex(o => o.value === option.value)); 
+  }, [globalProducts]);
 
 
   const handleProductChange = (itemIndex: number, newProductId: string) => {
@@ -205,20 +198,20 @@ export function PurchaseOrderForm({
     if (globalSizeDetails) {
       form.setValue(`items.${itemIndex}.weightPerBox`, globalSizeDetails.boxWeight);
     } else {
+      // If size details not found (e.g., placeholder size ID), set weight to 0 or handle as needed
       form.setValue(`items.${itemIndex}.weightPerBox`, 0);
     }
 
-    if (!isEditing && sourcePi && newProductId) { // Only prefill boxes if creating new from PI
+    if (!isEditing && sourcePi && newProductId) { 
         const piItem = sourcePi.items.find(piItm => piItm.productId === newProductId && piItm.sizeId === productSizeId);
         if (piItem) {
             form.setValue(`items.${itemIndex}.boxes`, piItem.boxes);
         } else {
             form.setValue(`items.${itemIndex}.boxes`, 1);
         }
-    } else if (!isEditing) { // Default for new PO not from PI
+    } else if (!isEditing) { 
         form.setValue(`items.${itemIndex}.boxes`, 1);
     }
-    // If editing, box count is already set from initialData and user can change it.
   };
 
   function onSubmit(values: PurchaseOrderFormValues) {
@@ -346,15 +339,14 @@ export function PurchaseOrderForm({
                       value={field.value}
                       onChange={(value) => {
                         field.onChange(value);
-                        // Reset items when size changes to ensure product compatibility
                         const currentItems = form.getValues("items");
-                        const newItems = currentItems.map(it => ({ ...it, productId: "" })); // Clear product selection
+                        const newItems = currentItems.map(it => ({ ...it, productId: "" })); 
                         replace(newItems.length > 0 ? newItems : [{ productId: "", designImage: "AS PER SAMPLE", weightPerBox: 0, boxes: 1, thickness: "8.5 MM to 9.0 MM" }]);
                       }}
                       placeholder="Select Size for PO..."
                       searchPlaceholder="Search sizes..."
-                      emptySearchMessage="No size found. Ensure sizes exist or PI had sized items."
-                      disabled={poSizeOptions.length === 0}
+                      emptySearchMessage={poSizeOptions.length === 0 && initialData?.sizeId ? `Original Size ID: ${initialData.sizeId} (Details Missing). Select another if needed.` : "No size found. Ensure sizes exist or PI had sized items."}
+                      disabled={poSizeOptions.length === 0 && !(isEditing && initialData && initialData.sizeId)} // Disable only if truly no options and not just a placeholder
                     />
                     <FormMessage />
                   </FormItem>
@@ -377,11 +369,12 @@ export function PurchaseOrderForm({
               <CardHeader>
                 <CardTitle className="flex items-center justify-between">
                   Product Items
-                  <Button type="button" size="sm" onClick={() => append({ productId: "", designImage: "AS PER SAMPLE", weightPerBox: 0, boxes: 1, thickness: "8.5 MM to 9.0 MM" })} disabled={!selectedPoSizeId}>
+                  <Button type="button" size="sm" onClick={() => append({ productId: "", designImage: "AS PER SAMPLE", weightPerBox: 0, boxes: 1, thickness: "8.5 MM to 9.0 MM" })} disabled={!selectedPoSizeId || (poSizeOptions.find(opt => opt.value === selectedPoSizeId)?.label.includes("(Details Missing)"))}>
                     <PlusCircle className="mr-2 h-4 w-4" /> Add Product
                   </Button>
                 </CardTitle>
                  {!selectedPoSizeId && <CardDescription className="text-destructive">Please select a Size for the PO above to add products.</CardDescription>}
+                 {selectedPoSizeId && poSizeOptions.find(opt => opt.value === selectedPoSizeId)?.label.includes("(Details Missing)") && <CardDescription className="text-destructive">Cannot add products for a size with missing details. Please select a valid size.</CardDescription>}
               </CardHeader>
               <CardContent className="space-y-4">
                 {fields.map((item, index) => {
@@ -412,7 +405,7 @@ export function PurchaseOrderForm({
                               placeholder="Select Product..."
                               searchPlaceholder="Search products..."
                               emptySearchMessage="No product found for this size."
-                              disabled={productOptions.length === 0 || !selectedPoSizeId}
+                              disabled={productOptions.length === 0 || !selectedPoSizeId || (poSizeOptions.find(opt => opt.value === selectedPoSizeId)?.label.includes("(Details Missing)"))}
                             />
                             <FormMessage />
                           </FormItem>
@@ -477,7 +470,7 @@ export function PurchaseOrderForm({
               name="termsAndConditions"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel className="flex items-center gap-2"><Edit3 className="h-4 w-4 text-muted-foreground" />Terms & Conditions</FormLabel>
+                  <FormLabel className="flex items-center gap-2"><Edit3 className="h-4 w-4 text-muted-foreground" />Terms & Conditions:</FormLabel>
                   <FormControl>
                     <Textarea
                       rows={5}
@@ -496,7 +489,7 @@ export function PurchaseOrderForm({
               </Button>
               {isEditing && onCancelEdit && (
                 <Button type="button" variant="outline" onClick={onCancelEdit} className="flex-grow font-headline text-lg py-3">
-                  Cancel Edit
+                   <XCircle className="mr-2 h-5 w-5" /> Cancel Edit
                 </Button>
               )}
             </div>
@@ -506,5 +499,4 @@ export function PurchaseOrderForm({
     </Card>
   );
 }
-
     
