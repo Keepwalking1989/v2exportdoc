@@ -9,12 +9,14 @@ import { ExportDocumentList } from "@/components/export-document-list";
 import type { ExportDocument } from "@/types/export-document";
 import type { PurchaseOrder } from "@/types/purchase-order";
 import type { Company } from "@/types/company"; // Exporters
+import type { Manufacturer } from "@/types/manufacturer"; // Import Manufacturer
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 
 const LOCAL_STORAGE_EXPORT_DOCS_KEY_V2 = "bizform_export_documents_v2";
 const LOCAL_STORAGE_PO_KEY = "bizform_purchase_orders";
 const LOCAL_STORAGE_COMPANIES_KEY = "bizform_companies"; // Exporters
+const LOCAL_STORAGE_MANUFACTURERS_KEY = "bizform_manufacturers"; // Manufacturers
 
 export default function ExportDocumentPage() {
   const { toast } = useToast();
@@ -25,6 +27,7 @@ export default function ExportDocumentPage() {
   const [exportDocuments, setExportDocuments] = useState<ExportDocument[]>([]);
   const [allPOs, setAllPOs] = useState<PurchaseOrder[]>([]);
   const [allExporters, setAllExporters] = useState<Company[]>([]);
+  const [allManufacturers, setAllManufacturers] = useState<Manufacturer[]>([]); // State for manufacturers
   
   const [isClient, setIsClient] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
@@ -41,6 +44,7 @@ export default function ExportDocumentPage() {
 
         setAllPOs(JSON.parse(localStorage.getItem(LOCAL_STORAGE_PO_KEY) || "[]").map((po:any)=>({...po, poDate: new Date(po.poDate)})));
         setAllExporters(JSON.parse(localStorage.getItem(LOCAL_STORAGE_COMPANIES_KEY) || "[]"));
+        setAllManufacturers(JSON.parse(localStorage.getItem(LOCAL_STORAGE_MANUFACTURERS_KEY) || "[]")); // Load manufacturers
 
       } catch (error) {
         console.error("Failed to parse data from localStorage", error);
@@ -48,6 +52,7 @@ export default function ExportDocumentPage() {
         setExportDocuments([]);
         setAllPOs([]); 
         setAllExporters([]);
+        setAllManufacturers([]); // Initialize manufacturers on error
       } finally {
         setIsLoading(false);
       }
@@ -66,7 +71,7 @@ export default function ExportDocumentPage() {
         setSourcePoIdForNewDoc(poIdFromUrl);
         setDocToEdit(null); 
         formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        toast({ title: "New Export Document", description: `Source Purchase Order ID: ${poIdFromUrl}. Select an exporter.`});
+        toast({ title: "New Export Document", description: `Source Purchase Order ID: ${poIdFromUrl}. Select an exporter and manufacturer.`});
       } else {
         toast({ variant: "destructive", title: "Error", description: `Source Purchase Order ID ${poIdFromUrl} not found.` });
         router.replace('/export-document', { scroll: false }); 
@@ -89,10 +94,12 @@ export default function ExportDocumentPage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams, isLoading, isClient, exportDocuments, allPOs, router]);
 
+  // The form will now pass { exporterId: string, manufacturerId?: string }
   const handleSaveExportDocument = (formData: ExportDocumentFormValues) => {
     let updatedDocs;
     const finalDocData: ExportDocument = {
         exporterId: formData.exporterId,
+        manufacturerId: formData.manufacturerId, // Save manufacturerId
         id: docToEdit ? docToEdit.id : Date.now().toString(),
         purchaseOrderId: docToEdit ? docToEdit.purchaseOrderId : sourcePoIdForNewDoc || undefined,
     };
@@ -162,7 +169,7 @@ export default function ExportDocumentPage() {
     );
   }
   
-  const canCreateOrEdit = allExporters.length > 0;
+  const canCreateOrEdit = allExporters.length > 0 && allManufacturers.length > 0; // Check for manufacturers too
   // Show form if creating new (with or without PO ID) or if editing
   const showForm = sourcePoIdForNewDoc || docToEdit || (!sourcePoIdForNewDoc && !docToEdit);
 
@@ -173,25 +180,30 @@ export default function ExportDocumentPage() {
         <div ref={formRef}>
           {showForm && canCreateOrEdit ? (
             <ExportDocumentForm
-              key={docToEdit?.id || sourcePoIdForNewDoc || 'new-export-doc-v2-simplified'}
+              key={docToEdit?.id || sourcePoIdForNewDoc || 'new-export-doc-v2-manufacturer'}
               initialData={docToEdit}
               sourcePoId={sourcePoIdForNewDoc}
               isEditing={!!docToEdit}
               onSave={handleSaveExportDocument}
               onCancelEdit={handleCancelEdit}
               allExporters={allExporters}
+              allManufacturers={allManufacturers} // Pass manufacturers to form
             />
-          ) : !canCreateOrEdit && showForm ? ( // Only show "cannot create" if the form was supposed to be shown but deps are missing
+          ) : !canCreateOrEdit && showForm ? (
              <Card className="w-full max-w-2xl mx-auto shadow-xl mb-8">
               <CardHeader>
                 <CardTitle className="font-headline text-2xl">Cannot Create or Edit Export Document</CardTitle>
               </CardHeader>
               <CardContent>
                 <p className="text-muted-foreground">
-                  To create or edit an Export Document, please ensure you have added at least one Exporter.
+                  To create or edit an Export Document, please ensure you have added at least one:
                 </p>
+                 <ul className="list-disc list-inside mt-2 text-muted-foreground">
+                  {allExporters.length === 0 && <li>Exporter (on the Exporter page)</li>}
+                  {allManufacturers.length === 0 && <li>Manufacturer (on the Manufacturer page)</li>}
+                </ul>
                  <p className="mt-4 text-sm text-muted-foreground">
-                  Please add Exporter information on the main (Exporter) page.
+                  Please add the required information on the respective pages.
                 </p>
               </CardContent>
             </Card>
@@ -201,6 +213,7 @@ export default function ExportDocumentPage() {
         <ExportDocumentList 
           documents={exportDocuments}
           allExporters={allExporters}
+          allManufacturers={allManufacturers} // Pass manufacturers to list
           onDeleteDocument={handleDeleteDocument}
           onEditDocument={handleEditDocument}
           onDownloadPdf={handleDownloadPdf}
@@ -213,3 +226,4 @@ export default function ExportDocumentPage() {
     </div>
   );
 }
+
