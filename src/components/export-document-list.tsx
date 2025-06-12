@@ -3,7 +3,7 @@
 
 import type { ExportDocument } from "@/types/export-document";
 import type { Company } from "@/types/company"; // For Exporter
-// No longer need PurchaseOrder type here if just displaying the ID from ExportDocument
+import type { Manufacturer } from "@/types/manufacturer"; // For Manufacturer
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -14,6 +14,7 @@ import { FileText, Edit, Trash2, Download } from "lucide-react";
 interface ExportDocumentListProps {
   documents: ExportDocument[];
   allExporters: Company[];
+  allManufacturers: Manufacturer[]; // Added manufacturer prop
   onEditDocument: (docId: string) => void;
   onDeleteDocument: (docId: string) => void;
   onDownloadPdf: (docId: string) => void;
@@ -22,6 +23,7 @@ interface ExportDocumentListProps {
 export function ExportDocumentList({
   documents,
   allExporters,
+  allManufacturers, // Destructure manufacturers
   onEditDocument,
   onDeleteDocument,
   onDownloadPdf,
@@ -62,6 +64,7 @@ export function ExportDocumentList({
               <TableRow>
                 <TableHead className="font-headline">Doc ID</TableHead>
                 <TableHead className="font-headline">Exporter</TableHead>
+                <TableHead className="font-headline">Manufacturer</TableHead> {/* New Column */}
                 <TableHead className="font-headline">PO ID</TableHead>
                 <TableHead className="font-headline text-right">Actions</TableHead>
               </TableRow>
@@ -69,10 +72,12 @@ export function ExportDocumentList({
             <TableBody>
               {documents.map((doc) => {
                 const exporterName = allExporters.find(e => e.id === doc.exporterId)?.companyName || "N/A";
+                const manufacturerName = doc.manufacturerId ? (allManufacturers.find(m => m.id === doc.manufacturerId)?.companyName || "N/A") : "N/A";
                 return (
                   <TableRow key={doc.id}>
                     <TableCell className="font-medium">ED-{doc.id.slice(-6)}</TableCell>
                     <TableCell>{exporterName}</TableCell>
+                    <TableCell>{manufacturerName}</TableCell> {/* Display Manufacturer */}
                     <TableCell>{doc.purchaseOrderId ? `PO-${doc.purchaseOrderId.slice(-6)}` : "N/A"}</TableCell>
                     <TableCell className="text-right space-x-1">
                       <Button variant="ghost" size="icon" onClick={() => onEditDocument(doc.id)} className="hover:text-primary" title="Edit">
