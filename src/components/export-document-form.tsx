@@ -16,30 +16,32 @@ import {
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Combobox, type ComboboxOption } from "@/components/ui/combobox";
 import { useToast } from "@/hooks/use-toast";
-import { FileSignature, Briefcase, Save, XCircle } from "lucide-react";
+import { FileSignature, Briefcase, Factory, Save, XCircle } from "lucide-react"; // Added Factory icon
 import React, { useEffect, useMemo } from "react";
 import type { Company } from "@/types/company"; // For Exporter
+import type { Manufacturer } from "@/types/manufacturer"; // For Manufacturer
 import type { ExportDocument } from "@/types/export-document";
 
 const formSchema = z.object({
   exporterId: z.string().min(1, "Exporter is required"),
+  manufacturerId: z.string().optional(), // Manufacturer is optional for now
 });
 
 export type ExportDocumentFormValues = z.infer<typeof formSchema>;
 
 interface ExportDocumentFormProps {
-  // initialData will contain exporterId and purchaseOrderId if editing or creating from PO
-  initialData?: Pick<ExportDocument, 'exporterId' | 'purchaseOrderId'> | null;
+  initialData?: Pick<ExportDocument, 'exporterId' | 'purchaseOrderId' | 'manufacturerId'> | null;
   isEditing: boolean;
-  onSave: (data: { exporterId: string }) => void; // Page will add purchaseOrderId
+  onSave: (data: ExportDocumentFormValues) => void;
   onCancelEdit: () => void;
   allExporters: Company[];
-  // sourcePoId is not directly used by the form fields but indicates context if creating from PO
-  sourcePoId?: string | null; 
+  allManufacturers: Manufacturer[]; // Added prop for manufacturers
+  sourcePoId?: string | null;
 }
 
 const getDefaultFormValues = (): ExportDocumentFormValues => ({
   exporterId: "",
+  manufacturerId: "",
 });
 
 export function ExportDocumentForm({
@@ -48,7 +50,8 @@ export function ExportDocumentForm({
   onSave,
   onCancelEdit,
   allExporters,
-  sourcePoId, 
+  allManufacturers, // Destructure allManufacturers
+  sourcePoId,
 }: ExportDocumentFormProps) {
   const { toast } = useToast();
   const form = useForm<ExportDocumentFormValues>({
@@ -60,14 +63,12 @@ export function ExportDocumentForm({
     if (isEditing && initialData) {
       form.reset({
         exporterId: initialData.exporterId || "",
+        manufacturerId: initialData.manufacturerId || "",
       });
     } else if (!isEditing) {
-      // If creating new (even from PO), we might want to auto-select an exporter if only one exists,
-      // or if the PO has an exporter that matches one in allExporters.
-      // For now, just reset to default. Pre-selection based on PO can be added later.
       form.reset(getDefaultFormValues());
     }
-  }, [isEditing, initialData, form, sourcePoId, allExporters]);
+  }, [isEditing, initialData, form]);
 
 
   const exporterOptions: ComboboxOption[] = useMemo(() =>
@@ -75,22 +76,27 @@ export function ExportDocumentForm({
     [allExporters]
   );
 
+  const manufacturerOptions: ComboboxOption[] = useMemo(() =>
+    allManufacturers.map(m => ({ value: m.id, label: m.companyName })),
+    [allManufacturers]
+  );
+
   function onSubmit(values: ExportDocumentFormValues) {
-    onSave(values); // The page component will handle adding the purchaseOrderId
+    onSave(values);
     toast({
-      title: isEditing ? "Document Updated" : "Document Field Saved",
-      description: `Exporter has been ${isEditing ? 'updated' : 'saved'}.`,
+      title: isEditing ? "Document Updated" : "Document Saved",
+      description: `Document has been successfully ${isEditing ? 'updated' : 'saved'}.`,
     });
     if (!isEditing) {
       form.reset(getDefaultFormValues());
     }
   }
 
-  const formTitle = isEditing ? "Edit Export Document" : 
+  const formTitle = isEditing ? "Edit Export Document" :
                     sourcePoId ? "New Export Document (from PO)" : "New Export Document";
-  const formDescription = isEditing ? "Modify the exporter for this document." :
-                          sourcePoId ? `Select an exporter. This document will be linked to Purchase Order ID: ${sourcePoId}.` :
-                          "Select an exporter for the new document.";
+  const formDescription = isEditing ? "Modify the details for this document." :
+                          sourcePoId ? `Select exporter and manufacturer. This document will be linked to PO ID: ${sourcePoId.slice(-6)}.` :
+                          "Select exporter and manufacturer for the new document.";
 
   return (
     <Card className="w-full max-w-xl mx-auto shadow-xl mb-8">
@@ -119,7 +125,7 @@ export function ExportDocumentForm({
                     onChange={field.onChange}
                     placeholder="Select Exporter..."
                     searchPlaceholder="Search Exporters..."
-                    emptySearchMessage="No exporter found. Please add exporters on the main page."
+                    emptySearchMessage="No exporter found. Add on Exporter page."
                     disabled={exporterOptions.length === 0}
                   />
                   <FormMessage />
@@ -127,23 +133,46 @@ export function ExportDocumentForm({
               )}
             />
 
+            <FormField
+              control={form.control}
+              name="manufacturerId"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="flex items-center gap-2">
+                    <Factory className="h-4 w-4 text-muted-foreground" />
+                    Manufacturer (Optional)
+                  </FormLabel>
+                  <Combobox
+                    options={manufacturerOptions}
+                    value={field.value}
+                    onChange={field.onChange}
+                    placeholder="Select Manufacturer..."
+                    searchPlaceholder="Search Manufacturers..."
+                    emptySearchMessage="No manufacturer found. Add on Manufacturer page."
+                    disabled={manufacturerOptions.length === 0}
+                  />
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
             <div className="flex justify-between items-center mt-8">
-              <Button 
-                type="button" 
-                variant="outline" 
-                onClick={onCancelEdit} 
-                className="font-headline" 
-                disabled={!isEditing}
+              <Button
+                type="button"
+                variant="outline"
+                onClick={onCancelEdit}
+                className="font-headline"
+                disabled={!isEditing && !sourcePoId} // Disable if new and not from PO
               >
-                <XCircle className="mr-2 h-5 w-5" /> Cancel Edit
+                <XCircle className="mr-2 h-5 w-5" /> Cancel
               </Button>
-              <Button 
-                type="submit" 
+              <Button
+                type="submit"
                 className="bg-accent hover:bg-accent/90 text-accent-foreground font-headline"
-                disabled={exporterOptions.length === 0}
+                disabled={exporterOptions.length === 0 && manufacturerOptions.length === 0}
               >
                 <Save className="mr-2 h-5 w-5" />
-                {isEditing ? "Update Exporter" : "Save Exporter"}
+                {isEditing ? "Update Document" : "Save Document"}
               </Button>
             </div>
           </form>
