@@ -68,6 +68,7 @@ export function ExportDocumentList({
                 <TableHead className="font-headline">Date</TableHead>
                 <TableHead className="font-headline">Exporter</TableHead>
                 <TableHead className="font-headline">Manufacturer</TableHead>
+                <TableHead className="font-headline">Final Destination</TableHead>
                 <TableHead className="font-headline">PO ID</TableHead>
                 <TableHead className="font-headline text-right">Actions</TableHead>
               </TableRow>
@@ -83,6 +84,7 @@ export function ExportDocumentList({
                     <TableCell>{format(new Date(doc.exportInvoiceDate), "dd/MM/yyyy")}</TableCell>
                     <TableCell>{exporterName}</TableCell>
                     <TableCell>{manufacturerName}</TableCell>
+                    <TableCell>{doc.countryOfFinalDestination || 'N/A'}</TableCell>
                     <TableCell>{doc.purchaseOrderId ? `PO-${doc.purchaseOrderId.slice(-6)}` : "N/A"}</TableCell>
                     <TableCell className="text-right space-x-1">
                       <Button variant="ghost" size="icon" onClick={() => onEditDocument(doc.id)} className="hover:text-primary" title="Edit">

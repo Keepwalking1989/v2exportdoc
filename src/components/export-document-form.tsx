@@ -16,7 +16,7 @@ import {
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Combobox, type ComboboxOption } from "@/components/ui/combobox";
 import { useToast } from "@/hooks/use-toast";
-import { FileSignature, Briefcase, Factory, Save, XCircle, CalendarIcon, Hash } from "lucide-react";
+import { FileSignature, Briefcase, Factory, Save, XCircle, CalendarIcon, Hash, Globe } from "lucide-react";
 import React, { useEffect, useMemo } from "react";
 import type { Company } from "@/types/company"; // For Exporter
 import type { Manufacturer } from "@/types/manufacturer"; // For Manufacturer
@@ -32,6 +32,7 @@ const formSchema = z.object({
   manufacturerId: z.string().optional(),
   exportInvoiceNumber: z.string().min(1, "Export Invoice Number is required."),
   exportInvoiceDate: z.date({ required_error: "Export Invoice Date is required." }),
+  countryOfFinalDestination: z.string().min(1, "Country of Final Destination is required."),
 });
 
 export type ExportDocumentFormValues = z.infer<typeof formSchema>;
@@ -51,6 +52,7 @@ const getDefaultFormValues = (): ExportDocumentFormValues => ({
   manufacturerId: "",
   exportInvoiceNumber: "",
   exportInvoiceDate: new Date(),
+  countryOfFinalDestination: "",
 });
 
 export function ExportDocumentForm({
@@ -75,6 +77,7 @@ export function ExportDocumentForm({
         manufacturerId: initialData.manufacturerId || "",
         exportInvoiceNumber: initialData.exportInvoiceNumber || "",
         exportInvoiceDate: initialData.exportInvoiceDate ? new Date(initialData.exportInvoiceDate) : new Date(),
+        countryOfFinalDestination: initialData.countryOfFinalDestination || "",
       });
     } else {
       form.reset(getDefaultFormValues());
@@ -221,6 +224,20 @@ export function ExportDocumentForm({
                   <FormMessage />
                 </FormItem>
               )}
+            />
+
+            <FormField
+                control={form.control}
+                name="countryOfFinalDestination"
+                render={({ field }) => (
+                    <FormItem>
+                    <FormLabel className="flex items-center gap-2"><Globe className="h-4 w-4 text-muted-foreground" />Country of Final Destination *</FormLabel>
+                    <FormControl>
+                        <Input placeholder="e.g. United States" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                    </FormItem>
+                )}
             />
 
             <div className="flex justify-between items-center mt-8">
