@@ -16,32 +16,41 @@ import {
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Combobox, type ComboboxOption } from "@/components/ui/combobox";
 import { useToast } from "@/hooks/use-toast";
-import { FileSignature, Briefcase, Factory, Save, XCircle } from "lucide-react"; // Added Factory icon
+import { FileSignature, Briefcase, Factory, Save, XCircle, CalendarIcon, Hash } from "lucide-react";
 import React, { useEffect, useMemo } from "react";
 import type { Company } from "@/types/company"; // For Exporter
 import type { Manufacturer } from "@/types/manufacturer"; // For Manufacturer
 import type { ExportDocument } from "@/types/export-document";
+import { Input } from "@/components/ui/input";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
+import { cn } from "@/lib/utils";
+import { format } from "date-fns";
 
 const formSchema = z.object({
   exporterId: z.string().min(1, "Exporter is required"),
-  manufacturerId: z.string().optional(), // Manufacturer is optional for now
+  manufacturerId: z.string().optional(),
+  exportInvoiceNumber: z.string().min(1, "Export Invoice Number is required."),
+  exportInvoiceDate: z.date({ required_error: "Export Invoice Date is required." }),
 });
 
 export type ExportDocumentFormValues = z.infer<typeof formSchema>;
 
 interface ExportDocumentFormProps {
-  initialData?: Pick<ExportDocument, 'exporterId' | 'purchaseOrderId' | 'manufacturerId'> | null;
+  initialData?: ExportDocument | null;
   isEditing: boolean;
   onSave: (data: ExportDocumentFormValues) => void;
   onCancelEdit: () => void;
   allExporters: Company[];
-  allManufacturers: Manufacturer[]; // Added prop for manufacturers
+  allManufacturers: Manufacturer[];
   sourcePoId?: string | null;
 }
 
 const getDefaultFormValues = (): ExportDocumentFormValues => ({
   exporterId: "",
   manufacturerId: "",
+  exportInvoiceNumber: "",
+  exportInvoiceDate: new Date(),
 });
 
 export function ExportDocumentForm({
@@ -50,7 +59,7 @@ export function ExportDocumentForm({
   onSave,
   onCancelEdit,
   allExporters,
-  allManufacturers, // Destructure allManufacturers
+  allManufacturers,
   sourcePoId,
 }: ExportDocumentFormProps) {
   const { toast } = useToast();
@@ -64,8 +73,10 @@ export function ExportDocumentForm({
       form.reset({
         exporterId: initialData.exporterId || "",
         manufacturerId: initialData.manufacturerId || "",
+        exportInvoiceNumber: initialData.exportInvoiceNumber || "",
+        exportInvoiceDate: initialData.exportInvoiceDate ? new Date(initialData.exportInvoiceDate) : new Date(),
       });
-    } else if (!isEditing) {
+    } else {
       form.reset(getDefaultFormValues());
     }
   }, [isEditing, initialData, form]);
@@ -95,8 +106,8 @@ export function ExportDocumentForm({
   const formTitle = isEditing ? "Edit Export Document" :
                     sourcePoId ? "New Export Document (from PO)" : "New Export Document";
   const formDescription = isEditing ? "Modify the details for this document." :
-                          sourcePoId ? `Select exporter and manufacturer. This document will be linked to PO ID: ${sourcePoId.slice(-6)}.` :
-                          "Select exporter and manufacturer for the new document.";
+                          sourcePoId ? `This document will be linked to PO ID: ${sourcePoId.slice(-6)}.` :
+                          "Fill in the details for the new document.";
 
   return (
     <Card className="w-full max-w-xl mx-auto shadow-xl mb-8">
@@ -110,6 +121,62 @@ export function ExportDocumentForm({
       <CardContent>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <FormField
+                control={form.control}
+                name="exportInvoiceNumber"
+                render={({ field }) => (
+                    <FormItem>
+                    <FormLabel className="flex items-center gap-2"><Hash className="h-4 w-4 text-muted-foreground" />Export Invoice No.</FormLabel>
+                    <FormControl>
+                        <Input placeholder="e.g. EXP-2024-001" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                    </FormItem>
+                )}
+                />
+                <FormField
+                control={form.control}
+                name="exportInvoiceDate"
+                render={({ field }) => (
+                    <FormItem className="flex flex-col">
+                    <FormLabel className="flex items-center gap-2"><CalendarIcon className="h-4 w-4 text-muted-foreground" />Export Invoice Date</FormLabel>
+                    <Popover>
+                        <PopoverTrigger asChild>
+                        <FormControl>
+                            <Button
+                            variant={"outline"}
+                            className={cn(
+                                "w-full pl-3 text-left font-normal",
+                                !field.value && "text-muted-foreground"
+                            )}
+                            >
+                            {field.value ? (
+                                format(field.value, "PPP")
+                            ) : (
+                                <span>Pick a date</span>
+                            )}
+                            <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                            </Button>
+                        </FormControl>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0" align="start">
+                        <Calendar
+                            mode="single"
+                            selected={field.value}
+                            onSelect={field.onChange}
+                            disabled={(date) =>
+                            date > new Date() || date < new Date("2000-01-01")
+                            }
+                            initialFocus
+                        />
+                        </PopoverContent>
+                    </Popover>
+                    <FormMessage />
+                    </FormItem>
+                )}
+                />
+            </div>
             <FormField
               control={form.control}
               name="exporterId"

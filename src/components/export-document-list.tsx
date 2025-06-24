@@ -10,11 +10,12 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Button } from "@/components/ui/button";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { FileText, Edit, Trash2, Download } from "lucide-react";
+import { format } from "date-fns";
 
 interface ExportDocumentListProps {
   documents: ExportDocument[];
   allExporters: Company[];
-  allManufacturers: Manufacturer[]; // Added manufacturer prop
+  allManufacturers: Manufacturer[];
   onEditDocument: (docId: string) => void;
   onDeleteDocument: (docId: string) => void;
   onDownloadPdf: (docId: string) => void;
@@ -23,7 +24,7 @@ interface ExportDocumentListProps {
 export function ExportDocumentList({
   documents,
   allExporters,
-  allManufacturers, // Destructure manufacturers
+  allManufacturers,
   onEditDocument,
   onDeleteDocument,
   onDownloadPdf,
@@ -63,8 +64,10 @@ export function ExportDocumentList({
             <TableHeader>
               <TableRow>
                 <TableHead className="font-headline">Doc ID</TableHead>
+                <TableHead className="font-headline">Export Invoice #</TableHead>
+                <TableHead className="font-headline">Date</TableHead>
                 <TableHead className="font-headline">Exporter</TableHead>
-                <TableHead className="font-headline">Manufacturer</TableHead> {/* New Column */}
+                <TableHead className="font-headline">Manufacturer</TableHead>
                 <TableHead className="font-headline">PO ID</TableHead>
                 <TableHead className="font-headline text-right">Actions</TableHead>
               </TableRow>
@@ -76,8 +79,10 @@ export function ExportDocumentList({
                 return (
                   <TableRow key={doc.id}>
                     <TableCell className="font-medium">ED-{doc.id.slice(-6)}</TableCell>
+                    <TableCell>{doc.exportInvoiceNumber}</TableCell>
+                    <TableCell>{format(new Date(doc.exportInvoiceDate), "dd/MM/yyyy")}</TableCell>
                     <TableCell>{exporterName}</TableCell>
-                    <TableCell>{manufacturerName}</TableCell> {/* Display Manufacturer */}
+                    <TableCell>{manufacturerName}</TableCell>
                     <TableCell>{doc.purchaseOrderId ? `PO-${doc.purchaseOrderId.slice(-6)}` : "N/A"}</TableCell>
                     <TableCell className="text-right space-x-1">
                       <Button variant="ghost" size="icon" onClick={() => onEditDocument(doc.id)} className="hover:text-primary" title="Edit">

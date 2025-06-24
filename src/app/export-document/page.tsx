@@ -39,7 +39,10 @@ export default function ExportDocumentPage() {
     if (typeof window !== "undefined") {
       try {
         const storedDocs = localStorage.getItem(LOCAL_STORAGE_EXPORT_DOCS_KEY_V2);
-        const currentDocs: ExportDocument[] = storedDocs ? JSON.parse(storedDocs) : [];
+        const currentDocs: ExportDocument[] = storedDocs ? JSON.parse(storedDocs).map((doc: any) => ({
+            ...doc,
+            exportInvoiceDate: doc.exportInvoiceDate ? new Date(doc.exportInvoiceDate) : new Date() // Parse date
+        })) : [];
         setExportDocuments(currentDocs);
 
         setAllPOs(JSON.parse(localStorage.getItem(LOCAL_STORAGE_PO_KEY) || "[]").map((po:any)=>({...po, poDate: new Date(po.poDate)})));
@@ -94,12 +97,10 @@ export default function ExportDocumentPage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams, isLoading, isClient, exportDocuments, allPOs, router]);
 
-  // The form will now pass { exporterId: string, manufacturerId?: string }
   const handleSaveExportDocument = (formData: ExportDocumentFormValues) => {
     let updatedDocs;
     const finalDocData: ExportDocument = {
-        exporterId: formData.exporterId,
-        manufacturerId: formData.manufacturerId, // Save manufacturerId
+        ...formData,
         id: docToEdit ? docToEdit.id : Date.now().toString(),
         purchaseOrderId: docToEdit ? docToEdit.purchaseOrderId : sourcePoIdForNewDoc || undefined,
     };
@@ -125,7 +126,7 @@ export default function ExportDocumentPage() {
   };
   
   const handleEditDocument = (docIdToEdit: string) => {
-    router.push(`/export-document?editDocId=${docIdToEdit}`, { scroll: false });
+    router.push(`/export-document?editDocId=${docIdToEdit}`);
   };
 
   const handleDeleteDocument = (docIdToDelete: string) => {
@@ -226,4 +227,3 @@ export default function ExportDocumentPage() {
     </div>
   );
 }
-
