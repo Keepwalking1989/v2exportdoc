@@ -6,5 +6,10 @@ export interface ExportDocument {
   manufacturerId?: string; // ID of the selected Manufacturer
   exportInvoiceNumber: string; // The user-facing invoice number
   exportInvoiceDate: Date; // The date of the export invoice
-  countryOfFinalDestination?: string; // Country of Final Destination
+  countryOfFinalDestination: string; // Country of Final Destination
+  vesselFlightNo?: string;
+  portOfLoading?: string;
+  portOfDischarge?: string;
+  finalDestination?: string;
+  termsOfDeliveryAndPayment?: string;
 }

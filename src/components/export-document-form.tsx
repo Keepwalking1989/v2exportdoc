@@ -16,7 +16,7 @@ import {
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Combobox, type ComboboxOption } from "@/components/ui/combobox";
 import { useToast } from "@/hooks/use-toast";
-import { FileSignature, Briefcase, Factory, Save, XCircle, CalendarIcon, Hash, Globe } from "lucide-react";
+import { FileSignature, Briefcase, Factory, Save, XCircle, CalendarIcon, Hash, Globe, Ship, Anchor, FileText } from "lucide-react";
 import React, { useEffect, useMemo } from "react";
 import type { Company } from "@/types/company"; // For Exporter
 import type { Manufacturer } from "@/types/manufacturer"; // For Manufacturer
@@ -26,6 +26,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Calendar } from "@/components/ui/calendar";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
+import { Textarea } from "@/components/ui/textarea";
 
 const formSchema = z.object({
   exporterId: z.string().min(1, "Exporter is required"),
@@ -33,6 +34,11 @@ const formSchema = z.object({
   exportInvoiceNumber: z.string().min(1, "Export Invoice Number is required."),
   exportInvoiceDate: z.date({ required_error: "Export Invoice Date is required." }),
   countryOfFinalDestination: z.string().min(1, "Country of Final Destination is required."),
+  vesselFlightNo: z.string().optional(),
+  portOfLoading: z.string().optional(),
+  portOfDischarge: z.string().optional(),
+  finalDestination: z.string().optional(),
+  termsOfDeliveryAndPayment: z.string().optional(),
 });
 
 export type ExportDocumentFormValues = z.infer<typeof formSchema>;
@@ -47,12 +53,19 @@ interface ExportDocumentFormProps {
   sourcePoId?: string | null;
 }
 
+const defaultTerms = "30 % advance Remaining Against BL";
+
 const getDefaultFormValues = (): ExportDocumentFormValues => ({
   exporterId: "",
   manufacturerId: "",
   exportInvoiceNumber: "",
   exportInvoiceDate: new Date(),
   countryOfFinalDestination: "",
+  vesselFlightNo: "",
+  portOfLoading: "",
+  portOfDischarge: "",
+  finalDestination: "",
+  termsOfDeliveryAndPayment: defaultTerms,
 });
 
 export function ExportDocumentForm({
@@ -78,6 +91,11 @@ export function ExportDocumentForm({
         exportInvoiceNumber: initialData.exportInvoiceNumber || "",
         exportInvoiceDate: initialData.exportInvoiceDate ? new Date(initialData.exportInvoiceDate) : new Date(),
         countryOfFinalDestination: initialData.countryOfFinalDestination || "",
+        vesselFlightNo: initialData.vesselFlightNo || "",
+        portOfLoading: initialData.portOfLoading || "",
+        portOfDischarge: initialData.portOfDischarge || "",
+        finalDestination: initialData.finalDestination || "",
+        termsOfDeliveryAndPayment: initialData.termsOfDeliveryAndPayment || defaultTerms,
       });
     } else {
       form.reset(getDefaultFormValues());
@@ -113,7 +131,7 @@ export function ExportDocumentForm({
                           "Fill in the details for the new document.";
 
   return (
-    <Card className="w-full max-w-xl mx-auto shadow-xl mb-8">
+    <Card className="w-full max-w-2xl mx-auto shadow-xl mb-8">
       <CardHeader>
         <CardTitle className="font-headline text-2xl flex items-center gap-2">
           <FileSignature className="h-6 w-6 text-primary" />
@@ -234,6 +252,78 @@ export function ExportDocumentForm({
                     <FormLabel className="flex items-center gap-2"><Globe className="h-4 w-4 text-muted-foreground" />Country of Final Destination *</FormLabel>
                     <FormControl>
                         <Input placeholder="e.g. United States" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                    </FormItem>
+                )}
+            />
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <FormField
+                    control={form.control}
+                    name="vesselFlightNo"
+                    render={({ field }) => (
+                        <FormItem>
+                        <FormLabel className="flex items-center gap-2"><Ship className="h-4 w-4 text-muted-foreground" />Vessel / Flight No.</FormLabel>
+                        <FormControl>
+                            <Input placeholder="e.g. MAERSK-123" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                        </FormItem>
+                    )}
+                />
+                 <FormField
+                    control={form.control}
+                    name="finalDestination"
+                    render={({ field }) => (
+                        <FormItem>
+                        <FormLabel className="flex items-center gap-2"><Anchor className="h-4 w-4 text-muted-foreground" />Final Destination (Place)</FormLabel>
+                        <FormControl>
+                            <Input placeholder="e.g. New York, USA" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                        </FormItem>
+                    )}
+                />
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <FormField
+                    control={form.control}
+                    name="portOfLoading"
+                    render={({ field }) => (
+                        <FormItem>
+                        <FormLabel className="flex items-center gap-2"><Anchor className="h-4 w-4 text-muted-foreground" />Port Of Loading</FormLabel>
+                        <FormControl>
+                            <Input placeholder="e.g. Mundra, India" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                        </FormItem>
+                    )}
+                />
+                <FormField
+                    control={form.control}
+                    name="portOfDischarge"
+                    render={({ field }) => (
+                        <FormItem>
+                        <FormLabel className="flex items-center gap-2"><Anchor className="h-4 w-4 text-muted-foreground" />Port Of Discharge</FormLabel>
+                        <FormControl>
+                            <Input placeholder="e.g. Newark, USA" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                        </FormItem>
+                    )}
+                />
+            </div>
+            
+            <FormField
+                control={form.control}
+                name="termsOfDeliveryAndPayment"
+                render={({ field }) => (
+                    <FormItem>
+                    <FormLabel className="flex items-center gap-2"><FileText className="h-4 w-4 text-muted-foreground" />Terms Of Delivery & Payments</FormLabel>
+                    <FormControl>
+                        <Textarea placeholder="Terms..." {...field} />
                     </FormControl>
                     <FormMessage />
                     </FormItem>
