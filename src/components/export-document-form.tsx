@@ -16,10 +16,11 @@ import {
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Combobox, type ComboboxOption } from "@/components/ui/combobox";
 import { useToast } from "@/hooks/use-toast";
-import { FileSignature, Briefcase, Factory, Save, XCircle, CalendarIcon, Hash, Globe, Ship, Anchor, FileText } from "lucide-react";
+import { FileSignature, Briefcase, Factory, Save, XCircle, CalendarIcon, Hash, Globe, Ship, Anchor, FileText, Truck } from "lucide-react";
 import React, { useEffect, useMemo } from "react";
 import type { Company } from "@/types/company"; // For Exporter
 import type { Manufacturer } from "@/types/manufacturer"; // For Manufacturer
+import type { Transporter } from "@/types/transporter";
 import type { ExportDocument } from "@/types/export-document";
 import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -31,6 +32,7 @@ import { Textarea } from "@/components/ui/textarea";
 const formSchema = z.object({
   exporterId: z.string().min(1, "Exporter is required"),
   manufacturerId: z.string().optional(),
+  transporterId: z.string().optional(),
   exportInvoiceNumber: z.string().min(1, "Export Invoice Number is required."),
   exportInvoiceDate: z.date({ required_error: "Export Invoice Date is required." }),
   countryOfFinalDestination: z.string().min(1, "Country of Final Destination is required."),
@@ -50,6 +52,7 @@ interface ExportDocumentFormProps {
   onCancelEdit: () => void;
   allExporters: Company[];
   allManufacturers: Manufacturer[];
+  allTransporters: Transporter[];
   sourcePoId?: string | null;
 }
 
@@ -58,6 +61,7 @@ const defaultTerms = "30 % advance Remaining Against BL";
 const getDefaultFormValues = (): ExportDocumentFormValues => ({
   exporterId: "",
   manufacturerId: "",
+  transporterId: "",
   exportInvoiceNumber: "",
   exportInvoiceDate: new Date(),
   countryOfFinalDestination: "",
@@ -75,6 +79,7 @@ export function ExportDocumentForm({
   onCancelEdit,
   allExporters,
   allManufacturers,
+  allTransporters,
   sourcePoId,
 }: ExportDocumentFormProps) {
   const { toast } = useToast();
@@ -88,6 +93,7 @@ export function ExportDocumentForm({
       form.reset({
         exporterId: initialData.exporterId || "",
         manufacturerId: initialData.manufacturerId || "",
+        transporterId: initialData.transporterId || "",
         exportInvoiceNumber: initialData.exportInvoiceNumber || "",
         exportInvoiceDate: initialData.exportInvoiceDate ? new Date(initialData.exportInvoiceDate) : new Date(),
         countryOfFinalDestination: initialData.countryOfFinalDestination || "",
@@ -111,6 +117,11 @@ export function ExportDocumentForm({
   const manufacturerOptions: ComboboxOption[] = useMemo(() =>
     allManufacturers.map(m => ({ value: m.id, label: m.companyName })),
     [allManufacturers]
+  );
+  
+  const transporterOptions: ComboboxOption[] = useMemo(() =>
+    allTransporters.map(t => ({ value: t.id, label: t.companyName })),
+    [allTransporters]
   );
 
   function onSubmit(values: ExportDocumentFormValues) {
@@ -245,6 +256,29 @@ export function ExportDocumentForm({
             />
 
             <FormField
+              control={form.control}
+              name="transporterId"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="flex items-center gap-2">
+                    <Truck className="h-4 w-4 text-muted-foreground" />
+                    Transporter (Optional)
+                  </FormLabel>
+                  <Combobox
+                    options={transporterOptions}
+                    value={field.value}
+                    onChange={field.onChange}
+                    placeholder="Select Transporter..."
+                    searchPlaceholder="Search Transporters..."
+                    emptySearchMessage="No transporter found. Add on Transporter page."
+                    disabled={transporterOptions.length === 0}
+                  />
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
                 control={form.control}
                 name="countryOfFinalDestination"
                 render={({ field }) => (
@@ -343,7 +377,7 @@ export function ExportDocumentForm({
               <Button
                 type="submit"
                 className="bg-accent hover:bg-accent/90 text-accent-foreground font-headline"
-                disabled={exporterOptions.length === 0 && manufacturerOptions.length === 0}
+                disabled={exporterOptions.length === 0}
               >
                 <Save className="mr-2 h-5 w-5" />
                 {isEditing ? "Update Document" : "Save Document"}

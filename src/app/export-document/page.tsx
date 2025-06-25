@@ -10,6 +10,7 @@ import type { ExportDocument } from "@/types/export-document";
 import type { PurchaseOrder } from "@/types/purchase-order";
 import type { Company } from "@/types/company"; // Exporters
 import type { Manufacturer } from "@/types/manufacturer"; // Import Manufacturer
+import type { Transporter } from "@/types/transporter"; // Import Transporter
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 
@@ -17,6 +18,7 @@ const LOCAL_STORAGE_EXPORT_DOCS_KEY_V2 = "bizform_export_documents_v2";
 const LOCAL_STORAGE_PO_KEY = "bizform_purchase_orders";
 const LOCAL_STORAGE_COMPANIES_KEY = "bizform_companies"; // Exporters
 const LOCAL_STORAGE_MANUFACTURERS_KEY = "bizform_manufacturers"; // Manufacturers
+const LOCAL_STORAGE_TRANSPORTERS_KEY = "bizform_transporters"; // Transporters
 
 export default function ExportDocumentPage() {
   const { toast } = useToast();
@@ -28,6 +30,7 @@ export default function ExportDocumentPage() {
   const [allPOs, setAllPOs] = useState<PurchaseOrder[]>([]);
   const [allExporters, setAllExporters] = useState<Company[]>([]);
   const [allManufacturers, setAllManufacturers] = useState<Manufacturer[]>([]); // State for manufacturers
+  const [allTransporters, setAllTransporters] = useState<Transporter[]>([]); // State for transporters
   
   const [isClient, setIsClient] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
@@ -48,6 +51,7 @@ export default function ExportDocumentPage() {
         setAllPOs(JSON.parse(localStorage.getItem(LOCAL_STORAGE_PO_KEY) || "[]").map((po:any)=>({...po, poDate: new Date(po.poDate)})));
         setAllExporters(JSON.parse(localStorage.getItem(LOCAL_STORAGE_COMPANIES_KEY) || "[]"));
         setAllManufacturers(JSON.parse(localStorage.getItem(LOCAL_STORAGE_MANUFACTURERS_KEY) || "[]")); // Load manufacturers
+        setAllTransporters(JSON.parse(localStorage.getItem(LOCAL_STORAGE_TRANSPORTERS_KEY) || "[]")); // Load transporters
 
       } catch (error) {
         console.error("Failed to parse data from localStorage", error);
@@ -56,6 +60,7 @@ export default function ExportDocumentPage() {
         setAllPOs([]); 
         setAllExporters([]);
         setAllManufacturers([]); // Initialize manufacturers on error
+        setAllTransporters([]); // Initialize transporters on error
       } finally {
         setIsLoading(false);
       }
@@ -170,8 +175,7 @@ export default function ExportDocumentPage() {
     );
   }
   
-  const canCreateOrEdit = allExporters.length > 0 && allManufacturers.length > 0; // Check for manufacturers too
-  // Show form if creating new (with or without PO ID) or if editing
+  const canCreateOrEdit = allExporters.length > 0 && allManufacturers.length > 0;
   const showForm = sourcePoIdForNewDoc || docToEdit || (!sourcePoIdForNewDoc && !docToEdit);
 
   return (
@@ -188,7 +192,8 @@ export default function ExportDocumentPage() {
               onSave={handleSaveExportDocument}
               onCancelEdit={handleCancelEdit}
               allExporters={allExporters}
-              allManufacturers={allManufacturers} // Pass manufacturers to form
+              allManufacturers={allManufacturers}
+              allTransporters={allTransporters}
             />
           ) : !canCreateOrEdit && showForm ? (
              <Card className="w-full max-w-2xl mx-auto shadow-xl mb-8">
@@ -214,7 +219,8 @@ export default function ExportDocumentPage() {
         <ExportDocumentList 
           documents={exportDocuments}
           allExporters={allExporters}
-          allManufacturers={allManufacturers} // Pass manufacturers to list
+          allManufacturers={allManufacturers}
+          allTransporters={allTransporters}
           onDeleteDocument={handleDeleteDocument}
           onEditDocument={handleEditDocument}
           onDownloadPdf={handleDownloadPdf}

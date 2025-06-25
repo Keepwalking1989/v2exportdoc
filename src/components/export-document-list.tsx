@@ -4,6 +4,7 @@
 import type { ExportDocument } from "@/types/export-document";
 import type { Company } from "@/types/company"; // For Exporter
 import type { Manufacturer } from "@/types/manufacturer"; // For Manufacturer
+import type { Transporter } from "@/types/transporter"; // For Transporter
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -16,6 +17,7 @@ interface ExportDocumentListProps {
   documents: ExportDocument[];
   allExporters: Company[];
   allManufacturers: Manufacturer[];
+  allTransporters: Transporter[];
   onEditDocument: (docId: string) => void;
   onDeleteDocument: (docId: string) => void;
   onDownloadPdf: (docId: string) => void;
@@ -25,6 +27,7 @@ export function ExportDocumentList({
   documents,
   allExporters,
   allManufacturers,
+  allTransporters,
   onEditDocument,
   onDeleteDocument,
   onDownloadPdf,
@@ -65,10 +68,9 @@ export function ExportDocumentList({
               <TableRow>
                 <TableHead className="font-headline">Doc ID</TableHead>
                 <TableHead className="font-headline">Export Invoice #</TableHead>
-                <TableHead className="font-headline">Date</TableHead>
                 <TableHead className="font-headline">Exporter</TableHead>
                 <TableHead className="font-headline">Manufacturer</TableHead>
-                <TableHead className="font-headline">Final Destination</TableHead>
+                <TableHead className="font-headline">Transporter</TableHead>
                 <TableHead className="font-headline">PO ID</TableHead>
                 <TableHead className="font-headline text-right">Actions</TableHead>
               </TableRow>
@@ -77,14 +79,14 @@ export function ExportDocumentList({
               {documents.map((doc) => {
                 const exporterName = allExporters.find(e => e.id === doc.exporterId)?.companyName || "N/A";
                 const manufacturerName = doc.manufacturerId ? (allManufacturers.find(m => m.id === doc.manufacturerId)?.companyName || "N/A") : "N/A";
+                const transporterName = doc.transporterId ? (allTransporters.find(t => t.id === doc.transporterId)?.companyName || "N/A") : "N/A";
                 return (
                   <TableRow key={doc.id}>
                     <TableCell className="font-medium">ED-{doc.id.slice(-6)}</TableCell>
                     <TableCell>{doc.exportInvoiceNumber}</TableCell>
-                    <TableCell>{format(new Date(doc.exportInvoiceDate), "dd/MM/yyyy")}</TableCell>
                     <TableCell>{exporterName}</TableCell>
                     <TableCell>{manufacturerName}</TableCell>
-                    <TableCell>{doc.countryOfFinalDestination || 'N/A'}</TableCell>
+                    <TableCell>{transporterName}</TableCell>
                     <TableCell>{doc.purchaseOrderId ? `PO-${doc.purchaseOrderId.slice(-6)}` : "N/A"}</TableCell>
                     <TableCell className="text-right space-x-1">
                       <Button variant="ghost" size="icon" onClick={() => onEditDocument(doc.id)} className="hover:text-primary" title="Edit">
