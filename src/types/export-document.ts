@@ -16,4 +16,9 @@ export interface ExportDocument {
   portOfDischarge?: string;
   finalDestination?: string;
   termsOfDeliveryAndPayment?: string;
+  conversationRate?: number;
+  exchangeNotification?: string;
+  exchangeDate?: Date;
+  freight?: number;
+  gst?: string;
 }

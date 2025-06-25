@@ -16,7 +16,7 @@ import {
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Combobox, type ComboboxOption } from "@/components/ui/combobox";
 import { useToast } from "@/hooks/use-toast";
-import { FileSignature, Briefcase, Factory, Save, XCircle, CalendarIcon, Hash, Globe, Ship, Anchor, FileText, Truck, BadgeCheck } from "lucide-react";
+import { FileSignature, Briefcase, Factory, Save, XCircle, CalendarIcon, Hash, Globe, Ship, Anchor, FileText, Truck, BadgeCheck, ArrowLeftRight, Bell, CalendarClock, Percent } from "lucide-react";
 import React, { useEffect, useMemo } from "react";
 import type { Company } from "@/types/company"; // For Exporter
 import type { Manufacturer } from "@/types/manufacturer"; // For Manufacturer
@@ -44,6 +44,11 @@ const formSchema = z.object({
   portOfDischarge: z.string().optional(),
   finalDestination: z.string().optional(),
   termsOfDeliveryAndPayment: z.string().optional(),
+  conversationRate: z.coerce.number().optional(),
+  exchangeNotification: z.string().optional(),
+  exchangeDate: z.date().optional(),
+  freight: z.coerce.number().optional(),
+  gst: z.string().optional(),
 });
 
 export type ExportDocumentFormValues = z.infer<typeof formSchema>;
@@ -76,6 +81,11 @@ const getDefaultFormValues = (): ExportDocumentFormValues => ({
   portOfDischarge: "",
   finalDestination: "",
   termsOfDeliveryAndPayment: defaultTerms,
+  conversationRate: 0,
+  exchangeNotification: "",
+  exchangeDate: new Date(),
+  freight: 0,
+  gst: "",
 });
 
 export function ExportDocumentForm({
@@ -125,6 +135,11 @@ export function ExportDocumentForm({
         portOfDischarge: initialData.portOfDischarge || "",
         finalDestination: initialData.finalDestination || "",
         termsOfDeliveryAndPayment: initialData.termsOfDeliveryAndPayment || defaultTerms,
+        conversationRate: initialData.conversationRate || 0,
+        exchangeNotification: initialData.exchangeNotification || "",
+        exchangeDate: initialData.exchangeDate ? new Date(initialData.exchangeDate) : new Date(),
+        freight: initialData.freight || 0,
+        gst: initialData.gst || "",
       });
     } else {
       form.reset(getDefaultFormValues());
@@ -443,6 +458,101 @@ export function ExportDocumentForm({
                 />
             </div>
             
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <FormField
+                    control={form.control}
+                    name="conversationRate"
+                    render={({ field }) => (
+                        <FormItem>
+                        <FormLabel className="flex items-center gap-2"><ArrowLeftRight className="h-4 w-4 text-muted-foreground" />Conversation Rate</FormLabel>
+                        <FormControl>
+                            <Input type="number" placeholder="e.g. 83.50" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                        </FormItem>
+                    )}
+                />
+                <FormField
+                    control={form.control}
+                    name="freight"
+                    render={({ field }) => (
+                        <FormItem>
+                        <FormLabel className="flex items-center gap-2"><Ship className="h-4 w-4 text-muted-foreground" />Freight</FormLabel>
+                        <FormControl>
+                            <Input type="number" placeholder="e.g. 500" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                        </FormItem>
+                    )}
+                />
+                <FormField
+                    control={form.control}
+                    name="gst"
+                    render={({ field }) => (
+                        <FormItem>
+                        <FormLabel className="flex items-center gap-2"><Percent className="h-4 w-4 text-muted-foreground" />GST</FormLabel>
+                        <FormControl>
+                            <Input placeholder="e.g. 18%" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                        </FormItem>
+                    )}
+                />
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <FormField
+                    control={form.control}
+                    name="exchangeNotification"
+                    render={({ field }) => (
+                        <FormItem>
+                        <FormLabel className="flex items-center gap-2"><Bell className="h-4 w-4 text-muted-foreground" />Exchange Notification</FormLabel>
+                        <FormControl>
+                            <Input placeholder="e.g. Notif-123" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                        </FormItem>
+                    )}
+                />
+                <FormField
+                    control={form.control}
+                    name="exchangeDate"
+                    render={({ field }) => (
+                        <FormItem className="flex flex-col">
+                        <FormLabel className="flex items-center gap-2"><CalendarClock className="h-4 w-4 text-muted-foreground" />Exchange Date</FormLabel>
+                        <Popover>
+                            <PopoverTrigger asChild>
+                            <FormControl>
+                                <Button
+                                variant={"outline"}
+                                className={cn(
+                                    "w-full pl-3 text-left font-normal",
+                                    !field.value && "text-muted-foreground"
+                                )}
+                                >
+                                {field.value ? (
+                                    format(field.value, "PPP")
+                                ) : (
+                                    <span>Pick a date</span>
+                                )}
+                                <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                                </Button>
+                            </FormControl>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-auto p-0" align="start">
+                            <Calendar
+                                mode="single"
+                                selected={field.value}
+                                onSelect={field.onChange}
+                                initialFocus
+                            />
+                            </PopoverContent>
+                        </Popover>
+                        <FormMessage />
+                        </FormItem>
+                    )}
+                />
+            </div>
+
             <FormField
                 control={form.control}
                 name="termsOfDeliveryAndPayment"
