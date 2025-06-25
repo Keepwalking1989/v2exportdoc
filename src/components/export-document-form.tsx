@@ -2,7 +2,7 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useForm } from "react-hook-form";
+import { useForm, useFieldArray } from "react-hook-form";
 import * as z from "zod";
 import { Button } from "@/components/ui/button";
 import {
@@ -16,7 +16,7 @@ import {
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Combobox, type ComboboxOption } from "@/components/ui/combobox";
 import { useToast } from "@/hooks/use-toast";
-import { FileSignature, Briefcase, Factory, Save, XCircle, CalendarIcon, Hash, Globe, Ship, Anchor, FileText, Truck, BadgeCheck, ArrowLeftRight, Bell, CalendarClock, Percent } from "lucide-react";
+import { FileSignature, Briefcase, Factory, Save, XCircle, CalendarIcon, Hash, Globe, Ship, Anchor, FileText, Truck, BadgeCheck, ArrowLeftRight, Bell, CalendarClock, Percent, PlusCircle, Trash2 } from "lucide-react";
 import React, { useEffect, useMemo } from "react";
 import type { Company } from "@/types/company"; // For Exporter
 import type { Manufacturer } from "@/types/manufacturer"; // For Manufacturer
@@ -49,6 +49,10 @@ const formSchema = z.object({
   exchangeDate: z.date().optional(),
   freight: z.coerce.number().optional(),
   gst: z.string().optional(),
+  containerItems: z.array(z.object({
+    id: z.string().optional(),
+    bookingNo: z.string().optional(),
+  })).optional(),
 });
 
 export type ExportDocumentFormValues = z.infer<typeof formSchema>;
@@ -86,6 +90,7 @@ const getDefaultFormValues = (): ExportDocumentFormValues => ({
   exchangeDate: undefined,
   freight: 0,
   gst: "",
+  containerItems: [{ bookingNo: "" }],
 });
 
 export function ExportDocumentForm({
@@ -104,6 +109,11 @@ export function ExportDocumentForm({
     defaultValues: getDefaultFormValues(),
   });
   
+  const { fields, append, remove } = useFieldArray({
+    control: form.control,
+    name: "containerItems",
+  });
+
   const selectedManufacturerId = form.watch("manufacturerId");
 
   useEffect(() => {
@@ -140,6 +150,7 @@ export function ExportDocumentForm({
         exchangeDate: initialData.exchangeDate ? new Date(initialData.exchangeDate) : undefined,
         freight: initialData.freight || 0,
         gst: initialData.gst || "",
+        containerItems: initialData.containerItems && initialData.containerItems.length > 0 ? initialData.containerItems : [{ bookingNo: "" }],
       });
     } else {
       form.reset(getDefaultFormValues());
@@ -566,6 +577,48 @@ export function ExportDocumentForm({
                     </FormItem>
                 )}
             />
+
+            <Card>
+              <CardHeader>
+                  <CardTitle className="flex items-center justify-between">
+                      Container Items
+                      <Button type="button" size="sm" onClick={() => append({ bookingNo: "" })}>
+                          <PlusCircle className="mr-2 h-4 w-4" /> Add Item
+                      </Button>
+                  </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                  {fields.map((field, index) => (
+                      <div key={field.id} className="p-4 border rounded-md space-y-4 relative bg-card/50">
+                          <Button
+                              type="button"
+                              variant="destructive"
+                              size="icon"
+                              onClick={() => remove(index)}
+                              className="absolute top-2 right-2 h-7 w-7"
+                              disabled={fields.length <= 1}
+                          >
+                              <Trash2 className="h-4 w-4" />
+                              <span className="sr-only">Remove Item</span>
+                          </Button>
+                          <FormField
+                              control={form.control}
+                              name={`containerItems.${index}.bookingNo`}
+                              render={({ field }) => (
+                                  <FormItem>
+                                      <FormLabel>Booking No.</FormLabel>
+                                      <FormControl>
+                                          <Input placeholder="e.g. BK123456" {...field} />
+                                      </FormControl>
+                                      <FormMessage />
+                                  </FormItem>
+                              )}
+                          />
+                      </div>
+                  ))}
+              </CardContent>
+            </Card>
+
 
             <div className="flex justify-between items-center mt-8">
               <Button

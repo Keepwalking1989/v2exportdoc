@@ -47,6 +47,7 @@ export default function ExportDocumentPage() {
             exportInvoiceDate: doc.exportInvoiceDate ? new Date(doc.exportInvoiceDate) : new Date(),
             manufacturerInvoiceDate: doc.manufacturerInvoiceDate ? new Date(doc.manufacturerInvoiceDate) : undefined,
             exchangeDate: doc.exchangeDate ? new Date(doc.exchangeDate) : undefined,
+            containerItems: doc.containerItems || [],
         })) : [];
         setExportDocuments(currentDocs);
 
@@ -113,6 +114,7 @@ export default function ExportDocumentPage() {
         ...formData,
         id: docToEdit ? docToEdit.id : Date.now().toString(),
         purchaseOrderId: docToEdit ? docToEdit.purchaseOrderId : sourcePoIdForNewDoc || undefined,
+        containerItems: formData.containerItems?.map(item => ({...item, id: item.id || Math.random().toString(36).substring(2,9)})) || [],
     };
 
     if (docToEdit) {

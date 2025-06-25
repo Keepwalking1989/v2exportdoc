@@ -1,4 +1,9 @@
 
+export interface ExportDocumentContainerItem {
+  id: string; // Unique ID for this container item
+  bookingNo?: string;
+}
+
 export interface ExportDocument {
   id: string; // Unique ID for the Export Document
   exporterId: string; // ID of the selected Exporter
@@ -21,4 +26,5 @@ export interface ExportDocument {
   exchangeDate?: Date;
   freight?: number;
   gst?: string;
+  containerItems?: ExportDocumentContainerItem[];
 }
