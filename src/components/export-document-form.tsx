@@ -2,7 +2,7 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useForm, useFieldArray, Controller, Control, UseFormSetValue, useWatch } from "react-hook-form";
+import { useForm, useFieldArray, Controller, Control, UseFormSetValue, useWatch, useFormContext } from "react-hook-form";
 import * as z from "zod";
 import { Button } from "@/components/ui/button";
 import {
@@ -138,7 +138,6 @@ const getDefaultFormValues = (): ExportDocumentFormValues => ({
 interface ContainerProductManagerProps {
     containerIndex: number;
     control: Control<ExportDocumentFormValues>;
-    setValue: UseFormSetValue<ExportDocumentFormValues>;
     allProducts: Product[];
     allSizes: Size[];
 }
@@ -153,7 +152,6 @@ interface ContainerProductItemProps {
     allProducts: Product[];
     allSizes: Size[];
     handleProductChange: (productIndex: number, productId: string) => void;
-    setValue: UseFormSetValue<ExportDocumentFormValues>;
 }
 
 const ContainerProductItem: React.FC<ContainerProductItemProps> = ({
@@ -165,13 +163,20 @@ const ContainerProductItem: React.FC<ContainerProductItemProps> = ({
     allProducts,
     allSizes,
     handleProductChange,
-    setValue,
 }) => {
-    // Hooks are now at the top level of this component, which is correct.
+    // We use the FormContext to get access to setValue and formState without excessive prop drilling.
+    const { setValue, formState } = useFormContext<ExportDocumentFormValues>();
+    
+    // Watch all the values needed for calculations
     const currentItem = useWatch({
         control,
         name: `containerItems.${containerIndex}.productItems.${productIndex}`,
     }) || {};
+
+    const totalPallets = useWatch({
+        control,
+        name: `containerItems.${containerIndex}.totalPallets`,
+    });
 
     const { sqm, amount } = useMemo(() => {
         const product = allProducts.find(p => p.id === currentItem.productId);
@@ -189,6 +194,7 @@ const ContainerProductItem: React.FC<ContainerProductItemProps> = ({
         return { sqm: calculatedSqm, amount: calculatedAmount };
     }, [currentItem.productId, currentItem.boxes, currentItem.rate, allProducts, allSizes]);
 
+    // Effect to auto-calculate Net Weight
     useEffect(() => {
       const product = allProducts.find(p => p.id === currentItem.productId);
       if (!product) return;
@@ -204,10 +210,28 @@ const ContainerProductItem: React.FC<ContainerProductItemProps> = ({
       }
     }, [currentItem.boxes, currentItem.productId, currentItem.netWeight, allProducts, allSizes, setValue, containerIndex, productIndex]);
     
+    // Effect to auto-calculate Gross Weight (only if not manually edited)
+    useEffect(() => {
+        const isGrossWeightDirty = formState.dirtyFields.containerItems?.[containerIndex]?.productItems?.[productIndex]?.grossWeight;
+        
+        if (!isGrossWeightDirty) {
+            const netWt = Number(currentItem.netWeight) || 0;
+            const pallets = Number(totalPallets) || 0;
+            const calculatedGrossWeight = netWt + (pallets * 25);
+            
+            // Only update if the value is different to prevent re-renders
+            if (calculatedGrossWeight !== (Number(currentItem.grossWeight) || 0)) {
+                setValue(`containerItems.${containerIndex}.productItems.${productIndex}.grossWeight`, calculatedGrossWeight, { shouldDirty: false });
+            }
+        }
+    }, [currentItem.netWeight, totalPallets, formState.dirtyFields, currentItem.grossWeight, setValue, containerIndex, productIndex]);
+
+    const isOverweight = (Number(currentItem.grossWeight) || 0) > 27000;
+
     return (
       <div className="p-3 border rounded-md space-y-3 relative bg-background/80">
         <Button
-            type="button" // Important for buttons inside a form
+            type="button"
             variant="destructive"
             size="icon"
             onClick={() => remove(productIndex)}
@@ -271,13 +295,18 @@ const ContainerProductItem: React.FC<ContainerProductItemProps> = ({
               <FormItem>
               <FormLabel className="flex items-center gap-1"><Weight className="h-4 w-4 text-muted-foreground"/>Gross Wt.</FormLabel>
               <FormControl>
-              <Input type="number" placeholder="e.g. 1020" {...field} />
+              <Input 
+                type="number" 
+                placeholder="e.g. 1020" 
+                {...field} 
+                className={cn(isOverweight && "border-2 border-destructive text-destructive focus-visible:ring-destructive")}
+              />
               </FormControl>
+              {isOverweight && <p className="text-xs text-destructive">Weight exceeds 27000 Kgs</p>}
               <FormMessage />
               </FormItem>
               )}
             />
-            {/* Existing fields for Rate, SQM, Amount */}
             <FormField
                 control={control}
                 name={`containerItems.${containerIndex}.productItems.${productIndex}.rate`}
@@ -319,11 +348,14 @@ const ContainerProductItem: React.FC<ContainerProductItemProps> = ({
 };
 
 
-const ContainerProductManager: React.FC<ContainerProductManagerProps> = ({ containerIndex, control, setValue, allProducts, allSizes }) => {
+const ContainerProductManager: React.FC<ContainerProductManagerProps> = ({ containerIndex, control, allProducts, allSizes }) => {
     const { fields, append, remove } = useFieldArray({
         control,
         name: `containerItems.${containerIndex}.productItems`,
     });
+    
+    // We get setValue from context here to pass to the handleProductChange function
+    const { setValue } = useFormContext<ExportDocumentFormValues>();
 
     const productOptions: ComboboxOption[] = useMemo(() =>
         allProducts.map(p => {
@@ -354,7 +386,7 @@ const ContainerProductManager: React.FC<ContainerProductManagerProps> = ({ conta
                 <Button
                     type="button"
                     variant="outline"
-                    size="default" // Changed from sm for better visibility
+                    size="default"
                     onClick={() => append({ productId: '', boxes: 1, rate: 0, netWeight: 0, grossWeight: 0 })}
                     disabled={productOptions.length === 0}
                 >
@@ -374,7 +406,6 @@ const ContainerProductManager: React.FC<ContainerProductManagerProps> = ({ conta
                         allProducts={allProducts}
                         allSizes={allSizes}
                         handleProductChange={handleProductChange}
-                        setValue={setValue}
                     />
                 ))}
                 {fields.length === 0 && (
@@ -1099,7 +1130,6 @@ export function ExportDocumentForm({
                             <ContainerProductManager
                                 containerIndex={index}
                                 control={form.control}
-                                setValue={form.setValue}
                                 allProducts={allProducts}
                                 allSizes={allSizes}
                             />
@@ -1115,7 +1145,7 @@ export function ExportDocumentForm({
                 variant="outline"
                 onClick={onCancelEdit}
                 className="font-headline"
-                disabled={!isEditing && !sourcePoId} // Disable if new and not from PO
+                disabled={!isEditing && !sourcePoId}
               >
                 <XCircle className="mr-2 h-5 w-5" /> Cancel
               </Button>
