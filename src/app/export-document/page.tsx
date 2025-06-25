@@ -11,6 +11,8 @@ import type { PurchaseOrder } from "@/types/purchase-order";
 import type { Company } from "@/types/company"; // Exporters
 import type { Manufacturer } from "@/types/manufacturer"; // Import Manufacturer
 import type { Transporter } from "@/types/transporter"; // Import Transporter
+import type { Product } from "@/types/product";
+import type { Size } from "@/types/size";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 
@@ -19,6 +21,8 @@ const LOCAL_STORAGE_PO_KEY = "bizform_purchase_orders";
 const LOCAL_STORAGE_COMPANIES_KEY = "bizform_companies"; // Exporters
 const LOCAL_STORAGE_MANUFACTURERS_KEY = "bizform_manufacturers"; // Manufacturers
 const LOCAL_STORAGE_TRANSPORTERS_KEY = "bizform_transporters"; // Transporters
+const LOCAL_STORAGE_PRODUCTS_KEY = "bizform_products";
+const LOCAL_STORAGE_SIZES_KEY = "bizform_sizes";
 
 export default function ExportDocumentPage() {
   const { toast } = useToast();
@@ -31,6 +35,8 @@ export default function ExportDocumentPage() {
   const [allExporters, setAllExporters] = useState<Company[]>([]);
   const [allManufacturers, setAllManufacturers] = useState<Manufacturer[]>([]); // State for manufacturers
   const [allTransporters, setAllTransporters] = useState<Transporter[]>([]); // State for transporters
+  const [allProducts, setAllProducts] = useState<Product[]>([]);
+  const [allSizes, setAllSizes] = useState<Size[]>([]);
   
   const [isClient, setIsClient] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
@@ -62,6 +68,8 @@ export default function ExportDocumentPage() {
             stuffingPermissionDate: m.stuffingPermissionDate ? new Date(m.stuffingPermissionDate) : undefined,
           }))); // Load manufacturers and parse date
         setAllTransporters(JSON.parse(localStorage.getItem(LOCAL_STORAGE_TRANSPORTERS_KEY) || "[]")); // Load transporters
+        setAllProducts(JSON.parse(localStorage.getItem(LOCAL_STORAGE_PRODUCTS_KEY) || "[]"));
+        setAllSizes(JSON.parse(localStorage.getItem(LOCAL_STORAGE_SIZES_KEY) || "[]"));
 
       } catch (error) {
         console.error("Failed to parse data from localStorage", error);
@@ -71,6 +79,8 @@ export default function ExportDocumentPage() {
         setAllExporters([]);
         setAllManufacturers([]); // Initialize manufacturers on error
         setAllTransporters([]); // Initialize transporters on error
+        setAllProducts([]);
+        setAllSizes([]);
       } finally {
         setIsLoading(false);
       }
@@ -118,7 +128,11 @@ export default function ExportDocumentPage() {
         ...formData,
         id: docToEdit ? docToEdit.id : Date.now().toString(),
         purchaseOrderId: docToEdit ? docToEdit.purchaseOrderId : sourcePoIdForNewDoc || undefined,
-        containerItems: formData.containerItems?.map(item => ({...item, id: item.id || Math.random().toString(36).substring(2,9)})) || [],
+        containerItems: formData.containerItems?.map(item => ({
+            ...item, 
+            id: item.id || Math.random().toString(36).substring(2,9),
+            productItems: item.productItems?.map(p => ({...p, id: p.id || Math.random().toString(36).substring(2,9)}))
+        })) || [],
     };
 
     if (docToEdit) {
@@ -204,6 +218,8 @@ export default function ExportDocumentPage() {
               allExporters={allExporters}
               allManufacturers={allManufacturers}
               allTransporters={allTransporters}
+              allProducts={allProducts}
+              allSizes={allSizes}
             />
           ) : !canCreateOrEdit && showForm ? (
              <Card className="w-full max-w-2xl mx-auto shadow-xl mb-8">

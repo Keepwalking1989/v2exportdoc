@@ -3,6 +3,7 @@ export interface ExportDocumentProductItem {
   id: string;
   productId: string;
   boxes: number;
+  rate?: number;
 }
 
 export interface ExportDocumentContainerItem {

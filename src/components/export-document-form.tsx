@@ -2,7 +2,7 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useForm, useFieldArray, Controller } from "react-hook-form";
+import { useForm, useFieldArray, Controller, Control, UseFormSetValue } from "react-hook-form";
 import * as z from "zod";
 import { Button } from "@/components/ui/button";
 import {
@@ -22,6 +22,8 @@ import type { Company } from "@/types/company"; // For Exporter
 import type { Manufacturer } from "@/types/manufacturer"; // For Manufacturer
 import type { Transporter } from "@/types/transporter";
 import type { ExportDocument } from "@/types/export-document";
+import type { Product } from "@/types/product";
+import type { Size } from "@/types/size";
 import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
@@ -29,7 +31,6 @@ import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { Textarea } from "@/components/ui/textarea";
 import { Separator } from "@/components/ui/separator";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 
 const formSchema = z.object({
   exporterId: z.string().min(1, "Exporter is required"),
@@ -67,9 +68,10 @@ const formSchema = z.object({
     weighingSlipNo: z.string().optional(),
     weighingDateTime: z.coerce.date().optional(),
     productItems: z.array(z.object({
-      id: z.string(),
-      productId: z.string(),
-      boxes: z.number(),
+      id: z.string().optional(),
+      productId: z.string().min(1, 'Product is required'),
+      boxes: z.coerce.number().positive('Boxes must be > 0'),
+      rate: z.coerce.number().nonnegative('Rate cannot be negative').optional(),
     })).optional(),
   })).optional(),
 });
@@ -84,6 +86,8 @@ interface ExportDocumentFormProps {
   allExporters: Company[];
   allManufacturers: Manufacturer[];
   allTransporters: Transporter[];
+  allProducts: Product[];
+  allSizes: Size[];
   sourcePoId?: string | null;
 }
 
@@ -129,6 +133,129 @@ const getDefaultFormValues = (): ExportDocumentFormValues => ({
   containerItems: [defaultNewContainerItem],
 });
 
+interface ContainerProductManagerProps {
+    containerIndex: number;
+    control: Control<ExportDocumentFormValues>;
+    setValue: UseFormSetValue<ExportDocumentFormValues>;
+    allProducts: Product[];
+    allSizes: Size[];
+}
+
+const ContainerProductManager: React.FC<ContainerProductManagerProps> = ({ containerIndex, control, setValue, allProducts, allSizes }) => {
+    const { fields, append, remove } = useFieldArray({
+        control,
+        name: `containerItems.${containerIndex}.productItems`,
+    });
+
+    const productOptions: ComboboxOption[] = useMemo(() =>
+        allProducts.map(p => {
+            const size = allSizes.find(s => s.id === p.sizeId);
+            return {
+                value: p.id,
+                label: `${p.designName} (${size?.size || 'N/A'})`
+            };
+        }), [allProducts, allSizes]);
+
+    const handleProductChange = (productIndex: number, productId: string) => {
+        const product = allProducts.find(p => p.id === productId);
+        if (product) {
+            const size = allSizes.find(s => s.id === product.sizeId);
+            if (size) {
+                setValue(`containerItems.${containerIndex}.productItems.${productIndex}.rate`, size.salesPrice);
+            }
+        }
+    };
+
+    return (
+        <div className="mt-4">
+            <h4 className="text-md font-semibold mb-2 flex items-center justify-between">
+                <span className="flex items-center gap-2">
+                    <Package className="h-5 w-5 text-primary" />
+                    Products in this Container
+                </span>
+                <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => append({ productId: '', boxes: 1, rate: 0 })}
+                    disabled={productOptions.length === 0}
+                >
+                    <PlusCircle className="mr-2 h-4 w-4" /> Add Product
+                </Button>
+            </h4>
+
+            <div className="space-y-4 mt-2">
+                {fields.map((productField, productIndex) => (
+                    <div key={productField.id} className="p-3 border rounded-md space-y-3 relative bg-background/80">
+                         <Button
+                            type="button"
+                            variant="destructive"
+                            size="icon"
+                            onClick={() => remove(productIndex)}
+                            className="absolute top-1 right-1 h-6 w-6"
+                        >
+                            <Trash2 className="h-3 w-3" />
+                            <span className="sr-only">Remove Product</span>
+                        </Button>
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-start">
+                           <FormField
+                                control={control}
+                                name={`containerItems.${containerIndex}.productItems.${productIndex}.productId`}
+                                render={({ field }) => (
+                                    <FormItem className="md:col-span-1">
+                                        <FormLabel>Product</FormLabel>
+                                        <Combobox
+                                            options={productOptions}
+                                            value={field.value}
+                                            onChange={(value) => {
+                                                field.onChange(value);
+                                                handleProductChange(productIndex, value);
+                                            }}
+                                            placeholder="Select Product..."
+                                        />
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+                             <FormField
+                                control={control}
+                                name={`containerItems.${containerIndex}.productItems.${productIndex}.boxes`}
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>Boxes</FormLabel>
+                                        <FormControl>
+                                            <Input type="number" placeholder="e.g. 100" {...field} />
+                                        </FormControl>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+                             <FormField
+                                control={control}
+                                name={`containerItems.${containerIndex}.productItems.${productIndex}.rate`}
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>Rate</FormLabel>
+                                        <FormControl>
+                                            <Input type="number" placeholder="e.g. 12.50" {...field} />
+                                        </FormControl>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+                        </div>
+                    </div>
+                ))}
+                {fields.length === 0 && (
+                     <div className="p-2 border border-dashed rounded-md text-center text-muted-foreground text-sm min-h-[50px] flex items-center justify-center">
+                        <p>{productOptions.length > 0 ? "No products added to this container yet." : "No products available. Please add products on the Product page."}</p>
+                    </div>
+                )}
+            </div>
+        </div>
+    );
+};
+
 export function ExportDocumentForm({
   initialData,
   isEditing,
@@ -137,6 +264,8 @@ export function ExportDocumentForm({
   allExporters,
   allManufacturers,
   allTransporters,
+  allProducts,
+  allSizes,
   sourcePoId,
 }: ExportDocumentFormProps) {
   const { toast } = useToast();
@@ -835,42 +964,13 @@ export function ExportDocumentForm({
                                 />
                             </div>
                             <Separator className="my-4" />
-                            <div>
-                                <h4 className="text-md font-semibold mb-2 flex items-center gap-2">
-                                    <Package className="h-5 w-5 text-primary" />
-                                    Products in this Container
-                                </h4>
-                                <div className="p-2 border border-dashed rounded-md text-center text-muted-foreground text-sm min-h-[50px] flex items-center justify-center">
-                                    <p>No products added yet.</p>
-                                </div>
-
-                                <Dialog>
-                                    <DialogTrigger asChild>
-                                        <Button 
-                                            type="button" 
-                                            variant="outline" 
-                                            size="sm" 
-                                            className="mt-2"
-                                        >
-                                            <PlusCircle className="mr-2 h-4 w-4" /> Add Product
-                                        </Button>
-                                    </DialogTrigger>
-                                    <DialogContent className="sm:max-w-[425px]">
-                                        <DialogHeader>
-                                            <DialogTitle>Add Product to Container</DialogTitle>
-                                            <DialogDescription>
-                                                Product fields will be added here later.
-                                            </DialogDescription>
-                                        </DialogHeader>
-                                        <div className="py-4 text-center">
-                                            <p>Popup content for adding products will be implemented next.</p>
-                                        </div>
-                                        <DialogFooter>
-                                            <Button type="button" disabled>Save Product</Button>
-                                        </DialogFooter>
-                                    </DialogContent>
-                                </Dialog>
-                            </div>
+                            <ContainerProductManager
+                                containerIndex={index}
+                                control={form.control}
+                                setValue={form.setValue}
+                                allProducts={allProducts}
+                                allSizes={allSizes}
+                            />
                       </div>
                   ))}
               </CardContent>
