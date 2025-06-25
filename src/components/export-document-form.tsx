@@ -311,8 +311,35 @@ const ContainerProductManager: React.FC<ContainerProductManagerProps> = ({ conta
         name: `containerItems.${containerIndex}.productItems`,
     });
     
-    // We get setValue from context here to pass to the handleProductChange function
     const { setValue } = useFormContext<ExportDocumentFormValues>();
+
+    const productItems = useWatch({
+        control,
+        name: `containerItems.${containerIndex}.productItems`,
+    }) || [];
+
+    const totalContainerAmount = useMemo(() => {
+        if (productItems.length < 2) {
+            return 0;
+        }
+
+        return productItems.reduce((total, item) => {
+            const product = allProducts.find(p => p.id === item.productId);
+            if (!product) return total;
+
+            const size = allSizes.find(s => s.id === product.sizeId);
+            if (!size) return total;
+
+            const boxes = Number(item.boxes) || 0;
+            const rate = Number(item.rate) || 0;
+            const sqmPerBox = size.sqmPerBox || 0;
+
+            const calculatedSqm = boxes * sqmPerBox;
+            const calculatedAmount = calculatedSqm * rate;
+            
+            return total + calculatedAmount;
+        }, 0);
+    }, [productItems, allProducts, allSizes]);
 
     const productOptions: ComboboxOption[] = useMemo(() =>
         allProducts.map(p => {
@@ -371,6 +398,19 @@ const ContainerProductManager: React.FC<ContainerProductManagerProps> = ({ conta
                     </div>
                 )}
             </div>
+
+            {totalContainerAmount > 0 && (
+                <>
+                    <Separator className="my-4" />
+                    <div className="flex justify-end items-center font-bold text-md">
+                         <span className="text-muted-foreground mr-4">Container Total Amount:</span>
+                         <span className="text-primary text-lg flex items-center gap-1">
+                             <DollarSign className="h-4 w-4" />
+                             {totalContainerAmount.toFixed(2)}
+                         </span>
+                    </div>
+                </>
+            )}
         </div>
     );
 };
