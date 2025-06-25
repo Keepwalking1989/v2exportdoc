@@ -11,6 +11,9 @@ export interface ExportDocumentContainerItem {
   startPalletNo?: string;
   endPalletNo?: string;
   totalPallets?: string;
+  description?: string;
+  weighingSlipNo?: string;
+  weighingDateTime?: Date;
 }
 
 export interface ExportDocument {

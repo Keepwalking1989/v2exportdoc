@@ -87,6 +87,7 @@ export function ExportDocumentList({
                   if (item.containerNo) details.push(`Container: ${item.containerNo}`);
                   if (item.truckNumber) details.push(`Truck: ${item.truckNumber}`);
                   if (item.totalPallets) details.push(`Pallets: ${item.totalPallets}`);
+                  if (item.description) details.push(`Desc: ${item.description}`);
                   return details.join(' | ');
                 }).filter(Boolean).join('\n') || "N/A";
 

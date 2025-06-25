@@ -47,7 +47,10 @@ export default function ExportDocumentPage() {
             exportInvoiceDate: doc.exportInvoiceDate ? new Date(doc.exportInvoiceDate) : new Date(),
             manufacturerInvoiceDate: doc.manufacturerInvoiceDate ? new Date(doc.manufacturerInvoiceDate) : undefined,
             exchangeDate: doc.exchangeDate ? new Date(doc.exchangeDate) : undefined,
-            containerItems: doc.containerItems || [],
+            containerItems: (doc.containerItems || []).map((item: any) => ({
+                ...item,
+                weighingDateTime: item.weighingDateTime ? new Date(item.weighingDateTime) : undefined,
+            })),
         })) : [];
         setExportDocuments(currentDocs);
 

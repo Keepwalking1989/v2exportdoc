@@ -2,7 +2,7 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useForm, useFieldArray } from "react-hook-form";
+import { useForm, useFieldArray, Controller } from "react-hook-form";
 import * as z from "zod";
 import { Button } from "@/components/ui/button";
 import {
@@ -16,7 +16,7 @@ import {
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Combobox, type ComboboxOption } from "@/components/ui/combobox";
 import { useToast } from "@/hooks/use-toast";
-import { FileSignature, Briefcase, Factory, Save, XCircle, CalendarIcon, Hash, Globe, Ship, Anchor, FileText, Truck, BadgeCheck, ArrowLeftRight, Bell, CalendarClock, Percent, PlusCircle, Trash2, Stamp, Radio, Weight, ListStart, ListEnd, Boxes } from "lucide-react";
+import { FileSignature, Briefcase, Factory, Save, XCircle, CalendarIcon, Hash, Globe, Ship, Anchor, FileText, Truck, BadgeCheck, ArrowLeftRight, Bell, CalendarClock, Percent, PlusCircle, Trash2, Stamp, Radio, Weight, ListStart, ListEnd, Boxes, NotebookText, FileScan, Clock } from "lucide-react";
 import React, { useEffect, useMemo } from "react";
 import type { Company } from "@/types/company"; // For Exporter
 import type { Manufacturer } from "@/types/manufacturer"; // For Manufacturer
@@ -61,6 +61,9 @@ const formSchema = z.object({
     startPalletNo: z.string().optional(),
     endPalletNo: z.string().optional(),
     totalPallets: z.string().optional(),
+    description: z.string().optional(),
+    weighingSlipNo: z.string().optional(),
+    weighingDateTime: z.coerce.date().optional(),
   })).optional(),
 });
 
@@ -90,6 +93,9 @@ const defaultNewContainerItem = {
   startPalletNo: "",
   endPalletNo: "",
   totalPallets: "",
+  description: "",
+  weighingSlipNo: "",
+  weighingDateTime: new Date(),
 };
 
 const getDefaultFormValues = (): ExportDocumentFormValues => ({
@@ -173,7 +179,12 @@ export function ExportDocumentForm({
         exchangeDate: initialData.exchangeDate ? new Date(initialData.exchangeDate) : undefined,
         freight: initialData.freight || 0,
         gst: initialData.gst || "",
-        containerItems: initialData.containerItems && initialData.containerItems.length > 0 ? initialData.containerItems : [defaultNewContainerItem],
+        containerItems: initialData.containerItems && initialData.containerItems.length > 0 
+          ? initialData.containerItems.map(item => ({
+              ...item,
+              weighingDateTime: item.weighingDateTime ? new Date(item.weighingDateTime) : undefined,
+            }))
+          : [defaultNewContainerItem],
       });
     } else {
       form.reset(getDefaultFormValues());
@@ -592,7 +603,7 @@ export function ExportDocumentForm({
                 name="termsOfDeliveryAndPayment"
                 render={({ field }) => (
                     <FormItem>
-                    <FormLabel className="flex items-center gap-2"><FileText className="h-4 w-4 text-muted-foreground" />Terms Of Delivery & Payments</FormLabel>
+                    <FormLabel className="flex items-center gap-2"><FileText className="h-4 w-4 text-muted-foreground" />Terms Of Delivery &amp; Payments</FormLabel>
                     <FormControl>
                         <Textarea placeholder="Terms..." {...field} />
                     </FormControl>
@@ -762,6 +773,58 @@ export function ExportDocumentForm({
                                     )}
                                 />
                            </div>
+                            <FormField
+                                control={form.control}
+                                name={`containerItems.${index}.description`}
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel className="flex items-center gap-2"><NotebookText className="h-4 w-4 text-muted-foreground" />Description for this Container</FormLabel>
+                                        <FormControl>
+                                            <Textarea placeholder="e.g. Contains fragile items, handle with care." {...field} />
+                                        </FormControl>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <FormField
+                                    control={form.control}
+                                    name={`containerItems.${index}.weighingSlipNo`}
+                                    render={({ field }) => (
+                                        <FormItem>
+                                            <FormLabel className="flex items-center gap-2"><FileScan className="h-4 w-4 text-muted-foreground" />Weighing Slip No</FormLabel>
+                                            <FormControl>
+                                                <Input placeholder="e.g. WSN-5678" {...field} />
+                                            </FormControl>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
+                                <Controller
+                                    control={form.control}
+                                    name={`containerItems.${index}.weighingDateTime`}
+                                    render={({ field }) => {
+                                        const dateValue = field.value ? new Date(field.value) : new Date();
+                                        const localISOString = new Date(dateValue.getTime() - (dateValue.getTimezoneOffset() * 60000)).toISOString().slice(0, 16);
+
+                                        return (
+                                            <FormItem>
+                                                <FormLabel className="flex items-center gap-2"><Clock className="h-4 w-4 text-muted-foreground" />Weighing Date &amp; Time</FormLabel>
+                                                <FormControl>
+                                                    <Input
+                                                        type="datetime-local"
+                                                        value={field.value ? localISOString : ''}
+                                                        onChange={(e) => {
+                                                            field.onChange(e.target.value ? new Date(e.target.value) : null);
+                                                        }}
+                                                    />
+                                                </FormControl>
+                                                <FormMessage />
+                                            </FormItem>
+                                        );
+                                    }}
+                                />
+                            </div>
                       </div>
                   ))}
               </CardContent>
