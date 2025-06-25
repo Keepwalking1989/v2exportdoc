@@ -7,6 +7,8 @@ export interface ExportDocument {
   transporterId?: string; // ID of the selected Transporter
   exportInvoiceNumber: string; // The user-facing invoice number
   exportInvoiceDate: Date; // The date of the export invoice
+  manufacturerInvoiceNumber?: string;
+  manufacturerInvoiceDate?: Date;
   countryOfFinalDestination: string; // Country of Final Destination
   vesselFlightNo?: string;
   portOfLoading?: string;

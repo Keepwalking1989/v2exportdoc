@@ -44,7 +44,8 @@ export default function ExportDocumentPage() {
         const storedDocs = localStorage.getItem(LOCAL_STORAGE_EXPORT_DOCS_KEY_V2);
         const currentDocs: ExportDocument[] = storedDocs ? JSON.parse(storedDocs).map((doc: any) => ({
             ...doc,
-            exportInvoiceDate: doc.exportInvoiceDate ? new Date(doc.exportInvoiceDate) : new Date() // Parse date
+            exportInvoiceDate: doc.exportInvoiceDate ? new Date(doc.exportInvoiceDate) : new Date(), // Parse date
+            manufacturerInvoiceDate: doc.manufacturerInvoiceDate ? new Date(doc.manufacturerInvoiceDate) : undefined,
         })) : [];
         setExportDocuments(currentDocs);
 

@@ -35,6 +35,8 @@ const formSchema = z.object({
   transporterId: z.string().optional(),
   exportInvoiceNumber: z.string().min(1, "Export Invoice Number is required."),
   exportInvoiceDate: z.date({ required_error: "Export Invoice Date is required." }),
+  manufacturerInvoiceNumber: z.string().optional(),
+  manufacturerInvoiceDate: z.date().optional(),
   countryOfFinalDestination: z.string().min(1, "Country of Final Destination is required."),
   vesselFlightNo: z.string().optional(),
   portOfLoading: z.string().optional(),
@@ -64,6 +66,8 @@ const getDefaultFormValues = (): ExportDocumentFormValues => ({
   transporterId: "",
   exportInvoiceNumber: "",
   exportInvoiceDate: new Date(),
+  manufacturerInvoiceNumber: "",
+  manufacturerInvoiceDate: new Date(),
   countryOfFinalDestination: "",
   vesselFlightNo: "",
   portOfLoading: "",
@@ -96,6 +100,8 @@ export function ExportDocumentForm({
         transporterId: initialData.transporterId || "",
         exportInvoiceNumber: initialData.exportInvoiceNumber || "",
         exportInvoiceDate: initialData.exportInvoiceDate ? new Date(initialData.exportInvoiceDate) : new Date(),
+        manufacturerInvoiceNumber: initialData.manufacturerInvoiceNumber || "",
+        manufacturerInvoiceDate: initialData.manufacturerInvoiceDate ? new Date(initialData.manufacturerInvoiceDate) : new Date(),
         countryOfFinalDestination: initialData.countryOfFinalDestination || "",
         vesselFlightNo: initialData.vesselFlightNo || "",
         portOfLoading: initialData.portOfLoading || "",
@@ -173,6 +179,62 @@ export function ExportDocumentForm({
                 render={({ field }) => (
                     <FormItem className="flex flex-col">
                     <FormLabel className="flex items-center gap-2"><CalendarIcon className="h-4 w-4 text-muted-foreground" />Export Invoice Date</FormLabel>
+                    <Popover>
+                        <PopoverTrigger asChild>
+                        <FormControl>
+                            <Button
+                            variant={"outline"}
+                            className={cn(
+                                "w-full pl-3 text-left font-normal",
+                                !field.value && "text-muted-foreground"
+                            )}
+                            >
+                            {field.value ? (
+                                format(field.value, "PPP")
+                            ) : (
+                                <span>Pick a date</span>
+                            )}
+                            <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                            </Button>
+                        </FormControl>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0" align="start">
+                        <Calendar
+                            mode="single"
+                            selected={field.value}
+                            onSelect={field.onChange}
+                            disabled={(date) =>
+                            date > new Date() || date < new Date("2000-01-01")
+                            }
+                            initialFocus
+                        />
+                        </PopoverContent>
+                    </Popover>
+                    <FormMessage />
+                    </FormItem>
+                )}
+                />
+            </div>
+             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <FormField
+                control={form.control}
+                name="manufacturerInvoiceNumber"
+                render={({ field }) => (
+                    <FormItem>
+                    <FormLabel className="flex items-center gap-2"><Hash className="h-4 w-4 text-muted-foreground" />Manufacturer Invoice No.</FormLabel>
+                    <FormControl>
+                        <Input placeholder="e.g. MAN-INV-001" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                    </FormItem>
+                )}
+                />
+                <FormField
+                control={form.control}
+                name="manufacturerInvoiceDate"
+                render={({ field }) => (
+                    <FormItem className="flex flex-col">
+                    <FormLabel className="flex items-center gap-2"><CalendarIcon className="h-4 w-4 text-muted-foreground" />Manufacturer Invoice Date</FormLabel>
                     <Popover>
                         <PopoverTrigger asChild>
                         <FormControl>
