@@ -1,4 +1,10 @@
 
+export interface ExportDocumentProductItem {
+  id: string;
+  productId: string;
+  boxes: number;
+}
+
 export interface ExportDocumentContainerItem {
   id: string; // Unique ID for this container item
   bookingNo?: string;
@@ -14,6 +20,7 @@ export interface ExportDocumentContainerItem {
   description?: string;
   weighingSlipNo?: string;
   weighingDateTime?: Date;
+  productItems?: ExportDocumentProductItem[];
 }
 
 export interface ExportDocument {

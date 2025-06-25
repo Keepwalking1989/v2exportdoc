@@ -16,7 +16,7 @@ import {
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Combobox, type ComboboxOption } from "@/components/ui/combobox";
 import { useToast } from "@/hooks/use-toast";
-import { FileSignature, Briefcase, Factory, Save, XCircle, CalendarIcon, Hash, Globe, Ship, Anchor, FileText, Truck, BadgeCheck, ArrowLeftRight, Bell, CalendarClock, Percent, PlusCircle, Trash2, Stamp, Radio, Weight, ListStart, ListEnd, Boxes, NotebookText, FileScan, Clock } from "lucide-react";
+import { FileSignature, Briefcase, Factory, Save, XCircle, CalendarIcon, Hash, Globe, Ship, Anchor, FileText, Truck, BadgeCheck, ArrowLeftRight, Bell, CalendarClock, Percent, PlusCircle, Trash2, Stamp, Radio, Weight, ListStart, ListEnd, Boxes, NotebookText, FileScan, Clock, Package } from "lucide-react";
 import React, { useEffect, useMemo } from "react";
 import type { Company } from "@/types/company"; // For Exporter
 import type { Manufacturer } from "@/types/manufacturer"; // For Manufacturer
@@ -28,6 +28,8 @@ import { Calendar } from "@/components/ui/calendar";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { Textarea } from "@/components/ui/textarea";
+import { Separator } from "@/components/ui/separator";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 
 const formSchema = z.object({
   exporterId: z.string().min(1, "Exporter is required"),
@@ -64,6 +66,11 @@ const formSchema = z.object({
     description: z.string().optional(),
     weighingSlipNo: z.string().optional(),
     weighingDateTime: z.coerce.date().optional(),
+    productItems: z.array(z.object({
+      id: z.string(),
+      productId: z.string(),
+      boxes: z.number(),
+    })).optional(),
   })).optional(),
 });
 
@@ -96,6 +103,7 @@ const defaultNewContainerItem = {
   description: "",
   weighingSlipNo: "",
   weighingDateTime: new Date(),
+  productItems: [],
 };
 
 const getDefaultFormValues = (): ExportDocumentFormValues => ({
@@ -183,6 +191,7 @@ export function ExportDocumentForm({
           ? initialData.containerItems.map(item => ({
               ...item,
               weighingDateTime: item.weighingDateTime ? new Date(item.weighingDateTime) : undefined,
+              productItems: item.productItems || [],
             }))
           : [defaultNewContainerItem],
       });
@@ -824,6 +833,43 @@ export function ExportDocumentForm({
                                         );
                                     }}
                                 />
+                            </div>
+                            <Separator className="my-4" />
+                            <div>
+                                <h4 className="text-md font-semibold mb-2 flex items-center gap-2">
+                                    <Package className="h-5 w-5 text-primary" />
+                                    Products in this Container
+                                </h4>
+                                <div className="p-2 border border-dashed rounded-md text-center text-muted-foreground text-sm min-h-[50px] flex items-center justify-center">
+                                    <p>No products added yet.</p>
+                                </div>
+
+                                <Dialog>
+                                    <DialogTrigger asChild>
+                                        <Button 
+                                            type="button" 
+                                            variant="outline" 
+                                            size="sm" 
+                                            className="mt-2"
+                                        >
+                                            <PlusCircle className="mr-2 h-4 w-4" /> Add Product
+                                        </Button>
+                                    </DialogTrigger>
+                                    <DialogContent className="sm:max-w-[425px]">
+                                        <DialogHeader>
+                                            <DialogTitle>Add Product to Container</DialogTitle>
+                                            <DialogDescription>
+                                                Product fields will be added here later.
+                                            </DialogDescription>
+                                        </DialogHeader>
+                                        <div className="py-4 text-center">
+                                            <p>Popup content for adding products will be implemented next.</p>
+                                        </div>
+                                        <DialogFooter>
+                                            <Button type="button" disabled>Save Product</Button>
+                                        </DialogFooter>
+                                    </DialogContent>
+                                </Dialog>
                             </div>
                       </div>
                   ))}

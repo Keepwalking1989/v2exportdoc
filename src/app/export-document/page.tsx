@@ -50,6 +50,7 @@ export default function ExportDocumentPage() {
             containerItems: (doc.containerItems || []).map((item: any) => ({
                 ...item,
                 weighingDateTime: item.weighingDateTime ? new Date(item.weighingDateTime) : undefined,
+                productItems: item.productItems || [], // Ensure productItems array exists
             })),
         })) : [];
         setExportDocuments(currentDocs);
