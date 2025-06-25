@@ -71,6 +71,7 @@ export function ExportDocumentList({
                 <TableHead className="font-headline">Manuf. Inv #</TableHead>
                 <TableHead className="font-headline">Exporter</TableHead>
                 <TableHead className="font-headline">Manufacturer</TableHead>
+                <TableHead className="font-headline">Permission No</TableHead>
                 <TableHead className="font-headline">Transporter</TableHead>
                 <TableHead className="font-headline">PO ID</TableHead>
                 <TableHead className="font-headline text-right">Actions</TableHead>
@@ -89,6 +90,7 @@ export function ExportDocumentList({
                     <TableCell>{doc.manufacturerInvoiceNumber ? manufacturerInv : 'N/A'}</TableCell>
                     <TableCell>{exporterName}</TableCell>
                     <TableCell>{manufacturerName}</TableCell>
+                    <TableCell>{doc.permissionNumber || "N/A"}</TableCell>
                     <TableCell>{transporterName}</TableCell>
                     <TableCell>{doc.purchaseOrderId ? `PO-${doc.purchaseOrderId.slice(-6)}` : "N/A"}</TableCell>
                     <TableCell className="text-right space-x-1">

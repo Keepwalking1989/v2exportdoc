@@ -51,7 +51,10 @@ export default function ExportDocumentPage() {
 
         setAllPOs(JSON.parse(localStorage.getItem(LOCAL_STORAGE_PO_KEY) || "[]").map((po:any)=>({...po, poDate: new Date(po.poDate)})));
         setAllExporters(JSON.parse(localStorage.getItem(LOCAL_STORAGE_COMPANIES_KEY) || "[]"));
-        setAllManufacturers(JSON.parse(localStorage.getItem(LOCAL_STORAGE_MANUFACTURERS_KEY) || "[]")); // Load manufacturers
+        setAllManufacturers(JSON.parse(localStorage.getItem(LOCAL_STORAGE_MANUFACTURERS_KEY) || "[]").map((m: any) => ({
+            ...m,
+            stuffingPermissionDate: m.stuffingPermissionDate ? new Date(m.stuffingPermissionDate) : undefined,
+          }))); // Load manufacturers and parse date
         setAllTransporters(JSON.parse(localStorage.getItem(LOCAL_STORAGE_TRANSPORTERS_KEY) || "[]")); // Load transporters
 
       } catch (error) {
@@ -188,7 +191,6 @@ export default function ExportDocumentPage() {
             <ExportDocumentForm
               key={docToEdit?.id || sourcePoIdForNewDoc || 'new-export-doc-v2-manufacturer'}
               initialData={docToEdit}
-              sourcePoId={sourcePoIdForNewDoc}
               isEditing={!!docToEdit}
               onSave={handleSaveExportDocument}
               onCancelEdit={handleCancelEdit}

@@ -16,7 +16,7 @@ import {
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Combobox, type ComboboxOption } from "@/components/ui/combobox";
 import { useToast } from "@/hooks/use-toast";
-import { FileSignature, Briefcase, Factory, Save, XCircle, CalendarIcon, Hash, Globe, Ship, Anchor, FileText, Truck } from "lucide-react";
+import { FileSignature, Briefcase, Factory, Save, XCircle, CalendarIcon, Hash, Globe, Ship, Anchor, FileText, Truck, BadgeCheck } from "lucide-react";
 import React, { useEffect, useMemo } from "react";
 import type { Company } from "@/types/company"; // For Exporter
 import type { Manufacturer } from "@/types/manufacturer"; // For Manufacturer
@@ -37,6 +37,7 @@ const formSchema = z.object({
   exportInvoiceDate: z.date({ required_error: "Export Invoice Date is required." }),
   manufacturerInvoiceNumber: z.string().optional(),
   manufacturerInvoiceDate: z.date().optional(),
+  permissionNumber: z.string().optional(),
   countryOfFinalDestination: z.string().min(1, "Country of Final Destination is required."),
   vesselFlightNo: z.string().optional(),
   portOfLoading: z.string().optional(),
@@ -68,6 +69,7 @@ const getDefaultFormValues = (): ExportDocumentFormValues => ({
   exportInvoiceDate: new Date(),
   manufacturerInvoiceNumber: "",
   manufacturerInvoiceDate: new Date(),
+  permissionNumber: "",
   countryOfFinalDestination: "",
   vesselFlightNo: "",
   portOfLoading: "",
@@ -91,6 +93,20 @@ export function ExportDocumentForm({
     resolver: zodResolver(formSchema),
     defaultValues: getDefaultFormValues(),
   });
+  
+  const selectedManufacturerId = form.watch("manufacturerId");
+
+  useEffect(() => {
+    if (selectedManufacturerId) {
+      const selectedManufacturer = allManufacturers.find(m => m.id === selectedManufacturerId);
+      if (selectedManufacturer) {
+        form.setValue("permissionNumber", selectedManufacturer.stuffingPermissionNumber || "");
+      }
+    } else {
+        form.setValue("permissionNumber", "");
+    }
+  }, [selectedManufacturerId, allManufacturers, form]);
+
 
   useEffect(() => {
     if (isEditing && initialData) {
@@ -102,6 +118,7 @@ export function ExportDocumentForm({
         exportInvoiceDate: initialData.exportInvoiceDate ? new Date(initialData.exportInvoiceDate) : new Date(),
         manufacturerInvoiceNumber: initialData.manufacturerInvoiceNumber || "",
         manufacturerInvoiceDate: initialData.manufacturerInvoiceDate ? new Date(initialData.manufacturerInvoiceDate) : new Date(),
+        permissionNumber: initialData.permissionNumber || "",
         countryOfFinalDestination: initialData.countryOfFinalDestination || "",
         vesselFlightNo: initialData.vesselFlightNo || "",
         portOfLoading: initialData.portOfLoading || "",
@@ -315,6 +332,20 @@ export function ExportDocumentForm({
                   <FormMessage />
                 </FormItem>
               )}
+            />
+
+            <FormField
+                control={form.control}
+                name="permissionNumber"
+                render={({ field }) => (
+                    <FormItem>
+                    <FormLabel className="flex items-center gap-2"><BadgeCheck className="h-4 w-4 text-muted-foreground" />Permission No.</FormLabel>
+                    <FormControl>
+                        <Input placeholder="Auto-filled from Manufacturer" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                    </FormItem>
+                )}
             />
 
             <FormField

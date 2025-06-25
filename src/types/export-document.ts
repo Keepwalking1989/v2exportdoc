@@ -9,6 +9,7 @@ export interface ExportDocument {
   exportInvoiceDate: Date; // The date of the export invoice
   manufacturerInvoiceNumber?: string;
   manufacturerInvoiceDate?: Date;
+  permissionNumber?: string;
   countryOfFinalDestination: string; // Country of Final Destination
   vesselFlightNo?: string;
   portOfLoading?: string;
