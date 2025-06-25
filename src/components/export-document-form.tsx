@@ -173,11 +173,6 @@ const ContainerProductItem: React.FC<ContainerProductItemProps> = ({
         name: `containerItems.${containerIndex}.productItems.${productIndex}`,
     }) || {};
 
-    const totalPallets = useWatch({
-        control,
-        name: `containerItems.${containerIndex}.totalPallets`,
-    });
-
     const { sqm, amount } = useMemo(() => {
         const product = allProducts.find(p => p.id === currentItem.productId);
         if (!product) return { sqm: 0, amount: 0 };
@@ -210,21 +205,26 @@ const ContainerProductItem: React.FC<ContainerProductItemProps> = ({
       }
     }, [currentItem.boxes, currentItem.productId, currentItem.netWeight, allProducts, allSizes, setValue, containerIndex, productIndex]);
     
-    // Effect to auto-calculate Gross Weight (only if not manually edited)
+    // Effect to auto-calculate Gross Weight (now same as Net Weight, but editable)
     useEffect(() => {
         const isGrossWeightDirty = formState.dirtyFields.containerItems?.[containerIndex]?.productItems?.[productIndex]?.grossWeight;
         
         if (!isGrossWeightDirty) {
-            const netWt = Number(currentItem.netWeight) || 0;
-            const pallets = Number(totalPallets) || 0;
-            const calculatedGrossWeight = netWt + (pallets * 25);
+            const product = allProducts.find(p => p.id === currentItem.productId);
+            if (!product) return;
+            const size = allSizes.find(s => s.id === product.sizeId);
+            if (!size) return;
+    
+            const boxes = Number(currentItem.boxes) || 0;
+            const boxWeight = size.boxWeight || 0;
+            const calculatedGrossWeight = boxes * boxWeight;
             
             // Only update if the value is different to prevent re-renders
             if (calculatedGrossWeight !== (Number(currentItem.grossWeight) || 0)) {
                 setValue(`containerItems.${containerIndex}.productItems.${productIndex}.grossWeight`, calculatedGrossWeight, { shouldDirty: false });
             }
         }
-    }, [currentItem.netWeight, totalPallets, formState.dirtyFields, currentItem.grossWeight, setValue, containerIndex, productIndex]);
+    }, [currentItem.productId, currentItem.boxes, allProducts, allSizes, formState.dirtyFields, currentItem.grossWeight, setValue, containerIndex, productIndex]);
 
     const isOverweight = (Number(currentItem.grossWeight) || 0) > 27000;
 
