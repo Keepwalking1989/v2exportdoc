@@ -4,6 +4,8 @@ export interface ExportDocumentProductItem {
   productId: string;
   boxes: number;
   rate?: number;
+  netWeight?: number;
+  grossWeight?: number;
 }
 
 export interface ExportDocumentContainerItem {

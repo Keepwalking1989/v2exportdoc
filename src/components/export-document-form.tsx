@@ -13,7 +13,7 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Combobox, type ComboboxOption } from "@/components/ui/combobox";
 import { useToast } from "@/hooks/use-toast";
 import { FileSignature, Briefcase, Factory, Save, XCircle, CalendarIcon, Hash, Globe, Ship, Anchor, FileText, Truck, BadgeCheck, ArrowLeftRight, Bell, CalendarClock, Percent, PlusCircle, Trash2, Stamp, Radio, Weight, ListStart, ListEnd, Boxes, NotebookText, FileScan, Clock, Package, Layers, DollarSign } from "lucide-react";
@@ -71,6 +71,8 @@ const formSchema = z.object({
       id: z.string().optional(),
       productId: z.string().min(1, 'Product is required'),
       boxes: z.coerce.number().positive('Boxes must be > 0'),
+    netWeight: z.coerce.number().nonnegative('Net Weight cannot be negative').optional(),
+    grossWeight: z.coerce.number().nonnegative('Gross Weight cannot be negative').optional(),
       rate: z.coerce.number().nonnegative('Rate cannot be negative').optional(),
     })).optional(),
   })).optional(),
@@ -151,6 +153,7 @@ interface ContainerProductItemProps {
     allProducts: Product[];
     allSizes: Size[];
     handleProductChange: (productIndex: number, productId: string) => void;
+    setValue: UseFormSetValue<ExportDocumentFormValues>;
 }
 
 const ContainerProductItem: React.FC<ContainerProductItemProps> = ({
@@ -162,6 +165,7 @@ const ContainerProductItem: React.FC<ContainerProductItemProps> = ({
     allProducts,
     allSizes,
     handleProductChange,
+    setValue,
 }) => {
     // Hooks are now at the top level of this component, which is correct.
     const currentItem = useWatch({
@@ -183,12 +187,27 @@ const ContainerProductItem: React.FC<ContainerProductItemProps> = ({
         const calculatedAmount = calculatedSqm * rate;
 
         return { sqm: calculatedSqm, amount: calculatedAmount };
-    }, [currentItem, allProducts, allSizes]);
+    }, [currentItem.productId, currentItem.boxes, currentItem.rate, allProducts, allSizes]);
+
+    useEffect(() => {
+      const product = allProducts.find(p => p.id === currentItem.productId);
+      if (!product) return;
+      const size = allSizes.find(s => s.id === product.sizeId);
+      if (!size) return;
+
+      const boxes = Number(currentItem.boxes) || 0;
+      const boxWeight = size.boxWeight || 0;
+      const calculatedNetWeight = boxes * boxWeight;
+      
+      if (calculatedNetWeight !== currentItem.netWeight) {
+         setValue(`containerItems.${containerIndex}.productItems.${productIndex}.netWeight`, calculatedNetWeight);
+      }
+    }, [currentItem.boxes, currentItem.productId, currentItem.netWeight, allProducts, allSizes, setValue, containerIndex, productIndex]);
     
     return (
       <div className="p-3 border rounded-md space-y-3 relative bg-background/80">
         <Button
-            type="button"
+            type="button" // Important for buttons inside a form
             variant="destructive"
             size="icon"
             onClick={() => remove(productIndex)}
@@ -218,7 +237,7 @@ const ContainerProductItem: React.FC<ContainerProductItemProps> = ({
             )}
         />
 
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 items-start">
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 items-start">
             <FormField
                 control={control}
                 name={`containerItems.${containerIndex}.productItems.${productIndex}.boxes`}
@@ -232,6 +251,33 @@ const ContainerProductItem: React.FC<ContainerProductItemProps> = ({
                     </FormItem>
                 )}
             />
+            <FormField
+              control={control}
+              name={`containerItems.${containerIndex}.productItems.${productIndex}.netWeight`}
+              render={({ field }) => (
+              <FormItem>
+              <FormLabel className="flex items-center gap-1"><Weight className="h-4 w-4 text-muted-foreground"/>Net Wt.</FormLabel>
+              <FormControl>
+              <Input type="number" placeholder="e.g. 1000" {...field} />
+              </FormControl>
+              <FormMessage />
+              </FormItem>
+              )}
+            />
+            <FormField
+              control={control}
+              name={`containerItems.${containerIndex}.productItems.${productIndex}.grossWeight`}
+              render={({ field }) => (
+              <FormItem>
+              <FormLabel className="flex items-center gap-1"><Weight className="h-4 w-4 text-muted-foreground"/>Gross Wt.</FormLabel>
+              <FormControl>
+              <Input type="number" placeholder="e.g. 1020" {...field} />
+              </FormControl>
+              <FormMessage />
+              </FormItem>
+              )}
+            />
+            {/* Existing fields for Rate, SQM, Amount */}
             <FormField
                 control={control}
                 name={`containerItems.${containerIndex}.productItems.${productIndex}.rate`}
@@ -308,8 +354,8 @@ const ContainerProductManager: React.FC<ContainerProductManagerProps> = ({ conta
                 <Button
                     type="button"
                     variant="outline"
-                    size="sm"
-                    onClick={() => append({ productId: '', boxes: 1, rate: 0 })}
+                    size="default" // Changed from sm for better visibility
+                    onClick={() => append({ productId: '', boxes: 1, rate: 0, netWeight: 0, grossWeight: 0 })}
                     disabled={productOptions.length === 0}
                 >
                     <PlusCircle className="mr-2 h-4 w-4" /> Add Product
@@ -328,6 +374,7 @@ const ContainerProductManager: React.FC<ContainerProductManagerProps> = ({ conta
                         allProducts={allProducts}
                         allSizes={allSizes}
                         handleProductChange={handleProductChange}
+                        setValue={setValue}
                     />
                 ))}
                 {fields.length === 0 && (
@@ -652,7 +699,7 @@ export function ExportDocumentForm({
                   <FormMessage />
                 </FormItem>
               )}
-            />
+ />
 
             <FormField
                 control={form.control}
@@ -826,7 +873,7 @@ export function ExportDocumentForm({
                 name="termsOfDeliveryAndPayment"
                 render={({ field }) => (
                     <FormItem>
-                    <FormLabel className="flex items-center gap-2"><FileText className="h-4 w-4 text-muted-foreground" />Terms Of Delivery &amp; Payments</FormLabel>
+                    <FormLabel className="flex items-center gap-2"><FileText className="h-4 w-4 text-muted-foreground" />Terms Of Delivery & Payments</FormLabel>
                     <FormControl>
                         <Textarea placeholder="Terms..." {...field} />
                     </FormControl>
@@ -851,7 +898,7 @@ export function ExportDocumentForm({
                               type="button"
                               variant="destructive"
                               size="icon"
-                              onClick={() => remove(index)}
+                                    onClick={() => fields.length > 1 && remove(index)} // Prevent removing the last container
                               className="absolute top-2 right-2 h-7 w-7"
                               disabled={fields.length <= 1}
                           >
@@ -1032,7 +1079,7 @@ export function ExportDocumentForm({
 
                                         return (
                                             <FormItem>
-                                                <FormLabel className="flex items-center gap-2"><Clock className="h-4 w-4 text-muted-foreground" />Weighing Date &amp; Time</FormLabel>
+                                                <FormLabel className="flex items-center gap-2"><Clock className="h-4 w-4 text-muted-foreground" />Weighing Date & Time</FormLabel>
                                                 <FormControl>
                                                     <Input
                                                         type="datetime-local"
@@ -1059,7 +1106,7 @@ export function ExportDocumentForm({
                       </div>
                   ))}
               </CardContent>
-            </Card>
+ </Card>
 
 
             <div className="flex justify-between items-center mt-8">
