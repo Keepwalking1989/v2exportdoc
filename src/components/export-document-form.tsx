@@ -2,7 +2,7 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useForm, useFieldArray, Controller, Control, UseFormSetValue } from "react-hook-form";
+import { useForm, useFieldArray, Controller, Control, UseFormSetValue, useWatch } from "react-hook-form";
 import * as z from "zod";
 import { Button } from "@/components/ui/button";
 import {
@@ -16,7 +16,7 @@ import {
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Combobox, type ComboboxOption } from "@/components/ui/combobox";
 import { useToast } from "@/hooks/use-toast";
-import { FileSignature, Briefcase, Factory, Save, XCircle, CalendarIcon, Hash, Globe, Ship, Anchor, FileText, Truck, BadgeCheck, ArrowLeftRight, Bell, CalendarClock, Percent, PlusCircle, Trash2, Stamp, Radio, Weight, ListStart, ListEnd, Boxes, NotebookText, FileScan, Clock, Package } from "lucide-react";
+import { FileSignature, Briefcase, Factory, Save, XCircle, CalendarIcon, Hash, Globe, Ship, Anchor, FileText, Truck, BadgeCheck, ArrowLeftRight, Bell, CalendarClock, Percent, PlusCircle, Trash2, Stamp, Radio, Weight, ListStart, ListEnd, Boxes, NotebookText, FileScan, Clock, Package, Layers, DollarSign } from "lucide-react";
 import React, { useEffect, useMemo } from "react";
 import type { Company } from "@/types/company"; // For Exporter
 import type { Manufacturer } from "@/types/manufacturer"; // For Manufacturer
@@ -166,6 +166,11 @@ const ContainerProductManager: React.FC<ContainerProductManagerProps> = ({ conta
         }
     };
 
+    const watchedProductItems = useWatch({
+      control,
+      name: `containerItems.${containerIndex}.productItems`
+    });
+
     return (
         <div className="mt-4">
             <h4 className="text-md font-semibold mb-2 flex items-center justify-between">
@@ -185,24 +190,43 @@ const ContainerProductManager: React.FC<ContainerProductManagerProps> = ({ conta
             </h4>
 
             <div className="space-y-4 mt-2">
-                {fields.map((productField, productIndex) => (
-                    <div key={productField.id} className="p-3 border rounded-md space-y-3 relative bg-background/80">
-                         <Button
-                            type="button"
-                            variant="destructive"
-                            size="icon"
-                            onClick={() => remove(productIndex)}
-                            className="absolute top-1 right-1 h-6 w-6"
-                        >
-                            <Trash2 className="h-3 w-3" />
-                            <span className="sr-only">Remove Product</span>
-                        </Button>
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-start">
-                           <FormField
+                {fields.map((productField, productIndex) => {
+                    const currentItem = watchedProductItems?.[productIndex] || {};
+
+                    const { sqm, amount } = useMemo(() => {
+                        const product = allProducts.find(p => p.id === currentItem.productId);
+                        if (!product) return { sqm: 0, amount: 0 };
+                        
+                        const size = allSizes.find(s => s.id === product.sizeId);
+                        if (!size) return { sqm: 0, amount: 0 };
+
+                        const boxes = Number(currentItem.boxes) || 0;
+                        const rate = Number(currentItem.rate) || 0;
+                        
+                        const calculatedSqm = boxes * (size.sqmPerBox || 0);
+                        const calculatedAmount = calculatedSqm * rate;
+
+                        return { sqm: calculatedSqm, amount: calculatedAmount };
+                    }, [currentItem, allProducts, allSizes]);
+
+                    return (
+                        <div key={productField.id} className="p-3 border rounded-md space-y-3 relative bg-background/80">
+                            <Button
+                                type="button"
+                                variant="destructive"
+                                size="icon"
+                                onClick={() => remove(productIndex)}
+                                className="absolute top-1 right-1 h-6 w-6"
+                            >
+                                <Trash2 className="h-3 w-3" />
+                                <span className="sr-only">Remove Product</span>
+                            </Button>
+                            
+                            <FormField
                                 control={control}
                                 name={`containerItems.${containerIndex}.productItems.${productIndex}.productId`}
                                 render={({ field }) => (
-                                    <FormItem className="md:col-span-1">
+                                    <FormItem>
                                         <FormLabel>Product</FormLabel>
                                         <Combobox
                                             options={productOptions}
@@ -217,35 +241,60 @@ const ContainerProductManager: React.FC<ContainerProductManagerProps> = ({ conta
                                     </FormItem>
                                 )}
                             />
-                             <FormField
-                                control={control}
-                                name={`containerItems.${containerIndex}.productItems.${productIndex}.boxes`}
-                                render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>Boxes</FormLabel>
-                                        <FormControl>
-                                            <Input type="number" placeholder="e.g. 100" {...field} />
-                                        </FormControl>
-                                        <FormMessage />
-                                    </FormItem>
-                                )}
-                            />
-                             <FormField
-                                control={control}
-                                name={`containerItems.${containerIndex}.productItems.${productIndex}.rate`}
-                                render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>Rate</FormLabel>
-                                        <FormControl>
-                                            <Input type="number" placeholder="e.g. 12.50" {...field} />
-                                        </FormControl>
-                                        <FormMessage />
-                                    </FormItem>
-                                )}
-                            />
+
+                            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 items-start">
+                                <FormField
+                                    control={control}
+                                    name={`containerItems.${containerIndex}.productItems.${productIndex}.boxes`}
+                                    render={({ field }) => (
+                                        <FormItem>
+                                            <FormLabel className="flex items-center gap-1"><Boxes className="h-4 w-4 text-muted-foreground"/>Boxes</FormLabel>
+                                            <FormControl>
+                                                <Input type="number" placeholder="e.g. 100" {...field} />
+                                            </FormControl>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
+                                <FormField
+                                    control={control}
+                                    name={`containerItems.${containerIndex}.productItems.${productIndex}.rate`}
+                                    render={({ field }) => (
+                                        <FormItem>
+                                            <FormLabel className="flex items-center gap-1"><DollarSign className="h-4 w-4 text-muted-foreground"/>Rate</FormLabel>
+                                            <FormControl>
+                                                <Input type="number" placeholder="e.g. 12.50" {...field} />
+                                            </FormControl>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
+                                <FormItem>
+                                    <FormLabel className="flex items-center gap-1"><Layers className="h-4 w-4 text-muted-foreground"/>SQM</FormLabel>
+                                    <FormControl>
+                                        <Input
+                                            readOnly
+                                            value={sqm.toFixed(2)}
+                                            className="bg-muted/50 focus-visible:ring-0"
+                                            tabIndex={-1}
+                                        />
+                                    </FormControl>
+                                </FormItem>
+                                <FormItem>
+                                    <FormLabel className="flex items-center gap-1"><DollarSign className="h-4 w-4 text-muted-foreground"/>Amount</FormLabel>
+                                    <FormControl>
+                                        <Input
+                                            readOnly
+                                            value={amount.toFixed(2)}
+                                            className="bg-muted/50 focus-visible:ring-0"
+                                            tabIndex={-1}
+                                        />
+                                    </FormControl>
+                                </FormItem>
+                            </div>
                         </div>
-                    </div>
-                ))}
+                    )
+                })}
                 {fields.length === 0 && (
                      <div className="p-2 border border-dashed rounded-md text-center text-muted-foreground text-sm min-h-[50px] flex items-center justify-center">
                         <p>{productOptions.length > 0 ? "No products added to this container yet." : "No products available. Please add products on the Product page."}</p>
