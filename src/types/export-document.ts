@@ -3,6 +3,10 @@ export interface ExportDocumentContainerItem {
   id: string; // Unique ID for this container item
   bookingNo?: string;
   containerNo?: string;
+  lineSeal?: string;
+  rfidSeal?: string;
+  truckNumber?: string;
+  builtyNo?: string;
 }
 
 export interface ExportDocument {

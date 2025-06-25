@@ -16,7 +16,7 @@ import {
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Combobox, type ComboboxOption } from "@/components/ui/combobox";
 import { useToast } from "@/hooks/use-toast";
-import { FileSignature, Briefcase, Factory, Save, XCircle, CalendarIcon, Hash, Globe, Ship, Anchor, FileText, Truck, BadgeCheck, ArrowLeftRight, Bell, CalendarClock, Percent, PlusCircle, Trash2 } from "lucide-react";
+import { FileSignature, Briefcase, Factory, Save, XCircle, CalendarIcon, Hash, Globe, Ship, Anchor, FileText, Truck, BadgeCheck, ArrowLeftRight, Bell, CalendarClock, Percent, PlusCircle, Trash2, Seal, Radio } from "lucide-react";
 import React, { useEffect, useMemo } from "react";
 import type { Company } from "@/types/company"; // For Exporter
 import type { Manufacturer } from "@/types/manufacturer"; // For Manufacturer
@@ -53,6 +53,10 @@ const formSchema = z.object({
     id: z.string().optional(),
     bookingNo: z.string().optional(),
     containerNo: z.string().optional(),
+    lineSeal: z.string().optional(),
+    rfidSeal: z.string().optional(),
+    truckNumber: z.string().optional(),
+    builtyNo: z.string().optional(),
   })).optional(),
 });
 
@@ -91,7 +95,7 @@ const getDefaultFormValues = (): ExportDocumentFormValues => ({
   exchangeDate: undefined,
   freight: 0,
   gst: "",
-  containerItems: [{ bookingNo: "", containerNo: "" }],
+  containerItems: [{ bookingNo: "", containerNo: "", lineSeal: "", rfidSeal: "", truckNumber: "", builtyNo: "" }],
 });
 
 export function ExportDocumentForm({
@@ -151,7 +155,7 @@ export function ExportDocumentForm({
         exchangeDate: initialData.exchangeDate ? new Date(initialData.exchangeDate) : undefined,
         freight: initialData.freight || 0,
         gst: initialData.gst || "",
-        containerItems: initialData.containerItems && initialData.containerItems.length > 0 ? initialData.containerItems : [{ bookingNo: "", containerNo: "" }],
+        containerItems: initialData.containerItems && initialData.containerItems.length > 0 ? initialData.containerItems : [{ bookingNo: "", containerNo: "", lineSeal: "", rfidSeal: "", truckNumber: "", builtyNo: "" }],
       });
     } else {
       form.reset(getDefaultFormValues());
@@ -583,7 +587,7 @@ export function ExportDocumentForm({
               <CardHeader>
                   <CardTitle className="flex items-center justify-between">
                       Container Items
-                      <Button type="button" size="sm" onClick={() => append({ bookingNo: "", containerNo: "" })}>
+                      <Button type="button" size="sm" onClick={() => append({ bookingNo: "", containerNo: "", lineSeal: "", rfidSeal: "", truckNumber: "", builtyNo: "" })}>
                           <PlusCircle className="mr-2 h-4 w-4" /> Add Container
                       </Button>
                   </CardTitle>
@@ -630,6 +634,62 @@ export function ExportDocumentForm({
                                 )}
                             />
                           </div>
+                           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <FormField
+                                control={form.control}
+                                name={`containerItems.${index}.lineSeal`}
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel className="flex items-center gap-2"><Seal className="h-4 w-4 text-muted-foreground" />LINE SEAL</FormLabel>
+                                        <FormControl>
+                                            <Input placeholder="e.g. LS123" {...field} />
+                                        </FormControl>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+                            <FormField
+                                control={form.control}
+                                name={`containerItems.${index}.rfidSeal`}
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel className="flex items-center gap-2"><Radio className="h-4 w-4 text-muted-foreground" />RFID SEAL</FormLabel>
+                                        <FormControl>
+                                            <Input placeholder="e.g. RFID456" {...field} />
+                                        </FormControl>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+                           </div>
+                           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                             <FormField
+                                control={form.control}
+                                name={`containerItems.${index}.truckNumber`}
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel className="flex items-center gap-2"><Truck className="h-4 w-4 text-muted-foreground" />Truck Number</FormLabel>
+                                        <FormControl>
+                                            <Input placeholder="e.g. GJ01AB1234" {...field} />
+                                        </FormControl>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+                             <FormField
+                                control={form.control}
+                                name={`containerItems.${index}.builtyNo`}
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel className="flex items-center gap-2"><FileText className="h-4 w-4 text-muted-foreground" />Builty No</FormLabel>
+                                        <FormControl>
+                                            <Input placeholder="e.g. BN789" {...field} />
+                                        </FormControl>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+                           </div>
                       </div>
                   ))}
               </CardContent>

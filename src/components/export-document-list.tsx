@@ -71,7 +71,7 @@ export function ExportDocumentList({
                 <TableHead className="font-headline">Exporter</TableHead>
                 <TableHead className="font-headline">Manufacturer</TableHead>
                 <TableHead className="font-headline">Transporter</TableHead>
-                <TableHead className="font-headline">Booking No(s)</TableHead>
+                <TableHead className="font-headline">Container Details</TableHead>
                 <TableHead className="font-headline">PO ID</TableHead>
                 <TableHead className="font-headline text-right">Actions</TableHead>
               </TableRow>
@@ -81,7 +81,14 @@ export function ExportDocumentList({
                 const exporterName = allExporters.find(e => e.id === doc.exporterId)?.companyName || "N/A";
                 const manufacturerName = doc.manufacturerId ? (allManufacturers.find(m => m.id === doc.manufacturerId)?.companyName || "N/A") : "N/A";
                 const transporterName = doc.transporterId ? (allTransporters.find(t => t.id === doc.transporterId)?.companyName || "N/A") : "N/A";
-                const bookingNos = doc.containerItems?.map(item => item.bookingNo).filter(Boolean).join(', ') || "N/A";
+                const containerDetails = doc.containerItems?.map(item => {
+                  let details = [];
+                  if (item.bookingNo) details.push(`Booking: ${item.bookingNo}`);
+                  if (item.containerNo) details.push(`Container: ${item.containerNo}`);
+                  if (item.truckNumber) details.push(`Truck: ${item.truckNumber}`);
+                  return details.join(' | ');
+                }).filter(Boolean).join('\n') || "N/A";
+
                 return (
                   <TableRow key={doc.id}>
                     <TableCell className="font-medium">ED-{doc.id.slice(-6)}</TableCell>
@@ -89,7 +96,7 @@ export function ExportDocumentList({
                     <TableCell>{exporterName}</TableCell>
                     <TableCell>{manufacturerName}</TableCell>
                     <TableCell>{transporterName}</TableCell>
-                    <TableCell>{bookingNos}</TableCell>
+                    <TableCell className="whitespace-pre-line">{containerDetails}</TableCell>
                     <TableCell>{doc.purchaseOrderId ? `PO-${doc.purchaseOrderId.slice(-6)}` : "N/A"}</TableCell>
                     <TableCell className="text-right space-x-1">
                       <Button variant="ghost" size="icon" onClick={() => onEditDocument(doc.id)} className="hover:text-primary" title="Edit">
