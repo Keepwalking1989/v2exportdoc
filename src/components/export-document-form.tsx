@@ -16,7 +16,7 @@ import {
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Combobox, type ComboboxOption } from "@/components/ui/combobox";
 import { useToast } from "@/hooks/use-toast";
-import { FileSignature, Briefcase, Factory, Save, XCircle, CalendarIcon, Hash, Globe, Ship, Anchor, FileText, Truck, BadgeCheck, ArrowLeftRight, Bell, CalendarClock, Percent, PlusCircle, Trash2, Seal, Radio } from "lucide-react";
+import { FileSignature, Briefcase, Factory, Save, XCircle, CalendarIcon, Hash, Globe, Ship, Anchor, FileText, Truck, BadgeCheck, ArrowLeftRight, Bell, CalendarClock, Percent, PlusCircle, Trash2, Stamp, Radio } from "lucide-react";
 import React, { useEffect, useMemo } from "react";
 import type { Company } from "@/types/company"; // For Exporter
 import type { Manufacturer } from "@/types/manufacturer"; // For Manufacturer
@@ -640,7 +640,7 @@ export function ExportDocumentForm({
                                 name={`containerItems.${index}.lineSeal`}
                                 render={({ field }) => (
                                     <FormItem>
-                                        <FormLabel className="flex items-center gap-2"><Seal className="h-4 w-4 text-muted-foreground" />LINE SEAL</FormLabel>
+                                        <FormLabel className="flex items-center gap-2"><Stamp className="h-4 w-4 text-muted-foreground" />LINE SEAL</FormLabel>
                                         <FormControl>
                                             <Input placeholder="e.g. LS123" {...field} />
                                         </FormControl>
