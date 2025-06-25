@@ -52,6 +52,7 @@ const formSchema = z.object({
   containerItems: z.array(z.object({
     id: z.string().optional(),
     bookingNo: z.string().optional(),
+    containerNo: z.string().optional(),
   })).optional(),
 });
 
@@ -90,7 +91,7 @@ const getDefaultFormValues = (): ExportDocumentFormValues => ({
   exchangeDate: undefined,
   freight: 0,
   gst: "",
-  containerItems: [{ bookingNo: "" }],
+  containerItems: [{ bookingNo: "", containerNo: "" }],
 });
 
 export function ExportDocumentForm({
@@ -150,7 +151,7 @@ export function ExportDocumentForm({
         exchangeDate: initialData.exchangeDate ? new Date(initialData.exchangeDate) : undefined,
         freight: initialData.freight || 0,
         gst: initialData.gst || "",
-        containerItems: initialData.containerItems && initialData.containerItems.length > 0 ? initialData.containerItems : [{ bookingNo: "" }],
+        containerItems: initialData.containerItems && initialData.containerItems.length > 0 ? initialData.containerItems : [{ bookingNo: "", containerNo: "" }],
       });
     } else {
       form.reset(getDefaultFormValues());
@@ -582,8 +583,8 @@ export function ExportDocumentForm({
               <CardHeader>
                   <CardTitle className="flex items-center justify-between">
                       Container Items
-                      <Button type="button" size="sm" onClick={() => append({ bookingNo: "" })}>
-                          <PlusCircle className="mr-2 h-4 w-4" /> Add Item
+                      <Button type="button" size="sm" onClick={() => append({ bookingNo: "", containerNo: "" })}>
+                          <PlusCircle className="mr-2 h-4 w-4" /> Add Container
                       </Button>
                   </CardTitle>
               </CardHeader>
@@ -601,19 +602,34 @@ export function ExportDocumentForm({
                               <Trash2 className="h-4 w-4" />
                               <span className="sr-only">Remove Item</span>
                           </Button>
-                          <FormField
-                              control={form.control}
-                              name={`containerItems.${index}.bookingNo`}
-                              render={({ field }) => (
-                                  <FormItem>
-                                      <FormLabel>Booking No.</FormLabel>
-                                      <FormControl>
-                                          <Input placeholder="e.g. BK123456" {...field} />
-                                      </FormControl>
-                                      <FormMessage />
-                                  </FormItem>
-                              )}
-                          />
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <FormField
+                                control={form.control}
+                                name={`containerItems.${index}.bookingNo`}
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>Booking No.</FormLabel>
+                                        <FormControl>
+                                            <Input placeholder="e.g. BK123456" {...field} />
+                                        </FormControl>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+                             <FormField
+                                control={form.control}
+                                name={`containerItems.${index}.containerNo`}
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>Container No.</FormLabel>
+                                        <FormControl>
+                                            <Input placeholder="e.g. MSKU1234567" {...field} />
+                                        </FormControl>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+                          </div>
                       </div>
                   ))}
               </CardContent>

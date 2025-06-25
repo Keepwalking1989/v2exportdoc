@@ -2,6 +2,7 @@
 export interface ExportDocumentContainerItem {
   id: string; // Unique ID for this container item
   bookingNo?: string;
+  containerNo?: string;
 }
 
 export interface ExportDocument {
