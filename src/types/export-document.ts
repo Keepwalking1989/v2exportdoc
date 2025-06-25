@@ -7,6 +7,10 @@ export interface ExportDocumentContainerItem {
   rfidSeal?: string;
   truckNumber?: string;
   builtyNo?: string;
+  tareWeight?: number;
+  startPalletNo?: string;
+  endPalletNo?: string;
+  totalPallets?: string;
 }
 
 export interface ExportDocument {

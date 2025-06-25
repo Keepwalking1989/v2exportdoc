@@ -16,7 +16,7 @@ import {
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Combobox, type ComboboxOption } from "@/components/ui/combobox";
 import { useToast } from "@/hooks/use-toast";
-import { FileSignature, Briefcase, Factory, Save, XCircle, CalendarIcon, Hash, Globe, Ship, Anchor, FileText, Truck, BadgeCheck, ArrowLeftRight, Bell, CalendarClock, Percent, PlusCircle, Trash2, Stamp, Radio } from "lucide-react";
+import { FileSignature, Briefcase, Factory, Save, XCircle, CalendarIcon, Hash, Globe, Ship, Anchor, FileText, Truck, BadgeCheck, ArrowLeftRight, Bell, CalendarClock, Percent, PlusCircle, Trash2, Stamp, Radio, Weight, ListStart, ListEnd, Boxes } from "lucide-react";
 import React, { useEffect, useMemo } from "react";
 import type { Company } from "@/types/company"; // For Exporter
 import type { Manufacturer } from "@/types/manufacturer"; // For Manufacturer
@@ -57,6 +57,10 @@ const formSchema = z.object({
     rfidSeal: z.string().optional(),
     truckNumber: z.string().optional(),
     builtyNo: z.string().optional(),
+    tareWeight: z.coerce.number().optional(),
+    startPalletNo: z.string().optional(),
+    endPalletNo: z.string().optional(),
+    totalPallets: z.string().optional(),
   })).optional(),
 });
 
@@ -74,6 +78,19 @@ interface ExportDocumentFormProps {
 }
 
 const defaultTerms = "30 % advance Remaining Against BL";
+
+const defaultNewContainerItem = { 
+  bookingNo: "", 
+  containerNo: "", 
+  lineSeal: "", 
+  rfidSeal: "", 
+  truckNumber: "", 
+  builtyNo: "",
+  tareWeight: 0,
+  startPalletNo: "",
+  endPalletNo: "",
+  totalPallets: "",
+};
 
 const getDefaultFormValues = (): ExportDocumentFormValues => ({
   exporterId: "",
@@ -95,7 +112,7 @@ const getDefaultFormValues = (): ExportDocumentFormValues => ({
   exchangeDate: undefined,
   freight: 0,
   gst: "",
-  containerItems: [{ bookingNo: "", containerNo: "", lineSeal: "", rfidSeal: "", truckNumber: "", builtyNo: "" }],
+  containerItems: [defaultNewContainerItem],
 });
 
 export function ExportDocumentForm({
@@ -136,6 +153,7 @@ export function ExportDocumentForm({
   useEffect(() => {
     if (isEditing && initialData) {
       form.reset({
+        ...initialData,
         exporterId: initialData.exporterId || "",
         manufacturerId: initialData.manufacturerId || "",
         transporterId: initialData.transporterId || "",
@@ -155,7 +173,7 @@ export function ExportDocumentForm({
         exchangeDate: initialData.exchangeDate ? new Date(initialData.exchangeDate) : undefined,
         freight: initialData.freight || 0,
         gst: initialData.gst || "",
-        containerItems: initialData.containerItems && initialData.containerItems.length > 0 ? initialData.containerItems : [{ bookingNo: "", containerNo: "", lineSeal: "", rfidSeal: "", truckNumber: "", builtyNo: "" }],
+        containerItems: initialData.containerItems && initialData.containerItems.length > 0 ? initialData.containerItems : [defaultNewContainerItem],
       });
     } else {
       form.reset(getDefaultFormValues());
@@ -196,7 +214,7 @@ export function ExportDocumentForm({
                           "Fill in the details for the new document.";
 
   return (
-    <Card className="w-full max-w-2xl mx-auto shadow-xl mb-8">
+    <Card className="w-full max-w-4xl mx-auto shadow-xl mb-8">
       <CardHeader>
         <CardTitle className="font-headline text-2xl flex items-center gap-2">
           <FileSignature className="h-6 w-6 text-primary" />
@@ -587,7 +605,7 @@ export function ExportDocumentForm({
               <CardHeader>
                   <CardTitle className="flex items-center justify-between">
                       Container Items
-                      <Button type="button" size="sm" onClick={() => append({ bookingNo: "", containerNo: "", lineSeal: "", rfidSeal: "", truckNumber: "", builtyNo: "" })}>
+                      <Button type="button" size="sm" onClick={() => append(defaultNewContainerItem)}>
                           <PlusCircle className="mr-2 h-4 w-4" /> Add Container
                       </Button>
                   </CardTitle>
@@ -689,6 +707,60 @@ export function ExportDocumentForm({
                                     </FormItem>
                                 )}
                             />
+                           </div>
+                           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 pt-4">
+                                <FormField
+                                    control={form.control}
+                                    name={`containerItems.${index}.tareWeight`}
+                                    render={({ field }) => (
+                                        <FormItem>
+                                            <FormLabel className="flex items-center gap-2"><Weight className="h-4 w-4 text-muted-foreground" />Tare weight (Kgs)</FormLabel>
+                                            <FormControl>
+                                                <Input type="number" placeholder="e.g. 4500" {...field} />
+                                            </FormControl>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
+                                <FormField
+                                    control={form.control}
+                                    name={`containerItems.${index}.startPalletNo`}
+                                    render={({ field }) => (
+                                        <FormItem>
+                                            <FormLabel className="flex items-center gap-2"><ListStart className="h-4 w-4 text-muted-foreground" />Start PALLET NO</FormLabel>
+                                            <FormControl>
+                                                <Input placeholder="e.g. 1" {...field} />
+                                            </FormControl>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
+                                <FormField
+                                    control={form.control}
+                                    name={`containerItems.${index}.endPalletNo`}
+                                    render={({ field }) => (
+                                        <FormItem>
+                                            <FormLabel className="flex items-center gap-2"><ListEnd className="h-4 w-4 text-muted-foreground" />End PALLET NO</FormLabel>
+                                            <FormControl>
+                                                <Input placeholder="e.g. 26" {...field} />
+                                            </FormControl>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
+                                <FormField
+                                    control={form.control}
+                                    name={`containerItems.${index}.totalPallets`}
+                                    render={({ field }) => (
+                                        <FormItem>
+                                            <FormLabel className="flex items-center gap-2"><Boxes className="h-4 w-4 text-muted-foreground" />Total Pallets</FormLabel>
+                                            <FormControl>
+                                                <Input placeholder="e.g. 26" {...field} />
+                                            </FormControl>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
                            </div>
                       </div>
                   ))}
