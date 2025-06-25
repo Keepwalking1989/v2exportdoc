@@ -209,22 +209,17 @@ const ContainerProductItem: React.FC<ContainerProductItemProps> = ({
     useEffect(() => {
         const isGrossWeightDirty = formState.dirtyFields.containerItems?.[containerIndex]?.productItems?.[productIndex]?.grossWeight;
         
+        // Use the calculated netWeight as the source for grossWeight if not dirty
         if (!isGrossWeightDirty) {
-            const product = allProducts.find(p => p.id === currentItem.productId);
-            if (!product) return;
-            const size = allSizes.find(s => s.id === product.sizeId);
-            if (!size) return;
-    
-            const boxes = Number(currentItem.boxes) || 0;
-            const boxWeight = size.boxWeight || 0;
-            const calculatedGrossWeight = boxes * boxWeight;
+            const netWeightValue = currentItem.netWeight || 0;
             
             // Only update if the value is different to prevent re-renders
-            if (calculatedGrossWeight !== (Number(currentItem.grossWeight) || 0)) {
-                setValue(`containerItems.${containerIndex}.productItems.${productIndex}.grossWeight`, calculatedGrossWeight, { shouldDirty: false });
+            if (netWeightValue !== (Number(currentItem.grossWeight) || 0)) {
+                setValue(`containerItems.${containerIndex}.productItems.${productIndex}.grossWeight`, netWeightValue, { shouldDirty: false });
             }
         }
-    }, [currentItem.productId, currentItem.boxes, allProducts, allSizes, formState.dirtyFields, currentItem.grossWeight, setValue, containerIndex, productIndex]);
+    }, [currentItem.netWeight, currentItem.grossWeight, formState.dirtyFields, setValue, containerIndex, productIndex]);
+
 
     const isOverweight = (Number(currentItem.grossWeight) || 0) > 27000;
 
