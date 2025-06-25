@@ -5,7 +5,6 @@ export interface ExportDocumentProductItem {
   boxes: number;
   rate?: number;
   netWeight?: number;
-  grossWeight?: number;
 }
 
 export interface ExportDocumentContainerItem {

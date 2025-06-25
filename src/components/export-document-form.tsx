@@ -72,7 +72,6 @@ const formSchema = z.object({
       productId: z.string().min(1, 'Product is required'),
       boxes: z.coerce.number().positive('Boxes must be > 0'),
     netWeight: z.coerce.number().nonnegative('Net Weight cannot be negative').optional(),
-    grossWeight: z.coerce.number().nonnegative('Gross Weight cannot be negative').optional(),
       rate: z.coerce.number().nonnegative('Rate cannot be negative').optional(),
     })).optional(),
   })).optional(),
@@ -205,24 +204,6 @@ const ContainerProductItem: React.FC<ContainerProductItemProps> = ({
       }
     }, [currentItem.boxes, currentItem.productId, currentItem.netWeight, allProducts, allSizes, setValue, containerIndex, productIndex]);
     
-    // Effect to auto-calculate Gross Weight (now same as Net Weight, but editable)
-    useEffect(() => {
-        const isGrossWeightDirty = formState.dirtyFields.containerItems?.[containerIndex]?.productItems?.[productIndex]?.grossWeight;
-        
-        // Use the calculated netWeight as the source for grossWeight if not dirty
-        if (!isGrossWeightDirty) {
-            const netWeightValue = currentItem.netWeight || 0;
-            
-            // Only update if the value is different to prevent re-renders
-            if (netWeightValue !== (Number(currentItem.grossWeight) || 0)) {
-                setValue(`containerItems.${containerIndex}.productItems.${productIndex}.grossWeight`, netWeightValue, { shouldDirty: false });
-            }
-        }
-    }, [currentItem.netWeight, currentItem.grossWeight, formState.dirtyFields, setValue, containerIndex, productIndex]);
-
-
-    const isOverweight = (Number(currentItem.grossWeight) || 0) > 27000;
-
     return (
       <div className="p-3 border rounded-md space-y-3 relative bg-background/80">
         <Button
@@ -256,7 +237,7 @@ const ContainerProductItem: React.FC<ContainerProductItemProps> = ({
             )}
         />
 
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 items-start">
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 items-start">
             <FormField
                 control={control}
                 name={`containerItems.${containerIndex}.productItems.${productIndex}.boxes`}
@@ -279,25 +260,6 @@ const ContainerProductItem: React.FC<ContainerProductItemProps> = ({
               <FormControl>
               <Input type="number" placeholder="e.g. 1000" {...field} />
               </FormControl>
-              <FormMessage />
-              </FormItem>
-              )}
-            />
-            <FormField
-              control={control}
-              name={`containerItems.${containerIndex}.productItems.${productIndex}.grossWeight`}
-              render={({ field }) => (
-              <FormItem>
-              <FormLabel className="flex items-center gap-1"><Weight className="h-4 w-4 text-muted-foreground"/>Gross Wt.</FormLabel>
-              <FormControl>
-              <Input 
-                type="number" 
-                placeholder="e.g. 1020" 
-                {...field} 
-                className={cn(isOverweight && "border-2 border-destructive text-destructive focus-visible:ring-destructive")}
-              />
-              </FormControl>
-              {isOverweight && <p className="text-xs text-destructive">Weight exceeds 27000 Kgs</p>}
               <FormMessage />
               </FormItem>
               )}
@@ -382,7 +344,7 @@ const ContainerProductManager: React.FC<ContainerProductManagerProps> = ({ conta
                     type="button"
                     variant="outline"
                     size="default"
-                    onClick={() => append({ productId: '', boxes: 1, rate: 0, netWeight: 0, grossWeight: 0 })}
+                    onClick={() => append({ productId: '', boxes: 1, rate: 0, netWeight: 0 })}
                     disabled={productOptions.length === 0}
                 >
                     <PlusCircle className="mr-2 h-4 w-4" /> Add Product
