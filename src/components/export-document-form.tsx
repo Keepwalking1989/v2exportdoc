@@ -170,7 +170,7 @@ const ContainerProductItem: React.FC<ItemProps> = ({
     handleProductChange,
     fieldArrayName,
 }) => {
-    const { setValue } = useFormContext<ExportDocumentFormValues>();
+    const { setValue, getValues } = useFormContext<ExportDocumentFormValues>();
     
     const productOrBoxesChanged = useRef(false);
 
@@ -202,19 +202,21 @@ const ContainerProductItem: React.FC<ItemProps> = ({
     }, [productId, boxes]);
 
     useEffect(() => {
-        const currentNetWeight = form.getValues(`containerItems.${containerIndex}.${fieldArrayName}.${productIndex}.netWeight`);
-        const currentGrossWeight = form.getValues(`containerItems.${containerIndex}.${fieldArrayName}.${productIndex}.grossWeight`);
-
         if (productOrBoxesChanged.current) {
-             setValue(`containerItems.${containerIndex}.${fieldArrayName}.${productIndex}.netWeight`, netWeight);
-             if (currentGrossWeight === currentNetWeight || currentGrossWeight === 0 || !currentGrossWeight) {
-                 setValue(`containerItems.${containerIndex}.${fieldArrayName}.${productIndex}.grossWeight`, netWeight);
-             }
-             productOrBoxesChanged.current = false;
+            const currentNetWeight = getValues(`containerItems.${containerIndex}.${fieldArrayName}.${productIndex}.netWeight`);
+            const currentGrossWeight = getValues(`containerItems.${containerIndex}.${fieldArrayName}.${productIndex}.grossWeight`);
+            
+            setValue(`containerItems.${containerIndex}.${fieldArrayName}.${productIndex}.netWeight`, netWeight);
+            
+            // Only update gross weight if it was matching net weight, or was empty/zero.
+            // This preserves manual edits to gross weight.
+            if (Number(currentGrossWeight) === Number(currentNetWeight) || !currentGrossWeight) {
+                setValue(`containerItems.${containerIndex}.${fieldArrayName}.${productIndex}.grossWeight`, netWeight);
+            }
+            productOrBoxesChanged.current = false;
         }
-    }, [netWeight, setValue, containerIndex, productIndex, fieldArrayName]);
+    }, [netWeight, setValue, getValues, containerIndex, productIndex, fieldArrayName]);
 
-    const {form} = useFormContext<ExportDocumentFormValues>();
     
     return (
       <div className="p-3 border rounded-md space-y-3 relative bg-background/80">
