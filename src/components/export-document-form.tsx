@@ -170,7 +170,7 @@ const ContainerProductItem: React.FC<ItemProps> = ({
     handleProductChange,
     fieldArrayName,
 }) => {
-    const { setValue, getValues } = useFormContext<ExportDocumentFormValues>();
+    const { getValues, setValue } = useFormContext<ExportDocumentFormValues>();
     
     const productOrBoxesChanged = useRef(false);
 
@@ -208,8 +208,6 @@ const ContainerProductItem: React.FC<ItemProps> = ({
             
             setValue(`containerItems.${containerIndex}.${fieldArrayName}.${productIndex}.netWeight`, netWeight);
             
-            // Only update gross weight if it was matching net weight, or was empty/zero.
-            // This preserves manual edits to gross weight.
             if (Number(currentGrossWeight) === Number(currentNetWeight) || !currentGrossWeight) {
                 setValue(`containerItems.${containerIndex}.${fieldArrayName}.${productIndex}.grossWeight`, netWeight);
             }
@@ -361,7 +359,7 @@ const ContainerProductManager: React.FC<ItemManagerProps> = ({ containerIndex, c
     }) || [];
 
     const totalContainerAmount = useMemo(() => {
-        if (!productItems || productItems.length < 2) {
+        if (!productItems) {
             return 0;
         }
 
@@ -404,10 +402,20 @@ const ContainerProductManager: React.FC<ItemManagerProps> = ({ containerIndex, c
     
     return (
         <div className="mt-4">
-            <h4 className="text-md font-semibold mb-2 flex items-center gap-2">
-                <Package className="h-5 w-5 text-primary" />
-                Products in this Container
-            </h4>
+            <div className="flex justify-between items-center mb-2">
+                <h4 className="text-md font-semibold flex items-center gap-2">
+                    <Package className="h-5 w-5 text-primary" />
+                    Products in this Container
+                </h4>
+                <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => append({ productId: '', boxes: 1, rate: 0, netWeight: 0, grossWeight: 0 })}
+                    >
+                    <PlusCircle className="mr-2 h-4 w-4" /> Add Product
+                </Button>
+            </div>
 
             <div className="space-y-4 mt-2">
                 {fields.map((productField, productIndex) => (
@@ -431,7 +439,7 @@ const ContainerProductManager: React.FC<ItemManagerProps> = ({ containerIndex, c
                 )}
             </div>
 
-            {totalContainerAmount > 0 && (
+            {totalContainerAmount > 0 && productItems.length >= 2 && (
                 <>
                     <Separator className="my-4" />
                     <div className="flex justify-end items-center font-bold text-md">
@@ -469,6 +477,7 @@ const ContainerSampleManager: React.FC<ItemManagerProps> = ({ containerIndex, co
         if (product) {
             const size = allSizes.find(s => s.id === product.sizeId);
             if (size) {
+                // Samples have no rate
                 setValue(`containerItems.${containerIndex}.sampleItems.${productIndex}.rate`, 0);
             }
         }
@@ -476,10 +485,20 @@ const ContainerSampleManager: React.FC<ItemManagerProps> = ({ containerIndex, co
     
     return (
         <div className="mt-4">
-            <h4 className="text-md font-semibold mb-2 flex items-center gap-2">
-                <Gift className="h-5 w-5 text-primary" />
-                Sample Items in this Container
-            </h4>
+            <div className="flex justify-between items-center mb-2">
+                <h4 className="text-md font-semibold flex items-center gap-2">
+                    <Gift className="h-5 w-5 text-primary" />
+                    Sample Items in this Container
+                </h4>
+                <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => append({ productId: '', boxes: 1, rate: 0, netWeight: 0, grossWeight: 0 })}
+                >
+                    <Gift className="mr-2 h-4 w-4" /> Add Sample
+                </Button>
+            </div>
 
             <div className="space-y-4 mt-2">
                 {fields.map((productField, productIndex) => (
@@ -529,16 +548,6 @@ export function ExportDocumentForm({
   const { fields, append, remove } = useFieldArray({
     control: form.control,
     name: "containerItems",
-  });
-
-  const { fields: productFields, append: appendProduct } = useFieldArray({
-      control: form.control,
-      name: `containerItems.0.productItems`
-  });
-
-  const { fields: sampleFields, append: appendSample } = useFieldArray({
-      control: form.control,
-      name: `containerItems.0.sampleItems`
   });
 
   const selectedManufacturerId = form.watch("manufacturerId");
@@ -1229,26 +1238,7 @@ export function ExportDocumentForm({
                                     }}
                                 />
                             </div>
-                            <Separator className="my-4" />
-                            <div className="flex items-center gap-4">
-                                <Button
-                                    type="button"
-                                    variant="outline"
-                                    onClick={() => appendProduct({ productId: '', boxes: 1, rate: 0, netWeight: 0, grossWeight: 0 })}
-                                    className="flex-1"
-                                    >
-                                    <PlusCircle className="mr-2 h-4 w-4" /> Add Product
-                                </Button>
-                                <Button
-                                    type="button"
-                                    variant="outline"
-                                    onClick={() => appendSample({ productId: '', boxes: 1, rate: 0, netWeight: 0, grossWeight: 0 })}
-                                    className="flex-1"
-                                >
-                                    <Gift className="mr-2 h-4 w-4" /> Add Sample
-                                </Button>
-                            </div>
-
+                            
                             <ContainerProductManager
                                 containerIndex={index}
                                 control={form.control}
