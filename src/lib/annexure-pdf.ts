@@ -136,36 +136,54 @@ export function generateAnnexurePdf(
     });
     // @ts-ignore
     yPos = doc.lastAutoTable.finalY;
-    yPos += 10;
+    yPos += 20;
 
     // --- Footer Text ---
-    const footerLines = [
-        '"Supply Goods Under Letter Of Undertaking, Subject To Such Conditions, Safeguards And Procedure As May Be Prescribed."',
-        'Letter Of Undertaking No.Acknowledgement For Lut Application Reference Number (ARN) AD240324138081L',
-        'EXPORT UNDER SEFL SEALING UNDER Circular No.: 59/2010 Dated : 23.12.2010',
-        'Examined the export goods covered under this invoice description of the goods with refrence to DBK & MEIS Scheme Value cap p/kg.Net Wight of Ceramic Glazed Wall Tiles are as under',
-        'Certified that the description and value of the goods coverd by this invoice have been checked by me and the goods have been packed and sealed with lead seal one time lock seal checked by me and the goods have been packed and sealed with lead seal/ one time lock seal.'
-    ];
-
     doc.setFontSize(9);
     doc.setFont('helvetica', 'normal');
-    footerLines.forEach(line => {
+
+    const centeredLines = [
+        "Export Under GST Circular No. 26/2017 Customs DT.01/07/2017",
+        "\"Supply Goods Under Letter Of Undertaking, Subject To Such Conditions, Safeguards And Procedure As May Be Prescribed.\"",
+        "Letter Of Undertaking No.Acknowledgement For Lut Application Reference Number (ARN) AD240324138081L",
+    ];
+
+    centeredLines.forEach(line => {
         doc.text(line, contentWidth / 2 + pageMargin, yPos, { align: 'center', maxWidth: contentWidth - 20 });
         yPos += 12;
     });
-    yPos += 20;
+
+    const underlinedText = "EXPORT UNDER SELF SEALING UNDER Circular No.: 59/2010 Dated : 23.12.2010";
+    doc.text(underlinedText, contentWidth / 2 + pageMargin, yPos, { align: 'center' });
+    const textWidth = doc.getTextWidth(underlinedText);
+    const textX = (contentWidth / 2 + pageMargin) - (textWidth / 2);
+    doc.setLineWidth(0.5);
+    doc.line(textX, yPos + 1, textX + textWidth, yPos + 1);
+    yPos += 12;
+    
+    const moreCenteredLines = [
+        "Examined the export goods covered under this invoice description of the goods with reference to DBK & MEIS Scheme Value cap p/kg.Net",
+        "Weight of Ceramic Glazed Wall Tiles are as under",
+        "Certified that the description and value of the goods covered by this invoice have been checked by me and the goods have been packed and",
+        "sealed with lead seal one time lock seal checked by me and the goods have been packed and sealed with lead seal/ one time lock seal."
+    ];
+
+    moreCenteredLines.forEach(line => {
+        doc.text(line, contentWidth / 2 + pageMargin, yPos, { align: 'center', maxWidth: contentWidth - 20 });
+        yPos += 12;
+    });
+    yPos += 10;
 
     // --- Signature ---
     doc.setFontSize(9);
     doc.setFont('helvetica', 'bold');
     doc.text(`For, ${exporter.companyName}`, pageMargin, yPos);
 
-    yPos += 60; // Space for signature
+    yPos += 24; // Two empty lines
 
+    doc.setFont('helvetica', 'bold');
     doc.text('AUTHORISED SIGN', pageMargin, yPos);
-    doc.text('DESIGNATED PARTNER', contentWidth / 2 + pageMargin, yPos, { align: 'center' });
-
-    yPos -= 5;
+    yPos += 12;
     doc.text('SIGNATURE OF EXPORTER', pageMargin, yPos);
 
     // --- Save the PDF ---
