@@ -56,15 +56,6 @@ function amountToWordsUSD(amount: number): string {
     return result.replace(/\s\s+/g, ' ').trim() + " only";
 }
 
-// Helper to draw vertical text
-const drawVerticalText = (doc: jsPDF, text: string, x: number, y: number, options: { charSpacing: number }) => {
-    let currentY = y;
-    for (let i = 0; i < text.length; i++) {
-        doc.text(text[i], x, currentY, { align: 'center' });
-        currentY += options.charSpacing;
-    }
-};
-
 // --- Main PDF Generation Function ---
 export function generateCustomInvoicePdf(
     docData: ExportDocument,
@@ -74,120 +65,143 @@ export function generateCustomInvoicePdf(
     allSizes: Size[]
 ) {
     const doc = new jsPDF({ unit: 'pt', format: 'a4' });
-    const pageHeight = doc.internal.pageSize.getHeight();
-    const pageWidth = doc.internal.pageSize.getWidth();
-    const margin = 20;
-    const contentWidth = pageWidth - 2 * margin;
+    const pageMargin = 20;
+    let yPos = pageMargin;
 
-    let y = margin + 5; // Start with a bit more top margin
-
-    // --- Header ---
+    // --- Style Definitions (Classes) ---
+    const classOneStyles = { // Labels
+        fontStyle: 'bold',
+        textColor: '#000000',
+        halign: 'center',
+        valign: 'middle',
+        lineWidth: 0.5,
+        lineColor: '#000000',
+    };
+    const classTwoStyles = { // Data
+        fontStyle: 'normal',
+        textColor: '#000000',
+        valign: 'middle',
+        lineWidth: 0.5,
+        lineColor: '#000000',
+    };
+    const classThreeStyles = { // Fine Print
+        fontStyle: 'normal',
+        textColor: '#000000',
+        fontSize: 8,
+    };
+    
+    // --- Document Header ---
     doc.setFontSize(20);
     doc.setFont('helvetica', 'bold');
-    doc.text('CUSTOM INVOICE', pageWidth / 2, y, { align: 'center' });
-    y += 20;
+    doc.text('CUSTOM INVOICE', doc.internal.pageSize.getWidth() / 2, yPos, { align: 'center' });
+    yPos += 20;
 
     doc.setFontSize(9);
     doc.setFont('helvetica', 'normal');
-    doc.text('"Supply Meant For Export Under Bond & LUT - Letter Of Undertaking Without Payment Of Integrated Tax"', pageWidth / 2, y, { align: 'center' });
-    y += 15;
-    
-    const drawBlueHeader = (text: string, x: number, y: number, width: number, height: number, align: 'center' | 'left' = 'center') => {
-        doc.setFillColor(41, 171, 226); // #29ABE2
-        doc.rect(x, y, width, height, 'F');
-        doc.setTextColor(255, 255, 255);
-        doc.setFontSize(9);
-        doc.setFont('helvetica', 'bold');
-        let textX = align === 'left' ? x + 5 : x + width / 2;
-        doc.text(text, textX, y + height / 2, { align: align, baseline: 'middle' });
-        doc.setTextColor(0, 0, 0); // Reset text color
-    };
+    doc.text('"Supply Meant For Export Under Bond & LUT - Letter Of Undertaking Without Payment Of Integrated Tax"', doc.internal.pageSize.getWidth() / 2, yPos, { align: 'center' });
+    yPos += 15;
 
-    // --- Exporter & Invoice Details ---
-    const exporterBoxWidth = contentWidth * 0.5;
-    const invoiceDetailsWidth = contentWidth * 0.3;
-    const exportRefWidth = contentWidth * 0.2;
-    const headerHeight = 15;
+    // --- Exporter, Invoice Details, Ref (as a table) ---
+    autoTable(doc, {
+        startY: yPos,
+        theme: 'grid',
+        body: [
+            // Row 1: Labels (Class 1)
+            [
+                { content: 'Exporter', styles: { ...classOneStyles } },
+                { content: 'Export Invoice No & Date', styles: { ...classOneStyles } },
+                { content: 'Export Ref.', styles: { ...classOneStyles } }
+            ],
+            // Row 2: Data (Class 2)
+            [
+                { content: `${exporter.companyName}\n${exporter.address || ''}`, styles: { ...classTwoStyles, halign: 'left' } },
+                { content: `${docData.exportInvoiceNumber}\n${format(new Date(docData.exportInvoiceDate), 'dd/MM/yyyy')}`, styles: { ...classTwoStyles, halign: 'center' } },
+                { content: `IEC Code: ${exporter.iecNumber || 'N/A'}`, styles: { ...classTwoStyles, halign: 'left' } },
+            ]
+        ],
+        margin: { left: pageMargin, right: pageMargin },
+        columnStyles: {
+            0: { cellWidth: '40%' },
+            1: { cellWidth: '40%' },
+            2: { cellWidth: '20%' },
+        },
+        didDrawPage: data => { yPos = data.cursor?.y ?? yPos; }
+    });
+    // @ts-ignore
+    yPos = doc.lastAutoTable.finalY;
 
-    drawBlueHeader('Exporter', margin, y, exporterBoxWidth, headerHeight, 'left');
-    drawBlueHeader('Export Invoice No & Date', margin + exporterBoxWidth, y, invoiceDetailsWidth, headerHeight);
-    drawBlueHeader('Export Ref.', margin + exporterBoxWidth + invoiceDetailsWidth, y, exportRefWidth, headerHeight);
-    y += headerHeight;
-    
-    const addressBoxHeight = 45;
-    doc.setDrawColor(0);
-    doc.setLineWidth(1);
-    doc.rect(margin, y, exporterBoxWidth, addressBoxHeight);
-    doc.rect(margin + exporterBoxWidth, y, invoiceDetailsWidth, addressBoxHeight);
-    doc.rect(margin + exporterBoxWidth + invoiceDetailsWidth, y, exportRefWidth, addressBoxHeight);
-    
-    doc.setFontSize(9);
-    doc.setFont('helvetica', 'normal');
-    const exporterAddress = doc.splitTextToSize(`${exporter.companyName}\n${exporter.address || ''}`, exporterBoxWidth - 10);
-    doc.text(exporterAddress, margin + 5, y + 12);
-    const invoiceData = `${docData.exportInvoiceNumber}\n${format(new Date(docData.exportInvoiceDate), 'dd/MM/yyyy')}`;
-    doc.text(invoiceData, margin + exporterBoxWidth + 5, y + 12);
-    doc.text(`IEC Code: ${exporter.iecNumber || 'N/A'}`, margin + exporterBoxWidth + invoiceDetailsWidth + 5, y + 12);
-    y += addressBoxHeight;
-    
     // --- Consignee & Buyer ---
-    drawBlueHeader('Consignee:-', margin, y, exporterBoxWidth, headerHeight, 'left');
-    drawBlueHeader('Buyer (If Not Consignee)', margin + exporterBoxWidth, y, contentWidth - exporterBoxWidth, headerHeight, 'left');
-    y += headerHeight;
-
-    const consigneeBoxHeight = 35;
-    doc.rect(margin, y, exporterBoxWidth, consigneeBoxHeight);
-    doc.rect(margin + exporterBoxWidth, y, contentWidth - exporterBoxWidth, consigneeBoxHeight);
-    doc.text('TO\nTHE\nORDER', margin + 5, y + 12);
-    doc.text('TO\nTHE\nORDER', margin + exporterBoxWidth + 5, y + 12);
-    y += consigneeBoxHeight;
+    autoTable(doc, {
+        startY: yPos,
+        theme: 'grid',
+        body: [
+             // Row 1: Labels (Class 1)
+            [
+                { content: 'Consignee:-', styles: { ...classOneStyles, halign: 'left' } },
+                { content: 'Buyer (If Not Consignee)', styles: { ...classOneStyles, halign: 'left' } }
+            ],
+             // Row 2: Data (Class 2)
+            [
+                { content: 'TO\nTHE\nORDER', styles: { ...classTwoStyles, minCellHeight: 35 } },
+                { content: 'TO\nTHE\nORDER', styles: { ...classTwoStyles, minCellHeight: 35 } }
+            ]
+        ],
+        margin: { left: pageMargin, right: pageMargin },
+        didDrawPage: data => { yPos = data.cursor?.y ?? yPos; }
+    });
+    // @ts-ignore
+    yPos = doc.lastAutoTable.finalY;
 
     // --- Shipment Details Grid ---
-    const gridRowHeight = 30;
-    const colWidths1 = [contentWidth * 0.25, contentWidth * 0.25, contentWidth * 0.25, contentWidth * 0.25];
-    
-    drawBlueHeader('Pre-Carriage By', margin, y, colWidths1[0], headerHeight);
-    drawBlueHeader('Place Of Receipt By Pre-Carrier', margin + colWidths1[0], y, colWidths1[1], headerHeight);
-    drawBlueHeader('Country Of Origin Of Good', margin + colWidths1[0] + colWidths1[1], y, colWidths1[2], headerHeight);
-    drawBlueHeader('Country Of Final Destination', margin + colWidths1[0] + colWidths1[1] + colWidths1[2], y, colWidths1[3], headerHeight);
-    y += headerHeight;
-    
-    doc.rect(margin, y, colWidths1[0], gridRowHeight);
-    doc.text('By Road', margin + 5, y + 18);
-    doc.rect(margin + colWidths1[0], y, colWidths1[1], gridRowHeight);
-    doc.text(manufacturer.address.split(',')[0] || 'N/A', margin + colWidths1[0] + 5, y + 18);
-    doc.rect(margin + colWidths1[0] + colWidths1[1], y, colWidths1[2], gridRowHeight);
-    doc.text('INDIA', margin + colWidths1[0] + colWidths1[1] + 5, y + 18);
-    doc.rect(margin + colWidths1[0] + colWidths1[1] + colWidths1[2], y, colWidths1[3], gridRowHeight);
-    doc.text(docData.countryOfFinalDestination, margin + colWidths1[0] + colWidths1[1] + colWidths1[2] + 5, y + 18);
-    y += gridRowHeight;
+    autoTable(doc, {
+        startY: yPos,
+        theme: 'grid',
+        body: [
+            [
+                { content: 'Pre-Carriage By', styles: {...classOneStyles} },
+                { content: 'Place Of Receipt By Pre-Carrier', styles: {...classOneStyles} },
+                { content: 'Country Of Origin Of Good', styles: {...classOneStyles} },
+                { content: 'Country Of Final Destination', styles: {...classOneStyles} },
+            ],
+            [
+                { content: 'By Road', styles: {...classTwoStyles, halign: 'center'} },
+                { content: manufacturer.address.split(',')[0] || 'N/A', styles: {...classTwoStyles, halign: 'center'} },
+                { content: 'INDIA', styles: {...classTwoStyles, halign: 'center'} },
+                { content: docData.countryOfFinalDestination, styles: {...classTwoStyles, halign: 'center'} },
+            ],
+            [
+                { content: 'Vessel / Flight No.', styles: {...classOneStyles} },
+                { content: 'Port Of Loading', styles: {...classOneStyles} },
+                { content: 'Port Of Discharge', styles: {...classOneStyles} },
+                { content: 'Final Destination', styles: {...classOneStyles} },
+            ],
+             [
+                { content: docData.vesselFlightNo || 'N/A', styles: {...classTwoStyles, halign: 'center'} },
+                { content: docData.portOfLoading || 'N/A', styles: {...classTwoStyles, halign: 'center'} },
+                { content: docData.portOfDischarge || 'N/A', styles: {...classTwoStyles, halign: 'center'} },
+                { content: docData.finalDestination || 'N/A', styles: {...classTwoStyles, halign: 'center'} },
+            ],
+        ],
+        margin: { left: pageMargin, right: pageMargin },
+        didDrawPage: data => { yPos = data.cursor?.y ?? yPos; }
+    });
+    // @ts-ignore
+    yPos = doc.lastAutoTable.finalY;
 
-    const colWidths2 = [contentWidth * 0.25, contentWidth * 0.25, contentWidth * 0.5];
-    drawBlueHeader('Vessel / Flight No.', margin, y, colWidths2[0], headerHeight);
-    drawBlueHeader('Port Of Loading', margin + colWidths2[0], y, colWidths2[1], headerHeight);
-    drawBlueHeader('Terms Of Delivery & Payments', margin + colWidths2[0] + colWidths2[1], y, colWidths2[2], headerHeight);
-    y += headerHeight;
-    doc.rect(margin, y, colWidths2[0], gridRowHeight);
-    doc.text(docData.vesselFlightNo || 'N/A', margin + 5, y + 18);
-    doc.rect(margin + colWidths2[0], y, colWidths2[1], gridRowHeight);
-    doc.text(docData.portOfLoading || 'N/A', margin + colWidths2[0] + 5, y + 18);
-    doc.rect(margin + colWidths2[0] + colWidths2[1], y, colWidths2[2] * 2, gridRowHeight * 2); // Span 2 rows high, 1 row wide
-    const termsText = doc.splitTextToSize(docData.termsOfDeliveryAndPayment || 'N/A', colWidths2[2] - 10);
-    doc.text(termsText, margin + colWidths2[0] + colWidths2[1] + 5, y + 18);
-    
-    const yAfterTerms = y + gridRowHeight * 2;
-    let tempY = y;
-    
-    tempY += gridRowHeight;
-    drawBlueHeader('Port Of Discharge', margin, tempY, colWidths2[0], headerHeight);
-    drawBlueHeader('Final Destination', margin + colWidths2[0], tempY, colWidths2[1], headerHeight);
-    tempY += headerHeight;
-    doc.rect(margin, tempY, colWidths2[0], gridRowHeight);
-    doc.text(docData.portOfDischarge || 'N/A', margin + 5, tempY + 18);
-    doc.rect(margin + colWidths2[0], tempY, colWidths2[1], gridRowHeight);
-    doc.text(docData.finalDestination || 'N/A', margin + colWidths2[0] + 5, tempY + 18);
-    
-    y = yAfterTerms;
+    // --- Terms of Delivery ---
+    autoTable(doc, {
+        startY: yPos,
+        theme: 'grid',
+        body: [
+            [{ content: 'Terms Of Delivery & Payments', styles: {...classOneStyles, halign: 'left'} }],
+            [{ content: docData.termsOfDeliveryAndPayment || 'N/A', styles: {...classTwoStyles, halign: 'left', minCellHeight: 30} }],
+        ],
+         margin: { left: pageMargin, right: pageMargin },
+        didDrawPage: data => { yPos = data.cursor?.y ?? yPos; }
+    });
+    // @ts-ignore
+    yPos = doc.lastAutoTable.finalY;
+
 
     // --- Main Product Table ---
     const allItems: (ExportDocumentProductItem & { type: 'product' | 'sample' })[] = [];
@@ -245,148 +259,75 @@ export function generateCustomInvoicePdf(
         ];
     });
 
-    let tableFooter;
-    if (tableBody.length > 0) {
-        tableFooter = [
-            [
-                { content: 'TOTAL', colSpan: 3, styles: { halign: 'left', fontStyle: 'bold' } },
-                { content: grandTotalBoxes.toString(), styles: { halign: 'right', fontStyle: 'bold' } },
-                { content: grandTotalSqm.toFixed(2), styles: { halign: 'right', fontStyle: 'bold' } },
-                { content: '' },
-                { content: `$ ${grandTotalAmount.toFixed(2)}`, styles: { halign: 'right', fontStyle: 'bold' } },
-            ]
-        ];
-    } else {
-        tableBody.push([
-            { content: 'No items found in document.', colSpan: 7, styles: { halign: 'center', minCellHeight: 50 } }
-        ]);
-    }
-
     autoTable(doc, {
-        startY: y,
-        head: [['Marks & Nos.\nContainer', 'Sr. No', 'Description Of Goods', 'Boxes', 'Sq.Mtr', 'Rate in $', 'Total Amount\nIn USD $']],
+        startY: yPos,
+        head: [['HSN Code', 'Sr.\nNo', 'Description Of Goods', 'Boxes', 'Sq.Mtr', 'Rate in\n$', 'Total Amount\nIn USD $']],
         body: tableBody,
-        foot: tableFooter,
+        foot: [[
+            { content: 'TOTAL', colSpan: 3, styles: {...classOneStyles, halign: 'left'} },
+            { content: grandTotalBoxes.toString(), styles: {...classTwoStyles, halign: 'right'} },
+            { content: grandTotalSqm.toFixed(2), styles: {...classTwoStyles, halign: 'right'} },
+            { content: '', styles: {...classTwoStyles} },
+            { content: `$ ${grandTotalAmount.toFixed(2)}`, styles: {...classTwoStyles, halign: 'right'} },
+        ]],
         theme: 'grid',
-        margin: { left: margin, right: margin },
-        headStyles: {
-            fillColor: [41, 171, 226],
-            textColor: [255, 255, 255],
-            fontStyle: 'bold',
-            halign: 'center',
-            lineWidth: 1,
-            lineColor: [0, 0, 0]
-        },
-        footStyles: {
-            fontStyle: 'bold',
-            lineWidth: 1,
-            lineColor: [0,0,0],
-            minCellHeight: 35,
-            valign: 'middle'
-        },
-        styles: {
-            lineWidth: 1,
-            lineColor: [0, 0, 0]
-        },
+        margin: { left: pageMargin, right: pageMargin },
+        headStyles: classOneStyles,
+        bodyStyles: {...classTwoStyles, halign: 'left'},
+        footStyles: { ...classOneStyles, minCellHeight: 25 },
         columnStyles: {
             0: { cellWidth: 70, halign: 'center' },
             1: { cellWidth: 40, halign: 'center' },
-            2: { cellWidth: 'auto', halign: 'left' },
-            3: { cellWidth: 50, halign: 'right' },
-            4: { cellWidth: 50, halign: 'right' },
-            5: { cellWidth: 50, halign: 'right' },
-            6: { cellWidth: 70, halign: 'right' },
+            2: { cellWidth: 'auto' },
+            3: { halign: 'right' },
+            4: { halign: 'right' },
+            5: { halign: 'right' },
+            6: { halign: 'right' },
         },
-        didDrawPage: (data) => { y = data.cursor?.y || y; }
+        didDrawPage: data => { yPos = data.cursor?.y ?? yPos; }
     });
-    
     // @ts-ignore
-    y = doc.lastAutoTable.finalY;
-    
-    // --- Exchange Rate Section ---
-    const exchangeRateSectionHeight = 45;
-    doc.rect(margin, y, contentWidth, exchangeRateSectionHeight);
-    const verticalTextX = margin + 15;
-    drawVerticalText(doc, "E X C H A N G E   R A T E", verticalTextX, y + 5, { charSpacing: 10 });
-    const lineX = margin + 30;
-    doc.line(lineX, y, lineX, y + exchangeRateSectionHeight);
-    
-    const innerBoxX = lineX + 5;
-    const innerBoxW = contentWidth - (lineX - margin) - 10;
-    const innerRowH = exchangeRateSectionHeight / 2;
-    doc.setFont('helvetica', 'bold').setFontSize(9);
-    doc.text('EXCHANGE RATE', innerBoxX + 5, y + innerRowH / 2 + 3);
-    doc.text('INR', innerBoxX + 5, y + innerRowH + innerRowH / 2 + 3);
-    
-    const innerVertLineX = innerBoxX + innerBoxW / 2;
-    doc.line(innerVertLineX, y, innerVertLineX, y + exchangeRateSectionHeight);
-    
-    doc.setFont('helvetica', 'normal');
-    doc.text(`1 USD = ${docData.conversationRate?.toFixed(2) || 'N/A'}`, innerVertLineX + 5, y + innerRowH / 2 + 3);
-    const totalInr = grandTotalAmount * (docData.conversationRate || 0);
-    doc.text(totalInr.toFixed(2), innerVertLineX + 5, y + innerRowH + innerRowH / 2 + 3);
-    y += exchangeRateSectionHeight;
-    
-    // --- Amount in Words ---
-    drawBlueHeader('Total No. Of Pkgs.', margin, y, 100, headerHeight, 'left');
-    drawBlueHeader('Amount In Words', margin + 100, y, contentWidth - 100, headerHeight, 'left');
-    y += headerHeight;
-    const amountInWordsHeight = 40;
-    doc.rect(margin, y, 100, amountInWordsHeight);
-    doc.rect(margin + 100, y, contentWidth - 100, amountInWordsHeight);
-    doc.text(grandTotalBoxes.toString(), margin + 5, y + 15);
-    const amountWordsText = doc.splitTextToSize(amountToWordsUSD(grandTotalAmount), contentWidth - 100 - 10);
-    doc.text(amountWordsText, margin + 105, y + 15);
-    y += amountInWordsHeight;
+    yPos = doc.lastAutoTable.finalY;
+
+    // --- Amount in Words & Totals ---
+     autoTable(doc, {
+        startY: yPos,
+        theme: 'grid',
+        body: [
+            [
+                { content: 'Total No. Of Pkgs.', styles: {...classOneStyles, halign: 'left'} },
+                { content: 'Amount In Words', styles: {...classOneStyles, halign: 'left'} },
+            ],
+             [
+                { content: grandTotalBoxes.toString(), styles: {...classTwoStyles, halign: 'center', minCellHeight: 30} },
+                { content: amountToWordsUSD(grandTotalAmount), styles: {...classTwoStyles, halign: 'left', minCellHeight: 30} },
+            ],
+        ],
+        margin: { left: pageMargin, right: pageMargin },
+        didDrawPage: data => { yPos = data.cursor?.y ?? yPos; }
+    });
+    // @ts-ignore
+    yPos = doc.lastAutoTable.finalY;
 
     // --- Footer Section ---
     const footerText = 'Export Under Duty Drawback Scheme, We shall claim the benefit as admissible under , RoDTEP , DBK';
-    drawBlueHeader(footerText, margin, y, contentWidth, headerHeight, 'left');
-    y += headerHeight;
-
-    // --- Supplier Section ---
-    const supplierHeaderHeight = 15;
-    drawBlueHeader('Supplier No. 1', margin, y, contentWidth, supplierHeaderHeight, 'left');
-    y += supplierHeaderHeight;
-    
-    const supplierDetailsHeight = 70;
-    doc.rect(margin, y, contentWidth, supplierDetailsHeight);
-    drawVerticalText(doc, 'C U S T O M', margin + 10, y + 12, { charSpacing: 9 });
-    doc.line(margin + 20, y, margin + 20, y + supplierDetailsHeight);
-
-    const supplierDetails = [
-      `Name: ${manufacturer.companyName}`,
-      `GSTTIN No.: ${manufacturer.gstNumber}`,
-      `Tax Invoice No & Date : ${docData.manufacturerInvoiceNumber || 'N/A'} Dt.${docData.manufacturerInvoiceDate ? format(new Date(docData.manufacturerInvoiceDate), 'dd/MM/yyyy') : 'N/A'} EPCG LIC NO : N/A`,
-      `Export Under GST Circular No. 26/2017 Custom Dt. 01/07/2017`,
-      `Letter Of Undertaking No. Acknowledgment For LUT Application Reference Number (ARN) N/A`,
-    ];
-    doc.setFontSize(8).setFont('helvetica', 'normal');
-    doc.text(supplierDetails, margin + 25, y + 12);
-    y += supplierDetailsHeight;
-
-    // --- Declaration and Signature ---
-    const declarationBoxHeight = 65;
-    doc.rect(margin, y, contentWidth, declarationBoxHeight);
-    
-    doc.setFont('helvetica', 'bold').setFontSize(9);
-    doc.text('Declaration:', margin + 5, y + 12);
-    doc.setFont('helvetica', 'normal').setFontSize(8);
     const declarationText = 'We declare that this Invoice shows the actual price of the goods described and that all particulars are true and correct.';
-    const declarationLines = doc.splitTextToSize(declarationText, contentWidth / 2 - 15);
-    doc.text(declarationLines, margin + 5, y + 24);
     
-    doc.line(margin + contentWidth / 2, y, margin + contentWidth / 2, y + declarationBoxHeight); // Vertical separator
-    
-    doc.setFont('helvetica', 'bold').setFontSize(9);
-    doc.text('Signature & Date:', margin + contentWidth / 2 + 5, y + 12);
-    doc.setFont('helvetica', 'normal');
-    doc.text(format(new Date(), 'dd/MM/yyyy'), margin + contentWidth / 2 + 85, y + 12);
-
-    doc.setFont('helvetica', 'bold');
-    doc.text(`FOR, ${exporter.companyName}`, margin + contentWidth / 2 + 5, y + 35);
-    doc.text('AUTHORISED SIGNATURE', contentWidth + margin - 5, y + declarationBoxHeight - 5, { align: 'right' });
-
+    autoTable(doc, {
+        startY: yPos,
+        theme: 'grid',
+        body: [
+            [{ content: footerText, styles: { ...classOneStyles, halign: 'left' }}],
+            [
+                { content: `Declaration:\n${declarationText}`, styles: {...classTwoStyles, ...classThreeStyles, halign: 'left', minCellHeight: 50} },
+                { content: `Signature & Date:\n${format(new Date(), 'dd/MM/yyyy')}\n\nFOR, ${exporter.companyName}\n\n\nAUTHORISED SIGNATURE`, styles: {...classTwoStyles, halign: 'center', minCellHeight: 50} }
+            ]
+        ],
+        margin: { left: pageMargin, right: pageMargin },
+        didDrawPage: data => { yPos = data.cursor?.y ?? yPos; }
+    });
+    // @ts-ignore
+    yPos = doc.lastAutoTable.finalY;
 
     // --- Save the PDF ---
     doc.save(`Custom_Invoice_${docData.exportInvoiceNumber.replace(/[\\/:*?"<>|]/g, '_')}.pdf`);
