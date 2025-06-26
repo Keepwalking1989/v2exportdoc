@@ -71,7 +71,8 @@ const formSchema = z.object({
       id: z.string().optional(),
       productId: z.string().min(1, 'Product is required'),
       boxes: z.coerce.number().positive('Boxes must be > 0'),
-    netWeight: z.coerce.number().nonnegative('Net Weight cannot be negative').optional(),
+      netWeight: z.coerce.number().nonnegative('Net Weight cannot be negative').optional(),
+      grossWeight: z.coerce.number().nonnegative('Gross Weight cannot be negative').optional(),
       rate: z.coerce.number().nonnegative('Rate cannot be negative').optional(),
     })).optional(),
   })).optional(),
@@ -164,7 +165,7 @@ const ContainerProductItem: React.FC<ContainerProductItemProps> = ({
     handleProductChange,
 }) => {
     // We use the FormContext to get access to setValue and formState without excessive prop drilling.
-    const { setValue, formState } = useFormContext<ExportDocumentFormValues>();
+    const { setValue } = useFormContext<ExportDocumentFormValues>();
     
     // Watch all the values needed for calculations
     const currentItem = useWatch({
@@ -188,7 +189,7 @@ const ContainerProductItem: React.FC<ContainerProductItemProps> = ({
         return { sqm: calculatedSqm, amount: calculatedAmount };
     }, [currentItem.productId, currentItem.boxes, currentItem.rate, allProducts, allSizes]);
 
-    // Effect to auto-calculate Net Weight
+    // Effect to auto-calculate Net and Gross Weight
     useEffect(() => {
       const product = allProducts.find(p => p.id === currentItem.productId);
       if (!product) return;
@@ -201,6 +202,7 @@ const ContainerProductItem: React.FC<ContainerProductItemProps> = ({
       
       if (calculatedNetWeight !== currentItem.netWeight) {
          setValue(`containerItems.${containerIndex}.productItems.${productIndex}.netWeight`, calculatedNetWeight);
+         setValue(`containerItems.${containerIndex}.productItems.${productIndex}.grossWeight`, calculatedNetWeight);
       }
     }, [currentItem.boxes, currentItem.productId, currentItem.netWeight, allProducts, allSizes, setValue, containerIndex, productIndex]);
     
@@ -237,7 +239,7 @@ const ContainerProductItem: React.FC<ContainerProductItemProps> = ({
             )}
         />
 
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 items-start">
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-4 items-start">
             <FormField
                 control={control}
                 name={`containerItems.${containerIndex}.productItems.${productIndex}.boxes`}
@@ -246,32 +248,6 @@ const ContainerProductItem: React.FC<ContainerProductItemProps> = ({
                         <FormLabel className="flex items-center gap-1"><Boxes className="h-4 w-4 text-muted-foreground"/>Boxes</FormLabel>
                         <FormControl>
                             <Input type="number" placeholder="e.g. 100" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                    </FormItem>
-                )}
-            />
-            <FormField
-              control={control}
-              name={`containerItems.${containerIndex}.productItems.${productIndex}.netWeight`}
-              render={({ field }) => (
-              <FormItem>
-              <FormLabel className="flex items-center gap-1"><Weight className="h-4 w-4 text-muted-foreground"/>Net Wt.</FormLabel>
-              <FormControl>
-              <Input type="number" placeholder="e.g. 1000" {...field} />
-              </FormControl>
-              <FormMessage />
-              </FormItem>
-              )}
-            />
-            <FormField
-                control={control}
-                name={`containerItems.${containerIndex}.productItems.${productIndex}.rate`}
-                render={({ field }) => (
-                    <FormItem>
-                        <FormLabel className="flex items-center gap-1"><DollarSign className="h-4 w-4 text-muted-foreground"/>Rate</FormLabel>
-                        <FormControl>
-                            <Input type="number" placeholder="e.g. 12.50" {...field} />
                         </FormControl>
                         <FormMessage />
                     </FormItem>
@@ -288,6 +264,45 @@ const ContainerProductItem: React.FC<ContainerProductItemProps> = ({
                     />
                 </FormControl>
             </FormItem>
+            <FormField
+                control={control}
+                name={`containerItems.${containerIndex}.productItems.${productIndex}.rate`}
+                render={({ field }) => (
+                    <FormItem>
+                        <FormLabel className="flex items-center gap-1"><DollarSign className="h-4 w-4 text-muted-foreground"/>Rate</FormLabel>
+                        <FormControl>
+                            <Input type="number" placeholder="e.g. 12.50" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                    </FormItem>
+                )}
+            />
+            <FormField
+              control={control}
+              name={`containerItems.${containerIndex}.productItems.${productIndex}.netWeight`}
+              render={({ field }) => (
+              <FormItem>
+                <FormLabel className="flex items-center gap-1"><Weight className="h-4 w-4 text-muted-foreground"/>Net Wt.</FormLabel>
+                <FormControl>
+                    <Input type="number" placeholder="e.g. 1000" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+              )}
+            />
+            <FormField
+              control={control}
+              name={`containerItems.${containerIndex}.productItems.${productIndex}.grossWeight`}
+              render={({ field }) => (
+              <FormItem>
+                <FormLabel className="flex items-center gap-1"><Weight className="h-4 w-4 text-muted-foreground"/>Gross Wt.</FormLabel>
+                <FormControl>
+                    <Input type="number" placeholder="e.g. 1000" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+              )}
+            />
             <FormItem>
                 <FormLabel className="flex items-center gap-1"><DollarSign className="h-4 w-4 text-muted-foreground"/>Amount</FormLabel>
                 <FormControl>
@@ -371,7 +386,7 @@ const ContainerProductManager: React.FC<ContainerProductManagerProps> = ({ conta
                     type="button"
                     variant="outline"
                     size="default"
-                    onClick={() => append({ productId: '', boxes: 1, rate: 0, netWeight: 0 })}
+                    onClick={() => append({ productId: '', boxes: 1, rate: 0, netWeight: 0, grossWeight: 0 })}
                     disabled={productOptions.length === 0}
                 >
                     <PlusCircle className="mr-2 h-4 w-4" /> Add Product
