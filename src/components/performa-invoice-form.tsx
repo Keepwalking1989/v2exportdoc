@@ -2,7 +2,7 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useForm, useFieldArray, Controller } from "react-hook-form";
+import { useForm, useFieldArray, Controller, useWatch } from "react-hook-form";
 import * as z from "zod";
 import { Button } from "@/components/ui/button";
 import {
@@ -147,7 +147,7 @@ export function PerformaInvoiceForm({
   }, [isEditing, initialDataForForm, nextInvoiceNumber, form, replace]);
 
 
-  const watchedItems = form.watch("items");
+  const watchedItemsForTotals = form.watch("items");
   const watchedFreight = form.watch("freight");
   const watchedDiscount = form.watch("discount");
 
@@ -191,53 +191,60 @@ export function PerformaInvoiceForm({
     form.setValue(`items.${itemIndex}.productId`, newProductId);
   };
 
-  const { subTotal, grandTotal, itemsWithCalculations } = useMemo(() => {
+  const { subTotal, grandTotal } = useMemo(() => {
     let currentSubTotal = 0;
-    const calculatedItems = (watchedItems || []).map(item => {
+    (watchedItemsForTotals || []).forEach(item => {
       const sizeDetail = sizes.find(s => s.id === item.sizeId);
-      
       const numBoxes = parseFloat(String(item.boxes)) || 0;
       const numRatePerSqmt = parseFloat(String(item.ratePerSqmt)) || 0;
       const sqmPerBox = sizeDetail ? (parseFloat(String(sizeDetail.sqmPerBox)) || 0) : 0;
-
-      let quantitySqmt = 0;
-      let amount = 0;
-
       if (sizeDetail && numBoxes > 0) {
-        quantitySqmt = numBoxes * sqmPerBox;
-        amount = quantitySqmt * numRatePerSqmt;
+        const quantitySqmt = numBoxes * sqmPerBox;
+        const amount = quantitySqmt * numRatePerSqmt;
+        currentSubTotal += amount;
       }
-      currentSubTotal += amount;
-      return { ...item, quantitySqmt, amount };
     });
 
     const currentDiscountInput = parseFloat(String(watchedDiscount)) || 0;
     const currentFreightInput = parseFloat(String(watchedFreight)) || 0;
-
     const currentGrandTotal = currentSubTotal - currentDiscountInput + currentFreightInput;
     
-    return { subTotal: currentSubTotal, grandTotal: currentGrandTotal, itemsWithCalculations: calculatedItems };
-  }, [watchedItems, sizes, watchedFreight, watchedDiscount]);
+    return { subTotal: currentSubTotal, grandTotal: currentGrandTotal };
+  }, [watchedItemsForTotals, sizes, watchedFreight, watchedDiscount]);
 
 
   function onSubmit(values: PerformaInvoiceFormValues) {
+    const finalItems = values.items.map(item => {
+        const sizeDetail = sizes.find(s => s.id === item.sizeId);
+        const numBoxes = parseFloat(String(item.boxes)) || 0;
+        const numRatePerSqmt = parseFloat(String(item.ratePerSqmt)) || 0;
+        const sqmPerBox = sizeDetail ? (parseFloat(String(sizeDetail.sqmPerBox)) || 0) : 0;
+        const quantitySqmt = numBoxes * sqmPerBox;
+        const amount = quantitySqmt * numRatePerSqmt;
+
+        return {
+            id: item.id || Math.random().toString(36).substring(2, 9),
+            sizeId: item.sizeId,
+            productId: item.productId,
+            boxes: numBoxes,
+            ratePerSqmt: numRatePerSqmt,
+            commission: item.commission || 0,
+            quantitySqmt,
+            amount,
+        };
+    });
+
+    const finalSubTotal = finalItems.reduce((acc, item) => acc + (item.amount || 0), 0);
+    const finalGrandTotal = finalSubTotal - (values.discount || 0) + (values.freight || 0);
+    
     const invoiceToSave: PerformaInvoice = {
       ...values,
       id: isEditing && initialDataForForm ? initialDataForForm.id : Date.now().toString(),
       invoiceNumber: isEditing && initialDataForForm ? initialDataForForm.invoiceNumber : nextInvoiceNumber,
       selectedBankId: values.selectedBankId || undefined, // Ensure it's undefined if empty string for type safety
-      items: itemsWithCalculations.map(item => ({
-        id: item.id || Math.random().toString(36).substring(2, 9), // Preserve existing ID or generate new
-        sizeId: item.sizeId,
-        productId: item.productId,
-        boxes: item.boxes,
-        ratePerSqmt: item.ratePerSqmt,
-        commission: item.commission || 0,
-        quantitySqmt: item.quantitySqmt,
-        amount: item.amount,
-      })),
-      subTotal,
-      grandTotal,
+      items: finalItems,
+      subTotal: finalSubTotal,
+      grandTotal: finalGrandTotal,
     };
     onSave(invoiceToSave);
     toast({
@@ -465,9 +472,24 @@ export function PerformaInvoiceForm({
               </CardHeader>
               <CardContent className="space-y-4">
                 {fields.map((fieldItem, index) => {
-                  const currentItemSizeId = form.watch(`items.${index}.sizeId`);
-                  const productOptionsForThisItem = getProductOptions(currentItemSizeId);
-                  const displayItem = itemsWithCalculations[index] || { quantitySqmt: 0, amount: 0 };
+                  const currentItemValues = useWatch({ control: form.control, name: `items.${index}`});
+                  const { sizeId, boxes, ratePerSqmt } = currentItemValues;
+
+                  const { quantitySqmt, amount } = useMemo(() => {
+                    const sizeDetail = sizes.find(s => s.id === sizeId);
+                    if (!sizeDetail) return { quantitySqmt: 0, amount: 0 };
+                    
+                    const numBoxes = parseFloat(String(boxes)) || 0;
+                    const numRatePerSqmt = parseFloat(String(ratePerSqmt)) || 0;
+                    const sqmPerBox = parseFloat(String(sizeDetail.sqmPerBox)) || 0;
+
+                    const calculatedSqm = numBoxes * sqmPerBox;
+                    const calculatedAmount = calculatedSqm * numRatePerSqmt;
+
+                    return { quantitySqmt: calculatedSqm, amount: calculatedAmount };
+                  }, [sizeId, boxes, ratePerSqmt, sizes]);
+                  
+                  const productOptionsForThisItem = getProductOptions(sizeId);
 
                   return (
                     <div key={fieldItem.id} className="p-4 border rounded-md space-y-4 relative bg-card/50">
@@ -520,7 +542,7 @@ export function PerformaInvoiceForm({
                                 placeholder="Select Product..."
                                 searchPlaceholder="Search Products..."
                                 emptySearchMessage="No product found for this size."
-                                disabled={!currentItemSizeId || productOptionsForThisItem.length === 0}
+                                disabled={!sizeId || productOptionsForThisItem.length === 0}
                               />
                               <FormMessage />
                             </FormItem>
@@ -535,10 +557,7 @@ export function PerformaInvoiceForm({
                             <FormItem>
                               <FormLabel>Boxes</FormLabel>
                               <FormControl>
-                                <Input
-                                  type="number"
-                                  {...field}
-                                />
+                                <Input type="number" {...field} />
                               </FormControl>
                               <FormMessage />
                             </FormItem>
@@ -551,11 +570,7 @@ export function PerformaInvoiceForm({
                             <FormItem>
                               <FormLabel>Rate/Sqmt</FormLabel>
                               <FormControl>
-                                <Input
-                                  type="number"
-                                  step="0.01"
-                                  {...field}
-                                />
+                                <Input type="number" step="0.01" {...field} />
                               </FormControl>
                               <FormMessage />
                             </FormItem>
@@ -568,22 +583,18 @@ export function PerformaInvoiceForm({
                             <FormItem>
                               <FormLabel>Commission</FormLabel>
                               <FormControl>
-                                <Input
-                                  type="number"
-                                  step="0.01"
-                                  {...field}
-                                />
+                                <Input type="number" step="0.01" {...field} />
                               </FormControl>
                               <FormMessage />
                             </FormItem>
                           )}
                         />
                          <div className="pt-8">
-                            Qty Sqmt: {displayItem.quantitySqmt?.toFixed(2) || '0.00'}
+                            Qty Sqmt: {quantitySqmt.toFixed(2)}
                         </div>
                       </div>
                       <div className="text-right font-medium">
-                          Item Amount: {(displayItem.amount || 0).toFixed(2)} {form.getValues("currencyType")}
+                          Item Amount: {amount.toFixed(2)} {form.getValues("currencyType")}
                       </div>
                     </div>
                   );
