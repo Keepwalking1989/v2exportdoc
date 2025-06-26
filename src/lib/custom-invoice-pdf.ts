@@ -65,8 +65,8 @@ export function generateCustomInvoicePdf(
     allSizes: Size[]
 ) {
     const doc = new jsPDF({ unit: 'pt', format: 'a4' });
+    let yPos = 20;
     const pageMargin = 20;
-    let yPos = pageMargin;
     
     const COLOR_BLUE_RGB = [217, 234, 247]; // Light blue for backgrounds
 
@@ -104,7 +104,7 @@ export function generateCustomInvoicePdf(
         theme: 'grid',
         body: [[{
             content: '"Supply Meant For Export Under Bond & LUT - Letter Of Undertaking Without Payment Of Integrated Tax"',
-            styles: { ...classOneStyles, fontSize: 9, valign: 'middle' }
+            styles: { ...classOneStyles, fontSize: 9, valign: 'middle', halign: 'center' }
         }]],
         margin: { left: pageMargin, right: pageMargin },
         didDrawPage: (data) => { yPos = data.cursor?.y ?? yPos; }
@@ -176,10 +176,10 @@ export function generateCustomInvoicePdf(
                 { content: 'Country Of Final Destination', styles: {...classOneStyles} },
             ],
             [
-                { content: 'By Road', styles: {...classTwoStyles, halign: 'center', cellPadding: 2} },
-                { content: 'Morbi', styles: {...classTwoStyles, halign: 'center', cellPadding: 2} },
-                { content: 'INDIA', styles: {...classTwoStyles, halign: 'center', cellPadding: 2} },
-                { content: docData.countryOfFinalDestination, styles: {...classTwoStyles, halign: 'center', cellPadding: 2} },
+                { content: 'By Road', styles: {...classTwoStyles, halign: 'center', cellPadding: 1} },
+                { content: 'Morbi', styles: {...classTwoStyles, halign: 'center', cellPadding: 1} },
+                { content: 'INDIA', styles: {...classTwoStyles, halign: 'center', cellPadding: 1} },
+                { content: docData.countryOfFinalDestination, styles: {...classTwoStyles, halign: 'center', cellPadding: 1} },
             ],
             [
                 { content: 'Vessel / Flight No.', styles: {...classOneStyles} },
@@ -188,10 +188,10 @@ export function generateCustomInvoicePdf(
                 { content: 'Final Destination', styles: {...classOneStyles} },
             ],
              [
-                { content: docData.vesselFlightNo || 'N/A', styles: {...classTwoStyles, halign: 'center', cellPadding: 2} },
-                { content: docData.portOfLoading || 'N/A', styles: {...classTwoStyles, halign: 'center', cellPadding: 2} },
-                { content: docData.portOfDischarge || 'N/A', styles: {...classTwoStyles, halign: 'center', cellPadding: 2} },
-                { content: docData.finalDestination || 'N/A', styles: {...classTwoStyles, halign: 'center', cellPadding: 2} },
+                { content: docData.vesselFlightNo || 'N/A', styles: {...classTwoStyles, halign: 'center', cellPadding: 1} },
+                { content: docData.portOfLoading || 'N/A', styles: {...classTwoStyles, halign: 'center', cellPadding: 1} },
+                { content: docData.portOfDischarge || 'N/A', styles: {...classTwoStyles, halign: 'center', cellPadding: 1} },
+                { content: docData.finalDestination || 'N/A', styles: {...classTwoStyles, halign: 'center', cellPadding: 1} },
             ],
         ],
         margin: { left: pageMargin, right: pageMargin },
@@ -334,8 +334,8 @@ export function generateCustomInvoicePdf(
         theme: 'grid',
         margin: { left: pageMargin, right: pageMargin },
         headStyles: classOneStyles,
-        bodyStyles: {...classTwoStyles, halign: 'left'},
-        footStyles: { ...classOneStyles, minCellHeight: 25 },
+        bodyStyles: {...classTwoStyles, halign: 'left', cellPadding: 1 },
+        footStyles: { ...classOneStyles, cellPadding: 1 },
         columnStyles: {
             0: { cellWidth: 70, halign: 'center' },
             1: { cellWidth: 40, halign: 'center' },
@@ -360,8 +360,8 @@ export function generateCustomInvoicePdf(
                 { content: 'Amount In Words', styles: {...classOneStyles, halign: 'left'} },
             ],
              [
-                { content: grandTotalBoxes.toString(), styles: {...classTwoStyles, halign: 'center', minCellHeight: 30} },
-                { content: amountToWordsUSD(grandTotalAmount), styles: {...classTwoStyles, halign: 'left', minCellHeight: 30} },
+                { content: grandTotalBoxes.toString(), styles: {...classTwoStyles, halign: 'center', cellPadding: 1 } },
+                { content: amountToWordsUSD(grandTotalAmount), styles: {...classTwoStyles, halign: 'left', cellPadding: 1 } },
             ],
         ],
         margin: { left: pageMargin, right: pageMargin },
@@ -379,6 +379,7 @@ export function generateCustomInvoicePdf(
         theme: 'grid',
         body: [[{ content: footerText, styles: { ...classOneStyles, halign: 'center' }}]],
         margin: { left: pageMargin, right: pageMargin },
+        styles: { cellPadding: 1 },
         didDrawPage: data => { yPos = data.cursor?.y ?? yPos; }
     });
     // @ts-ignore
@@ -389,6 +390,7 @@ export function generateCustomInvoicePdf(
         theme: 'grid',
         body: [[{ content: 'supplier No 1', styles: { ...classOneStyles, halign: 'center' }}]],
         margin: { left: pageMargin, right: pageMargin },
+        styles: { cellPadding: 1 },
         didDrawPage: data => { yPos = data.cursor?.y ?? yPos; }
     });
     // @ts-ignore
@@ -404,6 +406,7 @@ export function generateCustomInvoicePdf(
             { content: manufacturer.gstNumber, styles: { ...classTwoStyles, halign: 'left' } },
         ]],
         margin: { left: pageMargin, right: pageMargin },
+        styles: { cellPadding: 1 },
         didDrawPage: data => { yPos = data.cursor?.y ?? yPos; }
     });
     // @ts-ignore
@@ -422,6 +425,7 @@ export function generateCustomInvoicePdf(
             1: { cellWidth: '75%' },
         },
         margin: { left: pageMargin, right: pageMargin },
+        styles: { cellPadding: 1 },
         didDrawPage: data => { yPos = data.cursor?.y ?? yPos; }
     });
     // @ts-ignore
@@ -432,6 +436,7 @@ export function generateCustomInvoicePdf(
         theme: 'grid',
         body: [[{ content: 'Export Under GST Circular No. 26/2017 Custom Dt. 01/07/2017', styles: { ...classOneStyles, halign: 'center' }}]],
         margin: { left: pageMargin, right: pageMargin },
+        styles: { cellPadding: 1 },
         didDrawPage: data => { yPos = data.cursor?.y ?? yPos; }
     });
     // @ts-ignore
@@ -442,6 +447,7 @@ export function generateCustomInvoicePdf(
         theme: 'grid',
         body: [[{ content: 'We claim Duty rebate file.', styles: { ...classOneStyles, halign: 'center' }}]],
         margin: { left: pageMargin, right: pageMargin },
+        styles: { cellPadding: 1 },
         didDrawPage: data => { yPos = data.cursor?.y ?? yPos; }
     });
     // @ts-ignore
