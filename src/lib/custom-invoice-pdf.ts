@@ -4,7 +4,7 @@
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { format } from 'date-fns';
-import type { ExportDocument, ExportDocumentContainerItem, ExportDocumentProductItem } from '@/types/export-document';
+import type { ExportDocument, ExportDocumentProductItem } from '@/types/export-document';
 import type { Company } from '@/types/company'; // For Exporter
 import type { Manufacturer } from '@/types/manufacturer';
 import type { Size } from '@/types/size';
@@ -154,8 +154,8 @@ export function generateCustomInvoicePdf(
             ],
              // Row 2: Data (Class 2)
             [
-                { content: 'TO\nTHE\nORDER', styles: { ...classTwoStyles, minCellHeight: 35 } },
-                { content: 'TO\nTHE\nORDER', styles: { ...classTwoStyles, minCellHeight: 35 } }
+                { content: 'TO\nTHE\nORDER', styles: { ...classTwoStyles, minCellHeight: 35, halign: 'center' } },
+                { content: 'TO\nTHE\nORDER', styles: { ...classTwoStyles, minCellHeight: 35, halign: 'center' } }
             ]
         ],
         margin: { left: pageMargin, right: pageMargin },
@@ -216,60 +216,89 @@ export function generateCustomInvoicePdf(
 
 
     // --- Main Product Table ---
-    const allItems: (ExportDocumentProductItem & { type: 'product' | 'sample' })[] = [];
+    const allProductItems: ExportDocumentProductItem[] = [];
+    const allSampleItems: ExportDocumentProductItem[] = [];
     docData.containerItems?.forEach(container => {
-        (container.productItems || []).forEach(item => allItems.push({ ...item, type: 'product' }));
-        (container.sampleItems || []).forEach(item => allItems.push({ ...item, type: 'sample' }));
+        (container.productItems || []).forEach(item => allProductItems.push(item));
+        (container.sampleItems || []).forEach(item => allSampleItems.push(item));
     });
-    
-    const groupedByProduct = allItems.reduce((acc, item) => {
-        const key = `${item.productId}-${item.type}-${item.rate}`;
-        if (!acc[key]) {
+
+    const groupItems = (items: ExportDocumentProductItem[]) => {
+        return items.reduce((acc, item) => {
+            const key = `${item.productId}-${item.rate}`; // Group by product and rate
+            if (!acc[key]) {
+                const product = allProducts.find(p => p.id === item.productId);
+                const size = product ? allSizes.find(s => s.id === product.sizeId) : undefined;
+                acc[key] = {
+                    hsnCode: size?.hsnCode || 'N/A',
+                    description: `${product?.designName || 'Unknown'} (${size?.size || 'N/A'})`,
+                    boxes: 0,
+                    sqm: 0,
+                    rate: item.rate || 0,
+                    total: 0,
+                };
+            }
             const product = allProducts.find(p => p.id === item.productId);
             const size = product ? allSizes.find(s => s.id === product.sizeId) : undefined;
-            acc[key] = {
-                hsnCode: size?.hsnCode || 'N/A',
-                description: `${product?.designName || 'Unknown'} (${size?.size || 'N/A'})`,
-                isSample: item.type === 'sample',
-                boxes: 0,
-                sqm: 0,
-                rate: item.rate || 0,
-                total: 0,
-            };
-        }
-        const product = allProducts.find(p => p.id === item.productId);
-        const size = product ? allSizes.find(s => s.id === product.sizeId) : undefined;
-        const sqmForThisItem = (item.boxes || 0) * (size?.sqmPerBox || 0);
-        acc[key].boxes += item.boxes || 0;
-        acc[key].sqm += sqmForThisItem;
-        acc[key].total += sqmForThisItem * (item.rate || 0);
-        return acc;
-    }, {} as Record<string, any>);
+            const sqmForThisItem = (item.boxes || 0) * (size?.sqmPerBox || 0);
+            acc[key].boxes += item.boxes || 0;
+            acc[key].sqm += sqmForThisItem;
+            acc[key].total += sqmForThisItem * (item.rate || 0);
+            return acc;
+        }, {} as Record<string, any>);
+    };
+
+    const groupedProducts = Object.values(groupItems(allProductItems));
+    const groupedSamples = Object.values(groupItems(allSampleItems));
 
     let grandTotalBoxes = 0;
     let grandTotalSqm = 0;
     let grandTotalAmount = 0;
+    let srNoCounter = 1;
 
-    const tableBody = Object.values(groupedByProduct).map((item, index) => {
+    const tableBody: any[] = []; // Use any[] to accommodate different row structures
+
+    groupedProducts.forEach(item => {
         grandTotalBoxes += item.boxes;
         grandTotalSqm += item.sqm;
         grandTotalAmount += item.total;
-        
-        let desc = item.description;
-        if (item.isSample) {
-            desc += '\n(Sample With No Commercial Value)';
-        }
 
-        return [
+        tableBody.push([
             item.hsnCode,
-            index + 1,
-            desc,
+            srNoCounter++,
+            item.description,
             item.boxes.toString(),
             item.sqm.toFixed(2),
             item.rate.toFixed(2),
             item.total.toFixed(2)
-        ];
+        ]);
     });
+
+    if (groupedSamples.length > 0) {
+        tableBody.push([
+            { 
+                content: 'Free Of Cost Samples', 
+                colSpan: 7,
+                styles: { fontStyle: 'bold', halign: 'center' } 
+            }
+        ]);
+
+        groupedSamples.forEach(item => {
+            grandTotalBoxes += item.boxes;
+            grandTotalSqm += item.sqm;
+            
+            tableBody.push([
+                item.hsnCode,
+                srNoCounter++,
+                item.description, // No "(Sample...)" text
+                item.boxes.toString(),
+                item.sqm.toFixed(2),
+                '0.00', // Rate is 0
+                '0.00'  // Total is 0
+            ]);
+        });
+    }
+
 
     const emptyRowCount = 5;
     for (let i = 0; i < emptyRowCount; i++) {
