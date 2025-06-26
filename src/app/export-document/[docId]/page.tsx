@@ -25,12 +25,16 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Calendar } from '@/components/ui/calendar';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
+import { generateCustomInvoicePdf } from '@/lib/custom-invoice-pdf';
+import type { Company } from '@/types/company';
 
 const LOCAL_STORAGE_EXPORT_DOCS_KEY_V2 = "bizform_export_documents_v2";
 const LOCAL_STORAGE_MANUFACTURERS_KEY = "bizform_manufacturers";
 const LOCAL_STORAGE_TRANSPORTERS_KEY = "bizform_transporters";
 const LOCAL_STORAGE_PRODUCTS_KEY = "bizform_products";
 const LOCAL_STORAGE_SIZES_KEY = "bizform_sizes";
+const LOCAL_STORAGE_COMPANIES_KEY = "bizform_companies"; // Exporters
+
 
 const ewayBillSchema = z.object({
   ewayBillNumber: z.string().optional(),
@@ -59,10 +63,10 @@ const brcSchema = z.object({
 type BrcFormValues = z.infer<typeof brcSchema>;
 
 
-const DownloadOption = ({ label }: { label: string }) => (
+const DownloadOption = ({ label, onDownload }: { label: string, onDownload: () => void }) => (
   <div className="flex justify-between items-center p-3 border rounded-md bg-card hover:bg-muted/50 transition-colors">
     <span className="font-medium text-card-foreground">{label}</span>
-    <Button variant="outline" size="sm" onClick={() => { /* Implement download logic here */ }}>
+    <Button variant="outline" size="sm" onClick={onDownload}>
       <Download className="mr-2 h-4 w-4" /> Download
     </Button>
   </div>
@@ -92,6 +96,7 @@ export default function DocumentDataPage() {
 
 
   // State for related data
+  const [allExporters, setAllExporters] = useState<Company[]>([]);
   const [allManufacturers, setAllManufacturers] = useState<Manufacturer[]>([]);
   const [allTransporters, setAllTransporters] = useState<Transporter[]>([]);
   const [allProducts, setAllProducts] = useState<Product[]>([]);
@@ -140,7 +145,8 @@ export default function DocumentDataPage() {
         } else {
           console.error("Document not found");
         }
-
+        
+        setAllExporters(JSON.parse(localStorage.getItem(LOCAL_STORAGE_COMPANIES_KEY) || "[]"));
         setAllManufacturers(JSON.parse(localStorage.getItem(LOCAL_STORAGE_MANUFACTURERS_KEY) || "[]"));
         setAllTransporters(JSON.parse(localStorage.getItem(LOCAL_STORAGE_TRANSPORTERS_KEY) || "[]"));
         setAllProducts(JSON.parse(localStorage.getItem(LOCAL_STORAGE_PRODUCTS_KEY) || "[]"));
@@ -270,6 +276,21 @@ export default function DocumentDataPage() {
     };
   }, [document, allManufacturers, allTransporters, allProducts, allSizes]);
 
+  const handleDownloadCustomInvoice = () => {
+    if (!document) {
+      toast({ variant: "destructive", title: "Error", description: "Document data not loaded." });
+      return;
+    }
+    const exporter = allExporters.find(e => e.id === document.exporterId);
+    const manufacturer = allManufacturers.find(m => m.id === document.manufacturerId);
+
+    if (!exporter || !manufacturer) {
+       toast({ variant: "destructive", title: "Error", description: "Exporter or Manufacturer data is missing for this document." });
+       return;
+    }
+    generateCustomInvoicePdf(document, exporter, manufacturer, allProducts, allSizes);
+  };
+
   if (isLoading) {
     return <div className="flex flex-col min-h-screen bg-background"><Header /><main className="flex-grow container mx-auto px-4 py-8"><p className="text-center text-muted-foreground">Loading document data...</p></main></div>;
   }
@@ -295,7 +316,17 @@ export default function DocumentDataPage() {
           </TabsList>
 
           <TabsContent value="download">
-            <Card className="mt-4"><CardHeader><CardTitle>Download Documents</CardTitle><CardDescription>Select a document type to generate and download a PDF.</CardDescription></CardHeader><CardContent className="space-y-8"><div><h3 className="text-lg font-semibold mb-4 text-primary font-headline">For Custom</h3><div className="space-y-3"><DownloadOption label="Custom Invoice" /><DownloadOption label="Packing List" /><DownloadOption label="VGM" /><DownloadOption label="ANNEXURE" /></div></div><Separator /><div><h3 className="text-lg font-semibold mb-4 text-primary font-headline">For Client</h3><div className="space-y-3"><DownloadOption label="Custom Invoice" /><DownloadOption label="Packing List" /><DownloadOption label="VGM" /><DownloadOption label="ANNEXURE" /></div></div></CardContent></Card>
+            <Card className="mt-4"><CardHeader><CardTitle>Download Documents</CardTitle><CardDescription>Select a document type to generate and download a PDF.</CardDescription></CardHeader><CardContent className="space-y-8"><div><h3 className="text-lg font-semibold mb-4 text-primary font-headline">For Custom</h3><div className="space-y-3">
+              <DownloadOption label="Custom Invoice" onDownload={handleDownloadCustomInvoice} />
+              <DownloadOption label="Packing List" onDownload={() => toast({ title: 'Not Implemented' })} />
+              <DownloadOption label="VGM" onDownload={() => toast({ title: 'Not Implemented' })} />
+              <DownloadOption label="ANNEXURE" onDownload={() => toast({ title: 'Not Implemented' })} />
+            </div></div><Separator /><div><h3 className="text-lg font-semibold mb-4 text-primary font-headline">For Client</h3><div className="space-y-3">
+              <DownloadOption label="Custom Invoice" onDownload={() => toast({ title: 'Not Implemented' })} />
+              <DownloadOption label="Packing List" onDownload={() => toast({ title: 'Not Implemented' })} />
+              <DownloadOption label="VGM" onDownload={() => toast({ title: 'Not Implemented' })} />
+              <DownloadOption label="ANNEXURE" onDownload={() => toast({ title: 'Not Implemented' })} />
+            </div></div></CardContent></Card>
           </TabsContent>
 
           <TabsContent value="eway">
@@ -514,5 +545,3 @@ export default function DocumentDataPage() {
     </div>
   );
 }
-
-    
