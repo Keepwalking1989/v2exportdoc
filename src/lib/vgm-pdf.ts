@@ -35,7 +35,7 @@ export function generateVgmPdf(
         ['5*', 'Container No.', hasContainers ? 'ATTACHED SHEET' : 'N/A'],
         ['6*', 'Container Size ( TEU/FEU/other)', hasContainers ? 'ATTACHED SHEET' : 'N/A'],
         ['7*', 'Maximum permissible weight of container as per the CSC plate', '30480'], // Hardcoded as per image
-        ['8*', 'Weighbridge registration no. & Address of Weighbridge', manufacturer?.address || 'N/A'],
+        ['8*', 'Weighbridge registration no. & Address of Weighbridge', `${manufacturer?.companyName || ''}\n${manufacturer?.address || 'N/A'}`.trim()],
         ['9*', 'Verified gross mass of container (method-1/method-2)', 'METHOD-1'],
         ['10*', 'Date and time of weighing', hasContainers ? 'ATTACHED SHEET' : 'N/A'],
         ['11*', 'Weighing slip no.', hasContainers ? 'ATTACHED SHEET' : 'N/A'],
@@ -92,7 +92,7 @@ export function generateVgmPdf(
             [
                 'CARGO Weight (KGS)',
                 'TARE Weight (KGS)',
-                'VGM (KGS)'
+                'Total Weight'
             ]
         ],
         body: containerTableBody,
@@ -110,7 +110,7 @@ export function generateVgmPdf(
             1: { cellWidth: 'auto' }, // Container
             2: { halign: 'right' },   // Cargo Wt
             3: { halign: 'right' },   // Tare Wt
-            4: { halign: 'right' },   // VGM
+            4: { halign: 'right' },   // Total Wt
         },
         margin: { left: pageMargin, right: pageMargin },
     });
