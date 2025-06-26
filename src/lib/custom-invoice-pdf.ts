@@ -149,8 +149,8 @@ export function generateCustomInvoicePdf(
         body: [
              // Row 1: Labels (Class 1)
             [
-                { content: 'Consignee:-', styles: { ...classOneStyles, halign: 'left' } },
-                { content: 'Buyer (If Not Consignee)', styles: { ...classOneStyles, halign: 'left' } }
+                { content: 'Consignee:-', styles: { ...classOneStyles, halign: 'center' } },
+                { content: 'Buyer (If Not Consignee)', styles: { ...classOneStyles, halign: 'center' } }
             ],
              // Row 2: Data (Class 2)
             [
@@ -377,7 +377,7 @@ export function generateCustomInvoicePdf(
     autoTable(doc, {
         startY: yPos,
         theme: 'grid',
-        body: [[{ content: footerText, styles: { ...classOneStyles, halign: 'left' }}]],
+        body: [[{ content: footerText, styles: { ...classOneStyles, halign: 'center' }}]],
         margin: { left: pageMargin, right: pageMargin },
         didDrawPage: data => { yPos = data.cursor?.y ?? yPos; }
     });
@@ -387,7 +387,7 @@ export function generateCustomInvoicePdf(
     autoTable(doc, {
         startY: yPos,
         theme: 'grid',
-        body: [[{ content: 'supplier No 1', styles: { ...classOneStyles, halign: 'left' }}]],
+        body: [[{ content: 'supplier No 1', styles: { ...classOneStyles, halign: 'center' }}]],
         margin: { left: pageMargin, right: pageMargin },
         didDrawPage: data => { yPos = data.cursor?.y ?? yPos; }
     });
@@ -430,7 +430,7 @@ export function generateCustomInvoicePdf(
     autoTable(doc, {
         startY: yPos,
         theme: 'grid',
-        body: [[{ content: 'Export Under GST Circular No. 26/2017 Custom Dt. 01/07/2017', styles: { ...classOneStyles, halign: 'left' }}]],
+        body: [[{ content: 'Export Under GST Circular No. 26/2017 Custom Dt. 01/07/2017', styles: { ...classOneStyles, halign: 'center' }}]],
         margin: { left: pageMargin, right: pageMargin },
         didDrawPage: data => { yPos = data.cursor?.y ?? yPos; }
     });
@@ -440,7 +440,7 @@ export function generateCustomInvoicePdf(
     autoTable(doc, {
         startY: yPos,
         theme: 'grid',
-        body: [[{ content: 'We claim Duty rebate file.', styles: { ...classOneStyles, halign: 'left' }}]],
+        body: [[{ content: 'We claim Duty rebate file.', styles: { ...classOneStyles, halign: 'center' }}]],
         margin: { left: pageMargin, right: pageMargin },
         didDrawPage: data => { yPos = data.cursor?.y ?? yPos; }
     });
