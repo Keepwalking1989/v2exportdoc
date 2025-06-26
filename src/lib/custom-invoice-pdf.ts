@@ -68,10 +68,10 @@ export function generateCustomInvoicePdf(
     let yPos = 20;
     const pageMargin = 20;
     
-    const COLOR_BLUE_RGB = [217, 234, 247]; // Light blue for backgrounds
+    const COLOR_BLUE_RGB = [217, 234, 247];
 
     // --- Style Definitions (Classes) ---
-    const classOneStyles = { // Labels
+    const classOneStyles = { 
         fontStyle: 'bold',
         textColor: '#000000',
         halign: 'center',
@@ -80,14 +80,14 @@ export function generateCustomInvoicePdf(
         lineColor: '#000000',
         fillColor: COLOR_BLUE_RGB,
     };
-    const classTwoStyles = { // Data
+    const classTwoStyles = { 
         fontStyle: 'normal',
         textColor: '#000000',
         valign: 'middle',
         lineWidth: 0.5,
         lineColor: '#000000',
     };
-    const classThreeStyles = { // Fine Print
+    const classThreeStyles = { 
         fontStyle: 'normal',
         textColor: '#000000',
         fontSize: 8,
@@ -205,8 +205,8 @@ export function generateCustomInvoicePdf(
         startY: yPos,
         theme: 'grid',
         body: [
-            [{ content: 'Terms Of Delivery & Payments', styles: {...classOneStyles, halign: 'left'} }],
-            [{ content: docData.termsOfDeliveryAndPayment || 'N/A', styles: {...classTwoStyles, halign: 'left', minCellHeight: 30} }],
+            [{ content: 'Terms Of Delivery & Payments', styles: {...classOneStyles, halign: 'left', cellPadding: 1} }],
+            [{ content: docData.termsOfDeliveryAndPayment || 'N/A', styles: {...classTwoStyles, halign: 'left', minCellHeight: 30, cellPadding: 1} }],
         ],
          margin: { left: pageMargin, right: pageMargin },
         didDrawPage: data => { yPos = data.cursor?.y ?? yPos; }
@@ -279,7 +279,8 @@ export function generateCustomInvoicePdf(
     // --- Calculations for Footer ---
     const conversationRate = docData.conversationRate || 0;
     const totalAmountInr = grandTotalAmount * conversationRate;
-    const gstRate = parseFloat(docData.gst?.replace('%', '') || '0') / 100;
+    const gstString = docData.gst || "0";
+    const gstRate = parseFloat(gstString.replace('%', '')) / 100 || 0;
     const gstAmount = totalAmountInr * gstRate;
     const finalTotalInr = totalAmountInr + gstAmount;
 
@@ -462,6 +463,10 @@ export function generateCustomInvoicePdf(
                 { content: `Signature & Date:\n${format(new Date(), 'dd/MM/yyyy')}\n\nFOR, ${exporter.companyName}\n\n\nAUTHORISED SIGNATURE`, styles: {...classTwoStyles, halign: 'center', minCellHeight: 50} }
             ]
         ],
+        columnStyles: {
+            0: { cellWidth: '50%' },
+            1: { cellWidth: '50%' },
+        },
         margin: { left: pageMargin, right: pageMargin },
         didDrawPage: data => { yPos = data.cursor?.y ?? yPos; }
     });
