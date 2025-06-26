@@ -83,7 +83,18 @@ export function generateVgmPdf(
 
     autoTable(doc, {
         startY: yPos,
-        head: [['BOOKING NO', 'CONTAINER NUMBER', 'CARGO Weight (KGS)', 'TARE Weight (KGS)', 'VGM (KGS)']],
+        head: [
+            [
+                { content: 'BOOKING NO', rowSpan: 2 },
+                { content: 'CONTAINER NUMBER', rowSpan: 2 },
+                { content: 'VGM (KGS)\n( CARGO+TARE WEIGHT)', colSpan: 3, styles: { halign: 'center' } }
+            ],
+            [
+                'CARGO Weight (KGS)',
+                'TARE Weight (KGS)',
+                'VGM (KGS)'
+            ]
+        ],
         body: containerTableBody,
         theme: 'grid',
         styles: {
@@ -93,13 +104,13 @@ export function generateVgmPdf(
             valign: 'middle',
             halign: 'center',
         },
-        headStyles: { fontStyle: 'bold' },
+        headStyles: { fontStyle: 'bold', valign: 'middle' },
         columnStyles: {
             0: { cellWidth: 'auto' }, // Booking
             1: { cellWidth: 'auto' }, // Container
             2: { halign: 'right' },   // Cargo Wt
             3: { halign: 'right' },   // Tare Wt
-            4: { halign: 'right' },   // Total Wt / VGM
+            4: { halign: 'right' },   // VGM
         },
         margin: { left: pageMargin, right: pageMargin },
     });
