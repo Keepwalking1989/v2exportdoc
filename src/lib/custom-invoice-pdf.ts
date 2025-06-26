@@ -271,23 +271,66 @@ export function generateCustomInvoicePdf(
         ];
     });
 
-    // Add 5 empty rows as requested
     const emptyRowCount = 5;
     for (let i = 0; i < emptyRowCount; i++) {
         tableBody.push(['', '', '', '', '', '', '']);
     }
 
+    // --- Calculations for Footer ---
+    const conversationRate = docData.conversationRate || 0;
+    const totalAmountInr = grandTotalAmount * conversationRate;
+    const gstRate = parseFloat(docData.gst?.replace('%', '') || '0') / 100;
+    const gstAmount = totalAmountInr * gstRate;
+    const finalTotalInr = totalAmountInr + gstAmount;
+
+    // --- Footer Structure ---
+    const tableFooter = [];
+    tableFooter.push([
+        { content: 'TOTAL', colSpan: 3, styles: {...classOneStyles, halign: 'left'} },
+        { content: grandTotalBoxes.toString(), styles: {...classTwoStyles, halign: 'right'} },
+        { content: grandTotalSqm.toFixed(2), styles: {...classTwoStyles, halign: 'right'} },
+        { content: '', styles: {...classTwoStyles} },
+        { content: `$ ${grandTotalAmount.toFixed(2)}`, styles: {...classTwoStyles, halign: 'right'} },
+    ]);
+    tableFooter.push([
+        { content: '', colSpan: 3, styles: { ...classTwoStyles } },
+        { content: 'EXCHANGE RATE NOFICATION NUMBER AND DATE', colSpan: 4, styles: { ...classOneStyles } }
+    ]);
+    tableFooter.push([
+        { content: '', colSpan: 3, styles: { ...classTwoStyles } },
+        { content: docData.exchangeNotification || 'N/A', colSpan: 2, styles: { ...classTwoStyles, halign: 'left' } },
+        { content: docData.exchangeDate ? format(new Date(docData.exchangeDate), 'dd/MM/yyyy') : 'N/A', colSpan: 2, styles: { ...classTwoStyles, halign: 'right' } }
+    ]);
+    tableFooter.push([
+        { content: '', colSpan: 3, styles: { ...classTwoStyles } },
+        { content: 'EXCHANGE RATE', styles: { ...classOneStyles } },
+        { content: '1 USD', styles: { ...classTwoStyles } },
+        { content: conversationRate.toFixed(2), colSpan: 2, styles: { ...classTwoStyles, halign: 'right' } }
+    ]);
+    tableFooter.push([
+        { content: '', colSpan: 3, styles: { ...classTwoStyles } },
+        { content: 'FOB', styles: { ...classOneStyles } },
+        { content: 'INR', styles: { ...classTwoStyles } },
+        { content: totalAmountInr.toFixed(2), colSpan: 2, styles: { ...classTwoStyles, halign: 'right' } }
+    ]);
+    tableFooter.push([
+        { content: '', colSpan: 3, styles: { ...classTwoStyles } },
+        { content: 'IGST %', styles: { ...classOneStyles } },
+        { content: docData.gst || '0%', styles: { ...classTwoStyles } },
+        { content: gstAmount.toFixed(2), colSpan: 2, styles: { ...classTwoStyles, halign: 'right' } }
+    ]);
+    tableFooter.push([
+        { content: '', colSpan: 3, styles: { ...classTwoStyles } },
+        { content: 'TOTAL', styles: { ...classOneStyles } },
+        { content: 'INR', styles: { ...classTwoStyles } },
+        { content: finalTotalInr.toFixed(2), colSpan: 2, styles: { ...classTwoStyles, halign: 'right' } }
+    ]);
+
     autoTable(doc, {
         startY: yPos,
         head: [['HSN Code', 'Sr.\nNo', 'Description Of Goods', 'Boxes', 'Sq.Mtr', 'Rate in\n$', 'Total Amount\nIn USD $']],
         body: tableBody,
-        foot: [[
-            { content: 'TOTAL', colSpan: 3, styles: {...classOneStyles, halign: 'left'} },
-            { content: grandTotalBoxes.toString(), styles: {...classTwoStyles, halign: 'right'} },
-            { content: grandTotalSqm.toFixed(2), styles: {...classTwoStyles, halign: 'right'} },
-            { content: '', styles: {...classTwoStyles} },
-            { content: `$ ${grandTotalAmount.toFixed(2)}`, styles: {...classTwoStyles, halign: 'right'} },
-        ]],
+        foot: tableFooter,
         theme: 'grid',
         margin: { left: pageMargin, right: pageMargin },
         headStyles: classOneStyles,
