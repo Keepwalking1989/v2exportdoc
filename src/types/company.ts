@@ -5,4 +5,5 @@ export interface Company {
   address: string;
   phoneNumber: string;
   iecNumber: string;
+  gstNumber: string;
 }

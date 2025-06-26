@@ -15,7 +15,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import type { Company } from "@/types/company";
-import { Building2, User, MapPin, Phone, Barcode } from "lucide-react";
+import { Building2, User, MapPin, Phone, Barcode, BadgePercent } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 const phoneRegex = new RegExp(
@@ -36,6 +36,7 @@ const formSchema = z.object({
   iecNumber: z.string().min(5, { // IEC in India is 10 digits, but let's be flexible
     message: "IEC number must be at least 5 characters.",
   }),
+  gstNumber: z.string().length(15, { message: "GST Number must be 15 characters." }),
 });
 
 type CompanyFormValues = z.infer<typeof formSchema>;
@@ -54,6 +55,7 @@ export function CompanyForm({ onSave }: CompanyFormProps) {
       address: "",
       phoneNumber: "",
       iecNumber: "",
+      gstNumber: "",
     },
   });
 
@@ -142,6 +144,19 @@ export function CompanyForm({ onSave }: CompanyFormProps) {
                   <FormLabel className="flex items-center gap-2"><Barcode className="h-4 w-4 text-muted-foreground" />IEC Number</FormLabel>
                   <FormControl>
                     <Input placeholder="e.g. 0123456789" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+             <FormField
+              control={form.control}
+              name="gstNumber"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="flex items-center gap-2"><BadgePercent className="h-4 w-4 text-muted-foreground" />GST Number</FormLabel>
+                  <FormControl>
+                    <Input placeholder="e.g. 22AAAAA0000A1Z5" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>

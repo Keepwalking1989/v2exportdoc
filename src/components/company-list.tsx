@@ -37,7 +37,8 @@ export function CompanyList({ companies: initialCompanies }: CompanyListProps) {
       (company) =>
         company.companyName.toLowerCase().includes(searchTerm.toLowerCase()) ||
         company.contactPerson.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        company.iecNumber.toLowerCase().includes(searchTerm.toLowerCase())
+        company.iecNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (company.gstNumber && company.gstNumber.toLowerCase().includes(searchTerm.toLowerCase()))
     );
   }, [companies, searchTerm]);
 
@@ -63,7 +64,7 @@ export function CompanyList({ companies: initialCompanies }: CompanyListProps) {
             <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
             <Input
               type="search"
-              placeholder="Search by name, contact, or IEC..."
+              placeholder="Search by name, contact, IEC, or GST..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="pl-8 w-full"
@@ -81,6 +82,7 @@ export function CompanyList({ companies: initialCompanies }: CompanyListProps) {
                   <TableHead className="font-headline hidden md:table-cell">Address</TableHead>
                   <TableHead className="font-headline hidden sm:table-cell">Phone</TableHead>
                   <TableHead className="font-headline">IEC Number</TableHead>
+                  <TableHead className="font-headline">GST Number</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -91,6 +93,7 @@ export function CompanyList({ companies: initialCompanies }: CompanyListProps) {
                     <TableCell className="hidden md:table-cell">{company.address}</TableCell>
                     <TableCell className="hidden sm:table-cell">{company.phoneNumber}</TableCell>
                     <TableCell>{company.iecNumber}</TableCell>
+                    <TableCell>{company.gstNumber}</TableCell>
                   </TableRow>
                 ))}
               </TableBody>
