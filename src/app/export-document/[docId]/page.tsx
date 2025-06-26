@@ -27,6 +27,7 @@ import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { generateCustomInvoicePdf } from '@/lib/custom-invoice-pdf';
 import { generatePackingListPdf } from '@/lib/packing-list-pdf';
+import { generateAnnexurePdf } from '@/lib/annexure-pdf';
 import type { Company } from '@/types/company';
 
 const LOCAL_STORAGE_EXPORT_DOCS_KEY_V2 = "bizform_export_documents_v2";
@@ -306,6 +307,22 @@ export default function DocumentDataPage() {
     }
     generatePackingListPdf(document, exporter, manufacturer, allProducts, allSizes);
   };
+  
+  const handleDownloadAnnexure = () => {
+    if (!document) {
+      toast({ variant: "destructive", title: "Error", description: "Document data not loaded." });
+      return;
+    }
+    const exporter = allExporters.find(e => e.id === document.exporterId);
+    const manufacturer = allManufacturers.find(m => m.id === document.manufacturerId);
+    
+    if (!exporter || !manufacturer) {
+      toast({ variant: "destructive", title: "Error", description: "Exporter or Manufacturer data is missing for this document." });
+      return;
+    }
+    generateAnnexurePdf(document, exporter, manufacturer);
+  };
+
 
   if (isLoading) {
     return <div className="flex flex-col min-h-screen bg-background"><Header /><main className="flex-grow container mx-auto px-4 py-8"><p className="text-center text-muted-foreground">Loading document data...</p></main></div>;
@@ -336,7 +353,7 @@ export default function DocumentDataPage() {
               <DownloadOption label="Custom Invoice" onDownload={handleDownloadCustomInvoice} />
               <DownloadOption label="Packing List" onDownload={handleDownloadPackingList} />
               <DownloadOption label="VGM" onDownload={() => toast({ title: 'Not Implemented' })} />
-              <DownloadOption label="ANNEXURE" onDownload={() => toast({ title: 'Not Implemented' })} />
+              <DownloadOption label="ANNEXURE" onDownload={handleDownloadAnnexure} />
             </div></div><Separator /><div><h3 className="text-lg font-semibold mb-4 text-primary font-headline">For Client</h3><div className="space-y-3">
               <DownloadOption label="Custom Invoice" onDownload={() => toast({ title: 'Not Implemented' })} />
               <DownloadOption label="Packing List" onDownload={() => toast({ title: 'Not Implemented' })} />
