@@ -245,7 +245,18 @@ export function generateCustomInvoicePdf(
         ];
     });
 
-    if (tableBody.length === 0) {
+    let tableFooter;
+    if (tableBody.length > 0) {
+        tableFooter = [
+            [
+                { content: 'TOTAL', colSpan: 3, styles: { halign: 'left', fontStyle: 'bold' } },
+                { content: grandTotalBoxes.toString(), styles: { halign: 'right', fontStyle: 'bold' } },
+                { content: grandTotalSqm.toFixed(2), styles: { halign: 'right', fontStyle: 'bold' } },
+                { content: '' },
+                { content: `$ ${grandTotalAmount.toFixed(2)}`, styles: { halign: 'right', fontStyle: 'bold' } },
+            ]
+        ];
+    } else {
         tableBody.push([
             { content: 'No items found in document.', colSpan: 7, styles: { halign: 'center', minCellHeight: 50 } }
         ]);
@@ -255,6 +266,7 @@ export function generateCustomInvoicePdf(
         startY: y,
         head: [['Marks & Nos.\nContainer', 'Sr. No', 'Description Of Goods', 'Boxes', 'Sq.Mtr', 'Rate in $', 'Total Amount\nIn USD $']],
         body: tableBody,
+        foot: tableFooter,
         theme: 'grid',
         margin: { left: margin, right: margin },
         headStyles: {
@@ -264,6 +276,13 @@ export function generateCustomInvoicePdf(
             halign: 'center',
             lineWidth: 1,
             lineColor: [0, 0, 0]
+        },
+        footStyles: {
+            fontStyle: 'bold',
+            lineWidth: 1,
+            lineColor: [0,0,0],
+            minCellHeight: 35,
+            valign: 'middle'
         },
         styles: {
             lineWidth: 1,
@@ -283,28 +302,7 @@ export function generateCustomInvoicePdf(
     
     // @ts-ignore
     y = doc.lastAutoTable.finalY;
-
-    const table = (doc as any).lastAutoTable;
-    // Only draw the TOTAL row if there were actual items.
-    if (Object.keys(groupedByProduct).length > 0 && table && table.columns && table.columns.length > 6) {
-        const totalRowHeight = 35;
-        doc.setLineWidth(1);
-        doc.setDrawColor(0,0,0);
-        doc.rect(margin, y, contentWidth, totalRowHeight);
-        
-        doc.setFont('helvetica', 'bold').setFontSize(9);
-        doc.text('TOTAL', margin + 5, y + totalRowHeight / 2 + 3);
-
-        const boxColX = table.columns[3].x + table.columns[3].width;
-        const sqmColX = table.columns[4].x + table.columns[4].width;
-        const amountColX = table.columns[6].x + table.columns[6].width;
-
-        doc.text(grandTotalBoxes.toString(), boxColX - 5, y + totalRowHeight / 2 + 3, { align: 'right' });
-        doc.text(grandTotalSqm.toFixed(2), sqmColX - 5, y + totalRowHeight / 2 + 3, { align: 'right' });
-        doc.text(`$ ${grandTotalAmount.toFixed(2)}`, amountColX - 5, y + totalRowHeight / 2 + 3, { align: 'right' });
-        y += totalRowHeight;
-    }
-
+    
     // --- Exchange Rate Section ---
     const exchangeRateSectionHeight = 45;
     doc.rect(margin, y, contentWidth, exchangeRateSectionHeight);
@@ -393,5 +391,3 @@ export function generateCustomInvoicePdf(
     // --- Save the PDF ---
     doc.save(`Custom_Invoice_${docData.exportInvoiceNumber.replace(/[\\/:*?"<>|]/g, '_')}.pdf`);
 }
-
-    
