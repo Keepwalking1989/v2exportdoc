@@ -197,9 +197,14 @@ export function PerformaInvoiceForm({
       const sizeDetail = sizes.find(s => s.id === item.sizeId);
       let quantitySqmt = 0;
       let amount = 0;
-      if (sizeDetail && item.boxes > 0 && item.ratePerSqmt >= 0) {
-        quantitySqmt = item.boxes * sizeDetail.sqmPerBox;
-        amount = quantitySqmt * item.ratePerSqmt;
+      
+      const numBoxes = Number(item.boxes) || 0;
+      const numRatePerSqmt = Number(item.ratePerSqmt) || 0;
+      const sqmPerBox = sizeDetail ? Number(sizeDetail.sqmPerBox) || 0 : 0;
+
+      if (sizeDetail && numBoxes > 0 && numRatePerSqmt >= 0) {
+        quantitySqmt = numBoxes * sqmPerBox;
+        amount = quantitySqmt * numRatePerSqmt;
       }
       currentSubTotal += amount;
       return { ...item, quantitySqmt, amount };
