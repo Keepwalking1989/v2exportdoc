@@ -141,17 +141,21 @@ export function generateAnnexurePdf(
     // --- Footer Text ---
     doc.setFontSize(9);
     doc.setFont('helvetica', 'normal');
+    const lineHeight = 12;
+    const effectiveContentWidth = contentWidth - 20;
 
-    const centeredLines = [
+    const drawCenteredWrappedText = (text: string) => {
+        const wrappedLines = doc.splitTextToSize(text, effectiveContentWidth);
+        doc.text(wrappedLines, contentWidth / 2 + pageMargin, yPos, { align: 'center' });
+        yPos += wrappedLines.length * lineHeight;
+    };
+    
+    const footerLines1 = [
         "Export Under GST Circular No. 26/2017 Customs DT.01/07/2017",
         "\"Supply Goods Under Letter Of Undertaking, Subject To Such Conditions, Safeguards And Procedure As May Be Prescribed.\"",
         "Letter Of Undertaking No.Acknowledgement For Lut Application Reference Number (ARN) AD240324138081L",
     ];
-
-    centeredLines.forEach(line => {
-        doc.text(line, contentWidth / 2 + pageMargin, yPos, { align: 'center', maxWidth: contentWidth - 20 });
-        yPos += 12;
-    });
+    footerLines1.forEach(drawCenteredWrappedText);
 
     const underlinedText = "EXPORT UNDER SELF SEALING UNDER Circular No.: 59/2010 Dated : 23.12.2010";
     doc.text(underlinedText, contentWidth / 2 + pageMargin, yPos, { align: 'center' });
@@ -159,19 +163,16 @@ export function generateAnnexurePdf(
     const textX = (contentWidth / 2 + pageMargin) - (textWidth / 2);
     doc.setLineWidth(0.5);
     doc.line(textX, yPos + 1, textX + textWidth, yPos + 1);
-    yPos += 12;
-    
-    const moreCenteredLines = [
+    yPos += lineHeight;
+
+    const footerLines2 = [
         "Examined the export goods covered under this invoice description of the goods with reference to DBK & MEIS Scheme Value cap p/kg.Net",
         "Weight of Ceramic Glazed Wall Tiles are as under",
         "Certified that the description and value of the goods covered by this invoice have been checked by me and the goods have been packed and",
         "sealed with lead seal one time lock seal checked by me and the goods have been packed and sealed with lead seal/ one time lock seal."
     ];
-
-    moreCenteredLines.forEach(line => {
-        doc.text(line, contentWidth / 2 + pageMargin, yPos, { align: 'center', maxWidth: contentWidth - 20 });
-        yPos += 12;
-    });
+    footerLines2.forEach(drawCenteredWrappedText);
+    
     yPos += 10;
 
     // --- Signature ---
