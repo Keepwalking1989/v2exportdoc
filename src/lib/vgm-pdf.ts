@@ -24,8 +24,7 @@ export function generateVgmPdf(
     doc.text('INFORMATION ABOUT VERIFIED GROSS MASS OF CONTAINER', contentWidth / 2 + pageMargin, yPos, { align: 'center' });
     yPos += 20;
 
-    const firstContainer = docData.containerItems?.[0];
-    const multipleContainers = (docData.containerItems?.length ?? 0) > 1;
+    const hasContainers = docData.containerItems && docData.containerItems.length > 0;
 
     // Main Information Table
     const mainTableBody = [
@@ -33,13 +32,13 @@ export function generateVgmPdf(
         ['2*', 'Shipper Registration/License no.( IEC No/CIN No)**', exporter.iecNumber],
         ['3*', 'Name and designation of official of the shipper authorized to sign document', exporter.contactPerson],
         ['4*', '24 x 7 contact details of authorized official of shipper', exporter.phoneNumber],
-        ['5*', 'Container No.', multipleContainers ? 'ATTACHED SHEET' : firstContainer?.containerNo || 'N/A'],
-        ['6*', 'Container Size ( TEU/FEU/other)', multipleContainers ? 'ATTACHED SHEET' : '20\''], // Assuming 20' size for single
+        ['5*', 'Container No.', hasContainers ? 'ATTACHED SHEET' : 'N/A'],
+        ['6*', 'Container Size ( TEU/FEU/other)', hasContainers ? 'ATTACHED SHEET' : 'N/A'],
         ['7*', 'Maximum permissible weight of container as per the CSC plate', '30480'], // Hardcoded as per image
         ['8*', 'Weighbridge registration no. & Address of Weighbridge', manufacturer?.address || 'N/A'],
         ['9*', 'Verified gross mass of container (method-1/method-2)', 'METHOD-1'],
-        ['10*', 'Date and time of weighing', multipleContainers ? 'ATTACHED SHEET' : firstContainer?.weighingDateTime ? format(new Date(firstContainer.weighingDateTime), 'dd/MM/yyyy HH:mm:ss') : 'N/A'],
-        ['11*', 'Weighing slip no.', multipleContainers ? 'ATTACHED SHEET' : firstContainer?.weighingSlipNo || 'N/A'],
+        ['10*', 'Date and time of weighing', hasContainers ? 'ATTACHED SHEET' : 'N/A'],
+        ['11*', 'Weighing slip no.', hasContainers ? 'ATTACHED SHEET' : 'N/A'],
         ['12', 'Type (Normal/Reefer/Hazardous/others)', 'NORMAL'], // Hardcoded
         ['13', 'If Hazardous UN NO.IMDG class', 'N/A'], // Hardcoded
     ];
@@ -66,40 +65,25 @@ export function generateVgmPdf(
     yPos = doc.lastAutoTable.finalY + 20;
 
 
-    // Container Weight Details Table
+    // Container Weight Details Table (Redesigned)
     const containerTableBody = (docData.containerItems || []).map(container => {
         const cargoWeight = (container.productItems || []).reduce((sum, item) => sum + (item.netWeight || 0), 0) +
                            (container.sampleItems || []).reduce((sum, item) => sum + (item.netWeight || 0), 0);
         const tareWeight = container.tareWeight || 0;
-        const totalWeight = cargoWeight + tareWeight;
+        const totalWeight = cargoWeight + tareWeight; // This is the VGM
 
         return [
             container.bookingNo || 'N/A',
             container.containerNo || 'N/A',
             cargoWeight.toFixed(2),
-            '+',
             tareWeight.toFixed(2),
-            '=',
             totalWeight.toFixed(2)
         ];
     });
 
     autoTable(doc, {
         startY: yPos,
-        head: [
-            [
-                { content: 'BOOKING NO', rowSpan: 2, styles: { halign: 'center', valign: 'middle' } },
-                { content: 'CONTAINER NUMBER', rowSpan: 2, styles: { halign: 'center', valign: 'middle' } },
-                { content: 'VGM (KGS)\n( CARGO+TARE WEIGHT )', colSpan: 5, styles: { halign: 'center', valign: 'middle' } }
-            ],
-            [
-                { content: 'CARGO\nWeight', styles: { halign: 'center' } },
-                { content: '', styles: { halign: 'center' } }, // Placeholder for +
-                { content: 'Tare\nWeight', styles: { halign: 'center' } },
-                { content: '', styles: { halign: 'center' } }, // Placeholder for =
-                { content: 'Total Weight', styles: { halign: 'center' } }
-            ]
-        ],
+        head: [['BOOKING NO', 'CONTAINER NUMBER', 'CARGO Weight (KGS)', 'TARE Weight (KGS)', 'VGM (KGS)']],
         body: containerTableBody,
         theme: 'grid',
         styles: {
@@ -107,26 +91,15 @@ export function generateVgmPdf(
             lineColor: [0, 0, 0],
             fontSize: 9,
             valign: 'middle',
+            halign: 'center',
         },
         headStyles: { fontStyle: 'bold' },
         columnStyles: {
-            0: { cellWidth: 'auto', halign: 'center' }, // Booking
-            1: { cellWidth: 'auto', halign: 'center' }, // Container
-            2: { cellWidth: 'auto', halign: 'right' }, // Cargo Wt
-            3: { cellWidth: 20, halign: 'center' },     // +
-            4: { cellWidth: 'auto', halign: 'right' }, // Tare Wt
-            5: { cellWidth: 20, halign: 'center' },     // =
-            6: { cellWidth: 'auto', halign: 'right' }, // Total Wt
-        },
-        didParseCell: (data) => {
-            // Remove borders from the '+' and '=' columns in the body
-            if ((data.column.index === 3 || data.column.index === 5) && data.section === 'body') {
-                data.cell.styles.lineWidth = 0;
-            }
-             // Remove borders from the placeholder columns in the head
-            if ((data.column.index === 1 || data.column.index === 3) && data.row.section === 'head' && data.row.index === 1) {
-                 data.cell.styles.lineWidth = 0;
-            }
+            0: { cellWidth: 'auto' }, // Booking
+            1: { cellWidth: 'auto' }, // Container
+            2: { halign: 'right' },   // Cargo Wt
+            3: { halign: 'right' },   // Tare Wt
+            4: { halign: 'right' },   // Total Wt / VGM
         },
         margin: { left: pageMargin, right: pageMargin },
     });
