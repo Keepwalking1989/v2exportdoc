@@ -43,12 +43,21 @@ function amountToWordsUSD(amount: number): string {
     let result = `${words.trim()} Dollars`;
 
     if (decimalPart > 0) {
-        result += ` and ${convertLessThanOneThousand(decimalPart).trim()} Cents`;
+        const centsText = convertLessThanOneThousand(decimalPart).trim();
+        result += ` and ${centsText} Cents`;
     }
 
     return result.replace(/\s+/g, ' ').trim() + " only";
 }
 
+// Helper to draw vertical text
+const drawVerticalText = (doc: jsPDF, text: string, x: number, y: number, options: { charSpacing: number }) => {
+    let currentY = y;
+    for (let i = 0; i < text.length; i++) {
+        doc.text(text[i], x, currentY, { align: 'center' });
+        currentY += options.charSpacing;
+    }
+};
 
 // --- Main PDF Generation Function ---
 export function generateCustomInvoicePdf(
@@ -77,95 +86,106 @@ export function generateCustomInvoicePdf(
     doc.text('"Supply Meant For Export Under Bond & LUT - Letter Of Undertaking Without Payment Of Integrated Tax"', pageWidth / 2, y, { align: 'center' });
     y += 15;
     
-    const drawBlueHeader = (text: string, x: number, y: number, width: number, height: number) => {
+    const drawBlueHeader = (text: string, x: number, y: number, width: number, height: number, align: 'center' | 'left' = 'center') => {
         doc.setFillColor(41, 171, 226); // #29ABE2
         doc.rect(x, y, width, height, 'F');
         doc.setTextColor(255, 255, 255);
         doc.setFontSize(9);
         doc.setFont('helvetica', 'bold');
-        doc.text(text, x + width / 2, y + height / 2, { align: 'center', baseline: 'middle' });
+        let textX = x + width / 2;
+        if (align === 'left') {
+            textX = x + 5;
+        }
+        doc.text(text, textX, y + height / 2, { align: align, baseline: 'middle' });
         doc.setTextColor(0, 0, 0); // Reset text color
     };
 
     // --- Exporter & Invoice Details ---
-    const exporterBoxHeight = 60;
-    drawBlueHeader('Exporter', margin, y, contentWidth / 2, 15);
+    const exporterBoxX = margin;
+    const exporterBoxWidth = contentWidth * 0.5;
+    const invoiceDetailsX = exporterBoxX + exporterBoxWidth;
+    const invoiceDetailsWidth = contentWidth * 0.25;
+    const exportRefX = invoiceDetailsX + invoiceDetailsWidth;
+    const exportRefWidth = contentWidth * 0.25;
+    const headerHeight = 15;
+
+    drawBlueHeader('Exporter', exporterBoxX, y, exporterBoxWidth, headerHeight, 'left');
+    drawBlueHeader('Export Invoice No & Date', invoiceDetailsX, y, invoiceDetailsWidth, headerHeight);
+    drawBlueHeader('Export Ref.', exportRefX, y, exportRefWidth, headerHeight);
+    
+    y += headerHeight;
+    const addressBoxHeight = 35;
     doc.setDrawColor(0);
-    doc.rect(margin, y + 15, contentWidth / 2, exporterBoxHeight - 15);
+    doc.rect(exporterBoxX, y, exporterBoxWidth, addressBoxHeight);
+    doc.rect(invoiceDetailsX, y, invoiceDetailsWidth, addressBoxHeight);
+    doc.rect(exportRefX, y, exportRefWidth, addressBoxHeight);
+    
     doc.setFontSize(9);
     doc.setFont('helvetica', 'normal');
-    const exporterAddress = doc.splitTextToSize(
-      `${exporter.companyName}\n${exporter.address || ''}`, 
-      contentWidth / 2 - 10
-    );
-    doc.text(exporterAddress, margin + 5, y + 25);
+    const exporterAddress = doc.splitTextToSize(`${exporter.companyName}\n${exporter.address || ''}`, exporterBoxWidth - 10);
+    doc.text(exporterAddress, exporterBoxX + 5, y + 10);
+    const invoiceData = `${docData.exportInvoiceNumber}\n${format(new Date(docData.exportInvoiceDate), 'dd/MM/yyyy')}`;
+    doc.text(invoiceData, invoiceDetailsX + 5, y + 10);
+    doc.text(`IEC Code: ${exporter.iecNumber || 'N/A'}`, exportRefX + 5, y + 10);
     
-    const invoiceDetailsBoxHeight = 30;
-    drawBlueHeader('Export Invoice No & Date', margin + contentWidth / 2, y, contentWidth / 4, 15);
-    doc.rect(margin + contentWidth / 2, y + 15, contentWidth / 4, invoiceDetailsBoxHeight - 15);
-    doc.text(`${docData.exportInvoiceNumber}\n${format(new Date(docData.exportInvoiceDate), 'dd/MM/yyyy')}`, margin + contentWidth / 2 + 5, y + 25);
+    y += addressBoxHeight;
     
-    drawBlueHeader('Export Ref.', margin + (contentWidth * 3) / 4, y, contentWidth / 4, 15);
-    doc.rect(margin + (contentWidth * 3) / 4, y + 15, contentWidth / 4, invoiceDetailsBoxHeight - 15);
-    doc.text(`IEC Code:\n${exporter.iecNumber || 'N/A'}`, margin + (contentWidth * 3) / 4 + 5, y + 25);
+    // --- Consignee & Buyer ---
+    drawBlueHeader('Consignee:-', exporterBoxX, y, exporterBoxWidth, headerHeight, 'left');
+    drawBlueHeader('Buyer (If Not Consignee)', invoiceDetailsX, y, contentWidth * 0.5, headerHeight, 'left');
     
-    y += invoiceDetailsBoxHeight;
-
-    drawBlueHeader('Consignee:-', margin, y, contentWidth / 2, 15);
-    doc.rect(margin, y + 15, contentWidth / 2, 30);
-    doc.text('TO\nTHE\nORDER', margin + 5, y + 25);
+    y += headerHeight;
+    const consigneeBoxHeight = 25;
+    doc.rect(exporterBoxX, y, exporterBoxWidth, consigneeBoxHeight);
+    doc.rect(invoiceDetailsX, y, contentWidth * 0.5, consigneeBoxHeight);
+    doc.text('TO\nTHE\nORDER', exporterBoxX + 5, y + 10);
+    doc.text('TO\nTHE\nORDER', invoiceDetailsX + 5, y + 10);
     
-    drawBlueHeader('Buyer (If Not Consignee)', margin + contentWidth / 2, y, contentWidth / 2, 15);
-    doc.rect(margin + contentWidth / 2, y + 15, contentWidth / 2, 30);
-    doc.text('TO\nTHE\nORDER', margin + contentWidth / 2 + 5, y + 25);
-
-    y += 45;
+    y += consigneeBoxHeight;
 
     // --- Shipment Details Grid ---
-    const shipmentRowHeight = 30;
-    const gridY1 = y;
-    drawBlueHeader('Pre-Carriage By', margin, gridY1, contentWidth / 4, 15);
-    doc.rect(margin, gridY1 + 15, contentWidth / 4, shipmentRowHeight);
-    doc.text('By Road', margin + 5, gridY1 + 25);
+    const gridRowHeight = 25;
+    const colWidth = contentWidth / 4;
     
-    drawBlueHeader('Place Of Receipt By Pre-Carrier', margin + contentWidth / 4, gridY1, contentWidth / 4, 15);
-    doc.rect(margin + contentWidth / 4, gridY1 + 15, contentWidth / 4, shipmentRowHeight);
-    doc.text(manufacturer.address.split(',')[0] || 'N/A', margin + contentWidth / 4 + 5, gridY1 + 25);
-
-    drawBlueHeader('Country Of Origin Of Good', margin + contentWidth / 2, gridY1, contentWidth / 4, 15);
-    doc.rect(margin + contentWidth / 2, gridY1 + 15, contentWidth / 4, shipmentRowHeight);
-    doc.text('INDIA', margin + contentWidth / 2 + 5, gridY1 + 25);
-
-    drawBlueHeader('Country Of Final Destination', margin + (contentWidth * 3) / 4, gridY1, contentWidth / 4, 15);
-    doc.rect(margin + (contentWidth * 3) / 4, gridY1 + 15, contentWidth / 4, shipmentRowHeight);
-    doc.text(docData.countryOfFinalDestination, margin + (contentWidth * 3) / 4 + 5, gridY1 + 25);
-    y += 15 + shipmentRowHeight;
+    drawBlueHeader('Pre-Carriage By', margin, y, colWidth, headerHeight);
+    drawBlueHeader('Place Of Receipt By Pre-Carrier', margin + colWidth, y, colWidth, headerHeight);
+    drawBlueHeader('Country Of Origin Of Good', margin + 2 * colWidth, y, colWidth, headerHeight);
+    drawBlueHeader('Country Of Final Destination', margin + 3 * colWidth, y, colWidth, headerHeight);
+    y += headerHeight;
     
-    const gridY2 = y;
-    drawBlueHeader('Vessel / Flight No.', margin, gridY2, contentWidth / 4, 15);
-    doc.rect(margin, gridY2 + 15, contentWidth / 4, shipmentRowHeight);
-    doc.text(docData.vesselFlightNo || 'N/A', margin + 5, gridY2 + 25);
+    doc.rect(margin, y, colWidth, gridRowHeight);
+    doc.text('By Road', margin + 5, y + 15);
+    doc.rect(margin + colWidth, y, colWidth, gridRowHeight);
+    doc.text(manufacturer.address.split(',')[0] || 'N/A', margin + colWidth + 5, y + 15);
+    doc.rect(margin + 2 * colWidth, y, colWidth, gridRowHeight);
+    doc.text('INDIA', margin + 2 * colWidth + 5, y + 15);
+    doc.rect(margin + 3 * colWidth, y, colWidth, gridRowHeight);
+    doc.text(docData.countryOfFinalDestination, margin + 3 * colWidth + 5, y + 15);
+    y += gridRowHeight;
 
-    drawBlueHeader('Port Of Loading', margin + contentWidth / 4, gridY2, contentWidth / 4, 15);
-    doc.rect(margin + contentWidth / 4, gridY2 + 15, contentWidth / 4, shipmentRowHeight);
-    doc.text(docData.portOfLoading || 'N/A', margin + contentWidth / 4 + 5, gridY2 + 25);
-    
-    drawBlueHeader('Terms Of Delivery & Payments', margin + contentWidth / 2, gridY2, contentWidth / 2, 15);
-    doc.rect(margin + contentWidth / 2, gridY2 + 15, contentWidth / 2, shipmentRowHeight * 2); // Double height
-    const termsText = doc.splitTextToSize(docData.termsOfDeliveryAndPayment || 'N/A', contentWidth / 2 - 10);
-    doc.text(termsText, margin + contentWidth / 2 + 5, gridY2 + 25);
-    
-    y += 15 + shipmentRowHeight;
+    drawBlueHeader('Vessel / Flight No.', margin, y, colWidth, headerHeight);
+    drawBlueHeader('Port Of Loading', margin + colWidth, y, colWidth, headerHeight);
+    drawBlueHeader('Terms Of Delivery & Payments', margin + 2 * colWidth, y, colWidth * 2, headerHeight);
+    y += headerHeight;
 
-    const gridY3 = y;
-    drawBlueHeader('Port Of Discharge', margin, gridY3, contentWidth / 4, 15);
-    doc.rect(margin, gridY3 + 15, contentWidth / 4, shipmentRowHeight);
-    doc.text(docData.portOfDischarge || 'N/A', margin + 5, gridY3 + 25);
+    doc.rect(margin, y, colWidth, gridRowHeight);
+    doc.text(docData.vesselFlightNo || 'N/A', margin + 5, y + 15);
+    doc.rect(margin + colWidth, y, colWidth, gridRowHeight);
+    doc.text(docData.portOfLoading || 'N/A', margin + colWidth + 5, y + 15);
+    doc.rect(margin + 2 * colWidth, y, colWidth * 2, gridRowHeight * 2); // Double height
+    const termsText = doc.splitTextToSize(docData.termsOfDeliveryAndPayment || 'N/A', colWidth * 2 - 10);
+    doc.text(termsText, margin + 2 * colWidth + 5, y + 15);
+    y += gridRowHeight;
 
-    drawBlueHeader('Final Destination', margin + contentWidth / 4, gridY3, contentWidth / 4, 15);
-    doc.rect(margin + contentWidth / 4, gridY3 + 15, contentWidth / 4, shipmentRowHeight);
-    doc.text(docData.finalDestination || 'N/A', margin + contentWidth / 4 + 5, gridY3 + 25);
-    y += 15 + shipmentRowHeight;
+    drawBlueHeader('Port Of Discharge', margin, y, colWidth, headerHeight);
+    drawBlueHeader('Final Destination', margin + colWidth, y, colWidth, headerHeight);
+    y += headerHeight;
+    doc.rect(margin, y, colWidth, gridRowHeight);
+    doc.text(docData.portOfDischarge || 'N/A', margin + 5, y + 15);
+    doc.rect(margin + colWidth, y, colWidth, gridRowHeight);
+    doc.text(docData.finalDestination || 'N/A', margin + colWidth + 5, y + 15);
+    y += gridRowHeight;
+
 
     // --- Main Product Table ---
     const allItems: (ExportDocumentProductItem & { type: 'product' | 'sample' })[] = [];
@@ -223,6 +243,15 @@ export function generateCustomInvoicePdf(
         ];
     });
 
+    // Add total row to the body
+    tableBody.push([
+        { content: 'TOTAL', rowSpan: 2, styles: { halign: 'right', valign: 'middle', fontStyle: 'bold' } },
+        { content: grandTotalBoxes.toString(), styles: { halign: 'right', valign: 'middle' } },
+        { content: grandTotalSqm.toFixed(2), styles: { halign: 'right', valign: 'middle' } },
+        { content: '', styles: {} },
+        { content: `$ ${grandTotalAmount.toFixed(2)}`, styles: { halign: 'right', valign: 'middle', fontStyle: 'bold' } }
+    ]);
+
     autoTable(doc, {
         startY: y,
         head: [['Marks & Nos.\n3 X 20\'', 'Sr. No', 'Description Of Goods', 'Boxes', 'Sq.Mtr', 'Rate in $', 'Total Amount\nIn USD $']],
@@ -236,109 +265,108 @@ export function generateCustomInvoicePdf(
             halign: 'center'
         },
         columnStyles: {
-            0: { halign: 'center', cellWidth: 60 },
-            1: { halign: 'center', cellWidth: 40 },
-            2: { halign: 'left', cellWidth: 'auto' },
-            3: { halign: 'right', cellWidth: 50 },
-            4: { halign: 'right', cellWidth: 50 },
-            5: { halign: 'right', cellWidth: 50 },
-            6: { halign: 'right', cellWidth: 60 },
+            0: { cellWidth: 60, halign: 'center', valign: 'middle' },
+            1: { cellWidth: 40, halign: 'center', valign: 'middle' },
+            2: { cellWidth: 'auto', halign: 'left', valign: 'middle' },
+            3: { cellWidth: 50, halign: 'right', valign: 'middle' },
+            4: { cellWidth: 50, halign: 'right', valign: 'middle' },
+            5: { cellWidth: 50, halign: 'right', valign: 'middle' },
+            6: { cellWidth: 60, halign: 'right', valign: 'middle' },
         },
         didDrawPage: (data) => { y = data.cursor?.y || y; }
     });
     // @ts-ignore
     y = doc.lastAutoTable.finalY;
 
-
-    // --- Totals Below Table ---
-    const totalRow = [
-        { content: 'TOTAL', colSpan: 3, styles: { halign: 'right', fontStyle: 'bold' } },
-        { content: grandTotalBoxes.toString(), styles: { halign: 'right' } },
-        { content: grandTotalSqm.toFixed(2), styles: { halign: 'right' } },
-        { content: '', styles: {} },
-        { content: `$ ${grandTotalAmount.toFixed(2)}`, styles: { halign: 'right', fontStyle: 'bold' } },
-    ];
-    
+    // --- Custom Totals Section (Manual Drawing) ---
     const exchangeRate = docData.conversationRate || 1;
     const totalINR = grandTotalAmount * exchangeRate;
+    const totalSectionHeight = 110;
     
-    const exchangeRow = [
-        { content: 'EXCHANGE RATE NOTIFICATION NUMBER AND DATE', colSpan: 3, styles: { halign: 'right', fontStyle: 'bold' } },
-        { content: `${docData.exchangeNotification || 'N/A'}\n${docData.exchangeDate ? format(new Date(docData.exchangeDate), 'dd/MM/yyyy') : 'N/A'}`, colSpan: 2, styles: { halign: 'center' } },
-        { content: 'EXCHANGE RATE', styles: { halign: 'right', fontStyle: 'bold' } },
-        { content: `1 USD = ${exchangeRate.toFixed(2)}`, styles: { halign: 'center' } },
-    ];
-    
-    const fobRow = [
-      { content: 'FOB', colSpan: 3, styles: { halign: 'right', fontStyle: 'bold' } },
-      { content: 'INR', colSpan: 2, styles: { halign: 'center' } },
-      { content: totalINR.toFixed(2), colSpan: 2, styles: { halign: 'right', fontStyle: 'bold' } }
-    ];
-    
-    const certifiedRow = [
-        { content: 'Certified That Goods Are Of Indian Origin', colSpan: 3, styles: { fillColor: [41, 171, 226], textColor: [255, 255, 255], fontStyle: 'bold', halign: 'center' } },
-        { content: 'TOTAL', colSpan: 2, styles: { halign: 'right', fontStyle: 'bold' } },
-        { content: 'INR', styles: { halign: 'center' } },
-        { content: totalINR.toFixed(2), styles: { halign: 'right', fontStyle: 'bold' } }
-    ];
+    const verticalText = "EXCHANGE RATE NOTIFICATION NUMBER AND DATE";
+    const fobText = "FOB";
 
-    autoTable(doc, {
-        startY: y,
-        body: [totalRow, exchangeRow, fobRow, certifiedRow],
-        theme: 'grid',
-        margin: { left: margin, right: margin },
-    });
-    // @ts-ignore
-    y = doc.lastAutoTable.finalY;
+    doc.rect(margin, y, contentWidth, totalSectionHeight);
+    const col1W = 120;
+    const col1X = margin;
+    const col2X = col1X + col1W;
+    const col2W = contentWidth - col1W;
+    const col3X = col2X + col2W / 2;
+    const col3W = col2W / 2;
+
+    // Vertical line between main areas
+    doc.line(col2X, y, col2X, y + totalSectionHeight);
+
+    // Exchange Rate section
+    doc.line(col2X, y + totalSectionHeight / 2, col2X + col2W, y + totalSectionHeight / 2); // Horizontal line
+    doc.line(col3X, y + totalSectionHeight / 2, col3X, y + totalSectionHeight); // Vertical line
+    
+    doc.setFontSize(9).setFont('helvetica', 'bold');
+    drawVerticalText(doc, verticalText, col1X + col1W / 2, y + 10, { charSpacing: 10 });
+    drawVerticalText(doc, fobText, col1X + col1W / 2, y + totalSectionHeight / 2 + 30, { charSpacing: 12 });
+    
+    doc.text('EXCHANGE RATE', col2X + col2W / 4, y + totalSectionHeight / 2 + 20, { align: 'center' });
+    doc.text(`1 USD = ${exchangeRate.toFixed(2)}`, col3X + col3W / 2, y + totalSectionHeight / 2 + 20, { align: 'center' });
+    
+    doc.text('INR', col2X + col2W / 4, y + totalSectionHeight - 20, { align: 'center' });
+    doc.text(totalINR.toFixed(2), col3X + col3W / 2, y + totalSectionHeight - 20, { align: 'center' });
+    
+    y += totalSectionHeight;
     
     // --- Amount in Words ---
-    drawBlueHeader('Total No. Of Pkgs.', margin, y, contentWidth / 4, 15);
-    drawBlueHeader('Amount In Words', margin + contentWidth / 4, y, (contentWidth * 3) / 4, 15);
+    drawBlueHeader('Total No. Of Pkgs.', margin, y, contentWidth / 4, headerHeight);
+    drawBlueHeader('Amount In Words', margin + contentWidth / 4, y, (contentWidth * 3) / 4, headerHeight);
     const amountInWordsHeight = 30;
-    doc.rect(margin, y + 15, contentWidth / 4, amountInWordsHeight);
-    doc.rect(margin + contentWidth / 4, y + 15, (contentWidth * 3) / 4, amountInWordsHeight);
-    doc.text(grandTotalBoxes.toString(), margin + 5, y + 25);
-    
+    y += headerHeight;
+    doc.rect(margin, y, contentWidth / 4, amountInWordsHeight);
+    doc.rect(margin + contentWidth / 4, y, (contentWidth * 3) / 4, amountInWordsHeight);
+    doc.text(grandTotalBoxes.toString(), margin + 5, y + 15);
     const amountWordsText = doc.splitTextToSize(amountToWordsUSD(grandTotalAmount), (contentWidth * 3) / 4 - 10);
-    doc.text(amountWordsText, margin + contentWidth / 4 + 5, y + 25);
-    y += 15 + amountInWordsHeight;
+    doc.text(amountWordsText, margin + contentWidth / 4 + 5, y + 15);
+    y += amountInWordsHeight;
 
     // --- Footer Section ---
     const footerText = 'Export Under Duty Drawback Scheme, We shall claim the benefit as admissible under , RoDTEP , DBK';
-    drawBlueHeader(footerText, margin, y, contentWidth, 15);
-    y += 15;
+    drawBlueHeader(footerText, margin, y, contentWidth, headerHeight);
+    y += headerHeight;
 
-    drawBlueHeader('Supplier No. 1', margin, y, contentWidth, 15);
-    y += 15;
+    drawBlueHeader('Supplier No. 1', margin, y, contentWidth, headerHeight, 'left');
+    y += headerHeight;
     
+    const supplierDetailsHeight = 60;
+    doc.rect(margin, y, contentWidth, supplierDetailsHeight);
     const supplierDetails = [
-      `Name\t\t: ${manufacturer.companyName}`,
-      `GSTTIN No.\t: ${manufacturer.gstNumber}`,
-      `Tax Invoice No & Date : ${docData.manufacturerInvoiceNumber || 'N/A'} Dt.${docData.manufacturerInvoiceDate ? format(new Date(docData.manufacturerInvoiceDate), 'dd/MM/yyyy') : 'N/A'}\t\tEPCG LIC NO : N/A`,
+      `Name: ${manufacturer.companyName}`,
+      `GSTTIN No.: ${manufacturer.gstNumber}`,
+      `Tax Invoice No & Date : ${docData.manufacturerInvoiceNumber || 'N/A'} Dt.${docData.manufacturerInvoiceDate ? format(new Date(docData.manufacturerInvoiceDate), 'dd/MM/yyyy') : 'N/A'} EPCG LIC NO : N/A`,
       `Export Under GST Circular No. 26/2017 Custom Dt. 01/07/2017`,
       `Letter Of Undertaking No. Acknowledgment For LUT Application Reference Number (ARN) N/A`,
     ];
-    doc.setFontSize(8);
-    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(8).setFont('helvetica', 'normal');
     doc.text(supplierDetails.join('\n'), margin + 5, y + 10);
-    y += 60; // Adjust space as needed
+    y += supplierDetailsHeight;
 
     // --- Declaration and Signature ---
-    doc.rect(margin, y, contentWidth, 60); // Box for declaration and signature
+    if (y > pageHeight - 100) {
+        doc.addPage();
+        y = margin;
+    }
+    const declarationBoxHeight = 60;
+    doc.rect(margin, y, contentWidth, declarationBoxHeight);
     
     const declarationText = 'We declare that this Invoice shows the actual price of the goods described and that all particulars are true and correct.';
-    doc.setFont('helvetica', 'bold');
-    doc.text('Declaration:', margin + 5, y + 10);
-    doc.setFont('helvetica', 'normal');
+    doc.setFont('helvetica', 'bold').setFontSize(9);
+    doc.text('Declaration:', margin + 5, y + 12);
+    doc.setFont('helvetica', 'normal').setFontSize(8);
     const declarationLines = doc.splitTextToSize(declarationText, contentWidth / 2 - 15);
-    doc.text(declarationLines, margin + 5, y + 22);
+    doc.text(declarationLines, margin + 5, y + 24);
     
-    doc.line(margin + contentWidth / 2, y, margin + contentWidth / 2, y + 60); // Vertical separator
+    doc.line(margin + contentWidth / 2, y, margin + contentWidth / 2, y + declarationBoxHeight); // Vertical separator
     
-    doc.setFont('helvetica', 'bold');
-    doc.text('Signature & Date:', margin + contentWidth / 2 + 5, y + 10);
+    doc.setFont('helvetica', 'bold').setFontSize(9);
+    doc.text('Signature & Date:', margin + contentWidth / 2 + 5, y + 12);
     doc.setFont('helvetica', 'normal');
-    doc.text(format(new Date(), 'dd/MM/yyyy'), margin + contentWidth / 2 + 80, y + 10);
+    doc.text(format(new Date(), 'dd/MM/yyyy'), margin + contentWidth / 2 + 80, y + 12);
 
     doc.setFont('helvetica', 'bold');
     doc.text(`FOR, ${exporter.companyName}`, margin + contentWidth / 2 + 5, y + 30);
