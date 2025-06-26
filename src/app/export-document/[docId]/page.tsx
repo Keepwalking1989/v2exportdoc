@@ -4,13 +4,23 @@
 import { useParams, useRouter } from 'next/navigation';
 import { Header } from '@/components/layout/header';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Separator } from '@/components/ui/separator';
 import { ArrowLeft, Download, Wind, Sailboat, Nfc, BadgeCheck } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import type { ExportDocument } from '@/types/export-document';
 
 const LOCAL_STORAGE_EXPORT_DOCS_KEY_V2 = "bizform_export_documents_v2";
+
+const DownloadOption = ({ label }: { label: string }) => (
+  <div className="flex justify-between items-center p-3 border rounded-md bg-card hover:bg-muted/50 transition-colors">
+    <span className="font-medium text-card-foreground">{label}</span>
+    <Button variant="outline" size="sm" onClick={() => { /* Implement download logic here */ }}>
+      <Download className="mr-2 h-4 w-4" /> Download
+    </Button>
+  </div>
+);
 
 export default function DocumentDataPage() {
   const router = useRouter();
@@ -96,9 +106,28 @@ export default function DocumentDataPage() {
             <Card className="mt-4">
               <CardHeader>
                 <CardTitle>Download Documents</CardTitle>
+                <CardDescription>Select a document type to generate and download a PDF.</CardDescription>
               </CardHeader>
-              <CardContent>
-                <p>Download options will be available here.</p>
+              <CardContent className="space-y-8">
+                <div>
+                  <h3 className="text-lg font-semibold mb-4 text-primary font-headline">For Custom</h3>
+                  <div className="space-y-3">
+                    <DownloadOption label="Custom Invoice" />
+                    <DownloadOption label="Packing List" />
+                    <DownloadOption label="VGM" />
+                    <DownloadOption label="ANNEXURE" />
+                  </div>
+                </div>
+                <Separator />
+                <div>
+                  <h3 className="text-lg font-semibold mb-4 text-primary font-headline">For Client</h3>
+                  <div className="space-y-3">
+                    <DownloadOption label="Custom Invoice" />
+                    <DownloadOption label="Packing List" />
+                    <DownloadOption label="VGM" />
+                    <DownloadOption label="ANNEXURE" />
+                  </div>
+                </div>
               </CardContent>
             </Card>
           </TabsContent>
