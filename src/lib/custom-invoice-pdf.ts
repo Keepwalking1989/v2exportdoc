@@ -67,6 +67,8 @@ export function generateCustomInvoicePdf(
     const doc = new jsPDF({ unit: 'pt', format: 'a4' });
     const pageMargin = 20;
     let yPos = pageMargin;
+    
+    const COLOR_BLUE_RGB = [217, 234, 247]; // Light blue for backgrounds
 
     // --- Style Definitions (Classes) ---
     const classOneStyles = { // Labels
@@ -76,6 +78,7 @@ export function generateCustomInvoicePdf(
         valign: 'middle',
         lineWidth: 0.5,
         lineColor: '#000000',
+        fillColor: COLOR_BLUE_RGB,
     };
     const classTwoStyles = { // Data
         fontStyle: 'normal',
@@ -96,10 +99,19 @@ export function generateCustomInvoicePdf(
     doc.text('CUSTOM INVOICE', doc.internal.pageSize.getWidth() / 2, yPos, { align: 'center' });
     yPos += 20;
 
-    doc.setFontSize(9);
-    doc.setFont('helvetica', 'normal');
-    doc.text('"Supply Meant For Export Under Bond & LUT - Letter Of Undertaking Without Payment Of Integrated Tax"', doc.internal.pageSize.getWidth() / 2, yPos, { align: 'center' });
-    yPos += 15;
+    autoTable(doc, {
+        startY: yPos,
+        theme: 'grid',
+        body: [[{
+            content: '"Supply Meant For Export Under Bond & LUT - Letter Of Undertaking Without Payment Of Integrated Tax"',
+            styles: { ...classOneStyles, fontSize: 9, valign: 'middle' }
+        }]],
+        margin: { left: pageMargin, right: pageMargin },
+        didDrawPage: (data) => { yPos = data.cursor?.y ?? yPos; }
+    });
+    // @ts-ignore
+    yPos = doc.lastAutoTable.finalY;
+
 
     // --- Exporter, Invoice Details, Ref (as a table) ---
     autoTable(doc, {
@@ -258,6 +270,12 @@ export function generateCustomInvoicePdf(
             item.total.toFixed(2)
         ];
     });
+
+    // Add 5 empty rows as requested
+    const emptyRowCount = 5;
+    for (let i = 0; i < emptyRowCount; i++) {
+        tableBody.push(['', '', '', '', '', '', '']);
+    }
 
     autoTable(doc, {
         startY: yPos,
