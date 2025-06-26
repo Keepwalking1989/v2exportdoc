@@ -98,8 +98,8 @@ export function generateAnnexurePdf(
         body: containerTableBody,
         startY: yPos,
         theme: 'grid',
-        headStyles: { fontStyle: 'bold', halign: 'center', fontSize: 9, fillColor: COLOR_BLUE_RGB },
-        bodyStyles: { fontSize: 9, halign: 'center' },
+        headStyles: { fontStyle: 'bold', halign: 'center', fontSize: 9, fillColor: COLOR_BLUE_RGB, textColor: [0, 0, 0], lineColor: [0, 0, 0] },
+        bodyStyles: { fontSize: 9, halign: 'center', lineColor: [0, 0, 0] },
         margin: { left: pageMargin, right: pageMargin },
         didDrawPage: data => { yPos = data.cursor?.y ?? yPos; }
     });
@@ -131,7 +131,7 @@ export function generateAnnexurePdf(
         body: totalsTableBody,
         startY: yPos,
         theme: 'grid',
-        styles: { fontSize: 9, valign: 'middle' },
+        styles: { fontSize: 9, valign: 'middle', lineColor: [0, 0, 0] },
         margin: { left: pageMargin, right: pageMargin },
         didDrawPage: data => { yPos = data.cursor?.y ?? yPos; }
     });
@@ -145,15 +145,29 @@ export function generateAnnexurePdf(
     const lineHeight = 12;
     const effectiveContentWidth = contentWidth - 20;
 
-    const drawCenteredWrappedText = (text: string) => {
+    const drawCenteredWrappedText = (text: string, isUnderlined = false) => {
         const wrappedLines = doc.splitTextToSize(text, effectiveContentWidth);
         const textHeight = wrappedLines.length * lineHeight;
         if (yPos + textHeight > doc.internal.pageSize.getHeight() - 30) {
             doc.addPage();
             yPos = 30;
         }
+        
+        const textYStart = yPos;
         doc.text(wrappedLines, contentWidth / 2 + pageMargin, yPos, { align: 'center' });
         yPos += textHeight;
+
+        if (isUnderlined) {
+            // Underline each line individually
+            let currentLineY = textYStart;
+            wrappedLines.forEach((line: string) => {
+                const textWidth = doc.getTextWidth(line);
+                const textX = (contentWidth / 2 + pageMargin) - (textWidth / 2);
+                doc.setLineWidth(0.5);
+                doc.line(textX, currentLineY + 1, textX + textWidth, currentLineY + 1);
+                currentLineY += lineHeight;
+            });
+        }
     };
     
     const footerLines1 = [
@@ -161,17 +175,10 @@ export function generateAnnexurePdf(
         "\"Supply Goods Under Letter Of Undertaking, Subject To Such Conditions, Safeguards And Procedure As May Be Prescribed.\"",
         "Letter Of Undertaking No.Acknowledgement For Lut Application Reference Number (ARN) AD240324138081L",
     ];
-    footerLines1.forEach(drawCenteredWrappedText);
+    footerLines1.forEach(line => drawCenteredWrappedText(line));
 
     const underlinedText = "EXPORT UNDER SELF SEALING UNDER Circular No.: 59/2010 Dated : 23.12.2010";
-    drawCenteredWrappedText(underlinedText);
-    const textWidth = doc.getTextWidth(underlinedText);
-    // Adjust yPos back to the baseline of the text that was just drawn
-    yPos -= lineHeight;
-    const textX = (contentWidth / 2 + pageMargin) - (textWidth / 2);
-    doc.setLineWidth(0.5);
-    doc.line(textX, yPos + 1, textX + textWidth, yPos + 1);
-    yPos += lineHeight;
+    drawCenteredWrappedText(underlinedText, true);
 
     const combinedFooterText = "Examined the export goods covered under this invoice description of the goods with reference to DBK & MEIS Scheme Value cap p/kg.Net Weight of Ceramic Glazed Wall Tiles are as under. Certified that the description and value of the goods covered by this invoice have been checked by me and the goods have been packed and sealed with lead seal one time lock seal checked by me and the goods have been packed and sealed with lead seal/ one time lock seal.";
     drawCenteredWrappedText(combinedFooterText);
