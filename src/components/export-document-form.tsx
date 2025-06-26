@@ -17,7 +17,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Combobox, type ComboboxOption } from "@/components/ui/combobox";
 import { useToast } from "@/hooks/use-toast";
 import { FileSignature, Briefcase, Factory, Save, XCircle, CalendarIcon, Hash, Globe, Ship, Anchor, FileText, Truck, BadgeCheck, ArrowLeftRight, Bell, CalendarClock, Percent, PlusCircle, Trash2, Stamp, Radio, Weight, ListStart, ListEnd, Boxes, NotebookText, FileScan, Clock, Package, Layers, DollarSign } from "lucide-react";
-import React, { useEffect, useMemo } from "react";
+import React, { useEffect, useMemo, useRef } from "react";
 import type { Company } from "@/types/company"; // For Exporter
 import type { Manufacturer } from "@/types/manufacturer"; // For Manufacturer
 import type { Transporter } from "@/types/transporter";
@@ -187,12 +187,18 @@ const ContainerProductItem: React.FC<ContainerProductItemProps> = ({
 
         return { sqm: calculatedSqm, amount: calculatedAmount, netWeight: calculatedNetWeight };
     }, [currentItem.productId, currentItem.boxes, currentItem.rate, allProducts, allSizes]);
-
-    // Effect to auto-calculate Net and Gross Weight when product or boxes change.
-    // Manual edits will be preserved until the product or box count is changed again.
+    
+    const productOrBoxesChanged = useRef(false);
     useEffect(() => {
-      setValue(`containerItems.${containerIndex}.productItems.${productIndex}.netWeight`, netWeight);
-      setValue(`containerItems.${containerIndex}.productItems.${productIndex}.grossWeight`, netWeight);
+        productOrBoxesChanged.current = true;
+    }, [currentItem.productId, currentItem.boxes]);
+
+    useEffect(() => {
+        if (productOrBoxesChanged.current) {
+            setValue(`containerItems.${containerIndex}.productItems.${productIndex}.netWeight`, netWeight);
+            setValue(`containerItems.${containerIndex}.productItems.${productIndex}.grossWeight`, netWeight);
+            productOrBoxesChanged.current = false;
+        }
     }, [netWeight, setValue, containerIndex, productIndex]);
     
     return (
@@ -273,7 +279,12 @@ const ContainerProductItem: React.FC<ContainerProductItemProps> = ({
               <FormItem>
                 <FormLabel className="flex items-center gap-1"><Weight className="h-4 w-4 text-muted-foreground"/>Net Wt.</FormLabel>
                 <FormControl>
-                    <Input type="number" placeholder="e.g. 1000" {...field} />
+                    <Input
+                      type="number"
+                      placeholder="e.g. 1000"
+                      {...field}
+                      className={cn(Number(field.value) > 27000 && "border-destructive text-destructive focus-visible:ring-destructive")}
+                    />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -286,7 +297,12 @@ const ContainerProductItem: React.FC<ContainerProductItemProps> = ({
               <FormItem>
                 <FormLabel className="flex items-center gap-1"><Weight className="h-4 w-4 text-muted-foreground"/>Gross Wt.</FormLabel>
                 <FormControl>
-                    <Input type="number" placeholder="e.g. 1000" {...field} />
+                    <Input
+                      type="number"
+                      placeholder="e.g. 1000"
+                      {...field}
+                      className={cn(Number(field.value) > 27000 && "border-destructive text-destructive focus-visible:ring-destructive")}
+                    />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -1169,3 +1185,5 @@ export function ExportDocumentForm({
     </Card>
   );
 }
+
+    
