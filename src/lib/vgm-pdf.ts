@@ -27,6 +27,7 @@ export function generateVgmPdf(
     const hasContainers = docData.containerItems && docData.containerItems.length > 0;
 
     // Main Information Table
+    const mainTableHeader = [['Sr No.', 'Details of information', 'Particulars']];
     const mainTableBody = [
         ['1*', 'Name of the shipper', exporter.companyName],
         ['2*', 'Shipper Registration/License no.( IEC No/CIN No)**', exporter.iecNumber],
@@ -45,8 +46,17 @@ export function generateVgmPdf(
 
     autoTable(doc, {
         startY: yPos,
+        head: mainTableHeader,
         body: mainTableBody,
         theme: 'grid',
+        headStyles: {
+            fontStyle: 'bold',
+            fillColor: [217, 234, 247], // Light Blue
+            textColor: [0, 0, 0],
+            halign: 'center',
+            lineWidth: 1,
+            lineColor: [0, 0, 0],
+        },
         styles: {
             lineWidth: 1,
             lineColor: [0, 0, 0],
@@ -104,7 +114,7 @@ export function generateVgmPdf(
             valign: 'middle',
             halign: 'center',
         },
-        headStyles: { fontStyle: 'bold', valign: 'middle' },
+        headStyles: { fontStyle: 'bold', valign: 'middle', lineWidth: 1, lineColor: [0,0,0] },
         columnStyles: {
             0: { cellWidth: 'auto' }, // Booking
             1: { cellWidth: 'auto' }, // Container
