@@ -55,4 +55,14 @@ export interface ExportDocument {
   ewayBillNumber?: string;
   ewayBillDate?: Date;
   ewayBillDocument?: string; // Storing file as data URI
+
+  // New fields for Shipping Bill
+  shippingBillNumber?: string;
+  shippingBillDate?: Date;
+  shippingBillDocument?: string; // data URI
+
+  // New fields for BL
+  blNumber?: string;
+  blDate?: Date;
+  blDocument?: string; // data URI
 }
