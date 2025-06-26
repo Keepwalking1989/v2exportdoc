@@ -193,14 +193,15 @@ export function PerformaInvoiceForm({
 
   const { subTotal, grandTotal, itemsWithCalculations } = useMemo(() => {
     let currentSubTotal = 0;
-    const calculatedItems = watchedItems.map(item => {
+    const calculatedItems = (watchedItems || []).map(item => {
       const sizeDetail = sizes.find(s => s.id === item.sizeId);
+      
+      const numBoxes = parseFloat(String(item.boxes)) || 0;
+      const numRatePerSqmt = parseFloat(String(item.ratePerSqmt)) || 0;
+      const sqmPerBox = sizeDetail ? (parseFloat(String(sizeDetail.sqmPerBox)) || 0) : 0;
+
       let quantitySqmt = 0;
       let amount = 0;
-      
-      const numBoxes = Number(item.boxes) || 0;
-      const numRatePerSqmt = Number(item.ratePerSqmt) || 0;
-      const sqmPerBox = sizeDetail ? Number(sizeDetail.sqmPerBox) || 0 : 0;
 
       if (sizeDetail && numBoxes > 0) {
         quantitySqmt = numBoxes * sqmPerBox;
@@ -210,10 +211,11 @@ export function PerformaInvoiceForm({
       return { ...item, quantitySqmt, amount };
     });
 
-    const currentDiscountInput = Number(watchedDiscount) || 0;
-    const currentFreightInput = Number(watchedFreight) || 0;
+    const currentDiscountInput = parseFloat(String(watchedDiscount)) || 0;
+    const currentFreightInput = parseFloat(String(watchedFreight)) || 0;
 
     const currentGrandTotal = currentSubTotal - currentDiscountInput + currentFreightInput;
+    
     return { subTotal: currentSubTotal, grandTotal: currentGrandTotal, itemsWithCalculations: calculatedItems };
   }, [watchedItems, sizes, watchedFreight, watchedDiscount]);
 
@@ -536,7 +538,6 @@ export function PerformaInvoiceForm({
                                 <Input
                                   type="number"
                                   {...field}
-                                  onChange={e => field.onChange(e.target.valueAsNumber || 0)}
                                 />
                               </FormControl>
                               <FormMessage />
@@ -554,7 +555,6 @@ export function PerformaInvoiceForm({
                                   type="number"
                                   step="0.01"
                                   {...field}
-                                  onChange={e => field.onChange(e.target.valueAsNumber || 0)}
                                 />
                               </FormControl>
                               <FormMessage />
@@ -572,7 +572,6 @@ export function PerformaInvoiceForm({
                                   type="number"
                                   step="0.01"
                                   {...field}
-                                  onChange={e => field.onChange(e.target.valueAsNumber || 0)}
                                 />
                               </FormControl>
                               <FormMessage />
@@ -599,7 +598,7 @@ export function PerformaInvoiceForm({
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel className="flex items-center gap-2"><Ship className="h-4 w-4 text-muted-foreground" />Freight</FormLabel>
-                    <FormControl><Input type="number" step="0.01" {...field} value={field.value || 0} onChange={e => field.onChange(e.target.valueAsNumber || 0)}/></FormControl>
+                    <FormControl><Input type="number" step="0.01" {...field} /></FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -610,7 +609,7 @@ export function PerformaInvoiceForm({
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel className="flex items-center gap-2"><Percent className="h-4 w-4 text-muted-foreground" />Discount</FormLabel>
-                    <FormControl><Input type="number" step="0.01" {...field} value={field.value || 0} onChange={e => field.onChange(e.target.valueAsNumber || 0)}/></FormControl>
+                    <FormControl><Input type="number" step="0.01" {...field} /></FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
