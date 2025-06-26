@@ -16,7 +16,7 @@ import {
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Combobox, type ComboboxOption } from "@/components/ui/combobox";
 import { useToast } from "@/hooks/use-toast";
-import { FileSignature, Briefcase, Factory, Save, XCircle, CalendarIcon, Hash, Globe, Ship, Anchor, FileText, Truck, BadgeCheck, ArrowLeftRight, Bell, CalendarClock, Percent, PlusCircle, Trash2, Stamp, Radio, Weight, ListStart, ListEnd, Boxes, NotebookText, FileScan, Clock, Package, Layers, DollarSign, Gift } from "lucide-react";
+import { FileSignature, Briefcase, Factory, Save, XCircle, CalendarIcon, Hash, Globe, Ship, Anchor, FileText, Truck, BadgeCheck, ArrowLeftRight, Bell, CalendarClock, Percent, PlusCircle, Trash2, Stamp, Radio, Weight, ListStart, ListEnd, Boxes, NotebookText, FileScan, Clock, Package, Layers, DollarSign, Gift, Sigma } from "lucide-react";
 import React, { useEffect, useMemo, useRef } from "react";
 import type { Company } from "@/types/company"; // For Exporter
 import type { Manufacturer } from "@/types/manufacturer"; // For Manufacturer
@@ -171,7 +171,6 @@ const ContainerProductItem: React.FC<ItemProps> = ({
     fieldArrayName,
 }) => {
     const { getValues, setValue } = useFormContext<ExportDocumentFormValues>();
-    
     const productOrBoxesChanged = useRef(false);
 
     const currentItem = useWatch({
@@ -208,6 +207,7 @@ const ContainerProductItem: React.FC<ItemProps> = ({
             
             setValue(`containerItems.${containerIndex}.${fieldArrayName}.${productIndex}.netWeight`, netWeight);
             
+            // Only update gross weight if it was matching net weight or not set
             if (Number(currentGrossWeight) === Number(currentNetWeight) || !currentGrossWeight) {
                 setValue(`containerItems.${containerIndex}.${fieldArrayName}.${productIndex}.grossWeight`, netWeight);
             }
@@ -287,7 +287,7 @@ const ContainerProductItem: React.FC<ItemProps> = ({
                     </FormItem>
                 )}
             />
-            <FormField
+             <FormField
               control={control}
               name={`containerItems.${containerIndex}.${fieldArrayName}.${productIndex}.netWeight`}
               render={({ field }) => (
@@ -353,34 +353,6 @@ const ContainerProductManager: React.FC<ItemManagerProps> = ({ containerIndex, c
     
     const { setValue } = useFormContext<ExportDocumentFormValues>();
 
-    const productItems = useWatch({
-        control,
-        name: `containerItems.${containerIndex}.productItems`,
-    }) || [];
-
-    const totalContainerAmount = useMemo(() => {
-        if (!productItems) {
-            return 0;
-        }
-
-        return productItems.reduce((total, item) => {
-            const product = allProducts.find(p => p.id === item.productId);
-            if (!product) return total;
-
-            const size = allSizes.find(s => s.id === product.sizeId);
-            if (!size) return total;
-
-            const boxes = Number(item.boxes) || 0;
-            const rate = Number(item.rate) || 0;
-            const sqmPerBox = size.sqmPerBox || 0;
-
-            const calculatedSqm = boxes * sqmPerBox;
-            const calculatedAmount = calculatedSqm * rate;
-            
-            return total + calculatedAmount;
-        }, 0);
-    }, [productItems, allProducts, allSizes]);
-
     const productOptions: ComboboxOption[] = useMemo(() =>
         allProducts.map(p => {
             const size = allSizes.find(s => s.id === p.sizeId);
@@ -438,19 +410,6 @@ const ContainerProductManager: React.FC<ItemManagerProps> = ({ containerIndex, c
                     </div>
                 )}
             </div>
-
-            {totalContainerAmount > 0 && productItems.length >= 2 && (
-                <>
-                    <Separator className="my-4" />
-                    <div className="flex justify-end items-center font-bold text-md">
-                         <span className="text-muted-foreground mr-4">Container Total Amount:</span>
-                         <span className="text-primary text-lg flex items-center gap-1">
-                             <DollarSign className="h-4 w-4" />
-                             {totalContainerAmount.toFixed(2)}
-                         </span>
-                    </div>
-                </>
-            )}
         </div>
     );
 };
@@ -520,6 +479,87 @@ const ContainerSampleManager: React.FC<ItemManagerProps> = ({ containerIndex, co
                         <p>{productOptions.length > 0 ? "No samples added to this container yet." : "No products available to add as samples."}</p>
                     </div>
                 )}
+            </div>
+        </div>
+    );
+};
+
+interface ContainerTotalsProps {
+    containerIndex: number;
+    control: Control<ExportDocumentFormValues>;
+    allProducts: Product[];
+    allSizes: Size[];
+}
+
+const ContainerTotals: React.FC<ContainerTotalsProps> = ({ containerIndex, control, allProducts, allSizes }) => {
+    const productItems = useWatch({
+        control,
+        name: `containerItems.${containerIndex}.productItems`,
+    }) || [];
+
+    const sampleItems = useWatch({
+        control,
+        name: `containerItems.${containerIndex}.sampleItems`,
+    }) || [];
+
+    const { totalAmount, totalNetWeight, totalGrossWeight } = useMemo(() => {
+        const allItems = [...(productItems || []), ...(sampleItems || [])];
+        
+        if (allItems.length === 0) {
+            return { totalAmount: 0, totalNetWeight: 0, totalGrossWeight: 0 };
+        }
+
+        const totals = allItems.reduce((acc, item) => {
+            const product = allProducts.find(p => p.id === item.productId);
+            const size = product ? allSizes.find(s => s.id === product.sizeId) : undefined;
+            
+            const boxes = Number(item.boxes) || 0;
+            const rate = Number(item.rate) || 0;
+            const sqmPerBox = size?.sqmPerBox || 0;
+            
+            const calculatedSqm = boxes * sqmPerBox;
+            const calculatedAmount = calculatedSqm * rate;
+            
+            acc.totalAmount += calculatedAmount;
+            acc.totalNetWeight += Number(item.netWeight) || 0;
+            acc.totalGrossWeight += Number(item.grossWeight) || 0;
+            
+            return acc;
+        }, { totalAmount: 0, totalNetWeight: 0, totalGrossWeight: 0 });
+
+        return totals;
+    }, [productItems, sampleItems, allProducts, allSizes]);
+
+    if (productItems.length === 0 && sampleItems.length === 0) {
+        return null;
+    }
+
+    return (
+        <div className="mt-6 p-4 border-t-2 border-dashed border-primary/50 space-y-3">
+             <h4 className="text-lg font-bold flex items-center gap-2 text-primary">
+                <Sigma className="h-5 w-5" />
+                Container Totals
+            </h4>
+            <div className="flex justify-between items-center font-semibold text-md">
+                <span className="text-muted-foreground">Total Amount:</span>
+                <span className="text-primary flex items-center gap-1">
+                    <DollarSign className="h-4 w-4" />
+                    {totalAmount.toFixed(2)}
+                </span>
+            </div>
+            <div className="flex justify-between items-center font-semibold text-md">
+                <span className="text-muted-foreground">Total Net Weight:</span>
+                <span className="flex items-center gap-1">
+                     <Weight className="h-4 w-4 text-muted-foreground" />
+                    {totalNetWeight.toFixed(2)} Kgs
+                </span>
+            </div>
+            <div className="flex justify-between items-center font-semibold text-md">
+                <span className="text-muted-foreground">Total Gross Weight:</span>
+                <span className="flex items-center gap-1">
+                     <Weight className="h-4 w-4 text-muted-foreground" />
+                    {totalGrossWeight.toFixed(2)} Kgs
+                </span>
             </div>
         </div>
     );
@@ -1247,6 +1287,12 @@ export function ExportDocumentForm({
                             />
                              <Separator className="my-6 border-dashed"/>
                              <ContainerSampleManager
+                                containerIndex={index}
+                                control={form.control}
+                                allProducts={allProducts}
+                                allSizes={allSizes}
+                            />
+                            <ContainerTotals
                                 containerIndex={index}
                                 control={form.control}
                                 allProducts={allProducts}
