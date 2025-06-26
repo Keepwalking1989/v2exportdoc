@@ -128,12 +128,12 @@ export function generatePackingListPdf(
              [
                 { content: 'Port Of Discharge', styles: {...classOneStyles} },
                 { content: 'Final Destination', styles: {...classOneStyles} },
-                { content: '', colSpan: 2, styles: {...classTwoStyles} },
+                { content: 'Marks & Nos.', colSpan: 2, styles: {...classOneStyles} },
             ],
              [
                 { content: docData.portOfDischarge || 'N/A', styles: {...classTwoStyles, halign: 'center', cellPadding: 1} },
                 { content: docData.finalDestination || 'N/A', styles: {...classTwoStyles, halign: 'center', cellPadding: 1} },
-                { content: '', colSpan: 2, styles: {...classTwoStyles} },
+                { content: `${docData.containerItems?.length || 0} Container(s)`, colSpan: 2, styles: {...classTwoStyles, halign: 'center', cellPadding: 1} },
             ],
         ],
         margin: { left: pageMargin, right: pageMargin },
@@ -190,20 +190,13 @@ export function generatePackingListPdf(
         grandTotalGrossWt += item.grossWt;
 
         tableBody.push([
-            { content: item.hsnCode, rowSpan: 2, styles: { halign: 'center', valign: 'middle' } },
-            { content: srNoCounter++, rowSpan: 2, styles: { halign: 'center', valign: 'middle' } },
-            { content: 'Glazed Vitrified Tiles' },
-            { content: item.boxes.toString() },
-            { content: item.sqm.toFixed(2) },
-            { content: item.netWt.toFixed(2) },
-            { content: item.grossWt.toFixed(2) },
-        ]);
-        tableBody.push([
-            { content: item.description },
-            { content: '' },
-            { content: '' },
-            { content: '' },
-            { content: '' },
+            item.hsnCode,
+            srNoCounter++,
+            item.description,
+            item.boxes.toString(),
+            item.sqm.toFixed(2),
+            item.netWt.toFixed(2),
+            item.grossWt.toFixed(2)
         ]);
     });
 
@@ -215,31 +208,7 @@ export function generatePackingListPdf(
 
     autoTable(doc, {
         startY: yPos,
-        head: [['Marks & Nos.\n1 X 20\'', 'Description Of Goods', 'Net Wt.', 'Gross Wt.']],
-        body: [
-            [{ content: 'HSN Code' }, { content: 'Sr. No.' }, { content: '' }, { content: 'Boxes' }, { content: 'Sq.Mtr' }, { content: 'Kgs' }, { content: 'Kgs' }]
-        ],
-        theme: 'grid',
-        headStyles: { ...classOneStyles, halign: 'left' },
-        bodyStyles: { ...classOneStyles, cellPadding: 1 },
-        columnStyles: {
-            0: { cellWidth: 70, halign: 'center' },
-            1: { cellWidth: 70, halign: 'center' },
-            2: { cellWidth: 'auto', halign: 'left'},
-            3: { cellWidth: 50, halign: 'right' },
-            4: { cellWidth: 60, halign: 'right' },
-            5: { cellWidth: 60, halign: 'right' },
-            6: { cellWidth: 60, halign: 'right' },
-        },
-        tableWidth: 'auto',
-        margin: { left: pageMargin, right: pageMargin },
-        didDrawPage: data => { yPos = data.cursor?.y ?? yPos; },
-    });
-    // @ts-ignore
-    const headerFinalY = doc.lastAutoTable.finalY;
-
-    autoTable(doc, {
-        startY: headerFinalY,
+        head: [['HSN Code', 'Sr. No.', 'Description Of Goods', 'Boxes', 'Sq.Mtr', 'Net Wt. (Kgs)', 'Gross Wt. (Kgs)']],
         body: tableBody,
         foot: [[
              { content: 'TOTAL', colSpan: 3, styles: {...classOneStyles, halign: 'left'} },
@@ -249,17 +218,18 @@ export function generatePackingListPdf(
              { content: grandTotalGrossWt.toFixed(2), styles: {...classTwoStyles, halign: 'right'} },
         ]],
         theme: 'grid',
+        headStyles: classOneStyles,
         bodyStyles: {...classTwoStyles, cellPadding: 1, valign: 'top' },
         footStyles: {...classOneStyles, cellPadding: 1 },
         margin: { left: pageMargin, right: pageMargin },
         columnStyles: {
             0: { cellWidth: 70, halign: 'center' },
-            1: { cellWidth: 70, halign: 'center' },
-            2: { cellWidth: 'auto', halign: 'left'},
+            1: { cellWidth: 40, halign: 'center' },
+            2: { cellWidth: 'auto', halign: 'left' },
             3: { cellWidth: 50, halign: 'right' },
             4: { cellWidth: 60, halign: 'right' },
-            5: { cellWidth: 60, halign: 'right' },
-            6: { cellWidth: 60, halign: 'right' },
+            5: { cellWidth: 65, halign: 'right' },
+            6: { cellWidth: 65, halign: 'right' },
         },
         didDrawPage: data => { yPos = data.cursor?.y ?? yPos; }
     });
@@ -295,21 +265,6 @@ export function generatePackingListPdf(
         headStyles: classOneStyles,
         bodyStyles: {...classTwoStyles, halign: 'center', cellPadding: 2},
         margin: { left: pageMargin, right: pageMargin },
-        didDrawPage: data => { yPos = data.cursor?.y ?? yPos; }
-    });
-    // @ts-ignore
-    yPos = doc.lastAutoTable.finalY;
-
-
-    // --- Total Packages Footer ---
-    autoTable(doc, {
-        startY: yPos,
-        theme: 'grid',
-        body: [
-            [{ content: 'TOTAL >>>>>>>>>>', styles: {...classOneStyles, halign: 'left'} }, { content: grandTotalBoxes.toString(), styles: {...classTwoStyles, halign: 'center'} }, { content: 'BOXES', styles: {...classTwoStyles, halign: 'left'} }],
-        ],
-        margin: { left: pageMargin, right: pageMargin },
-        columnStyles: { 0: {cellWidth: 'auto'}, 1: {cellWidth: 100}, 2: {cellWidth: 100}},
         didDrawPage: data => { yPos = data.cursor?.y ?? yPos; }
     });
     // @ts-ignore
