@@ -306,7 +306,6 @@ export function generatePackingListPdf(
         startY: yPos,
         theme: 'grid',
         body: [
-            [{ content: 'Total No. Of Pkgs.', styles: {...classOneStyles, halign: 'left'} }, { content: grandTotalBoxes.toString(), styles: {...classTwoStyles, halign: 'center'} }, { content: 'Pkgs.', styles: {...classTwoStyles, halign: 'left'} }],
             [{ content: 'TOTAL >>>>>>>>>>', styles: {...classOneStyles, halign: 'left'} }, { content: grandTotalBoxes.toString(), styles: {...classTwoStyles, halign: 'center'} }, { content: 'BOXES', styles: {...classTwoStyles, halign: 'left'} }],
         ],
         margin: { left: pageMargin, right: pageMargin },
