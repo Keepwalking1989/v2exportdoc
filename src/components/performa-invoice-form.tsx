@@ -202,7 +202,7 @@ export function PerformaInvoiceForm({
       const numRatePerSqmt = Number(item.ratePerSqmt) || 0;
       const sqmPerBox = sizeDetail ? Number(sizeDetail.sqmPerBox) || 0 : 0;
 
-      if (sizeDetail && numBoxes > 0 && numRatePerSqmt >= 0) {
+      if (sizeDetail && numBoxes > 0) {
         quantitySqmt = numBoxes * sqmPerBox;
         amount = quantitySqmt * numRatePerSqmt;
       }
@@ -210,15 +210,13 @@ export function PerformaInvoiceForm({
       return { ...item, quantitySqmt, amount };
     });
 
-    const currentDiscountInput = Number(watchedDiscount);
-    const discountAmount = isNaN(currentDiscountInput) ? 0 : currentDiscountInput;
+    const currentDiscountInput = Number(watchedDiscount) || 0;
+    const currentFreightInput = Number(watchedFreight) || 0;
 
-    const currentFreightInput = Number(watchedFreight);
-    const freightAmount = isNaN(currentFreightInput) ? 0 : currentFreightInput;
-
-    const currentGrandTotal = currentSubTotal - discountAmount + freightAmount;
+    const currentGrandTotal = currentSubTotal - currentDiscountInput + currentFreightInput;
     return { subTotal: currentSubTotal, grandTotal: currentGrandTotal, itemsWithCalculations: calculatedItems };
   }, [watchedItems, sizes, watchedFreight, watchedDiscount]);
+
 
   function onSubmit(values: PerformaInvoiceFormValues) {
     const invoiceToSave: PerformaInvoice = {
@@ -534,7 +532,13 @@ export function PerformaInvoiceForm({
                           render={({ field }) => (
                             <FormItem>
                               <FormLabel>Boxes</FormLabel>
-                              <FormControl><Input type="number" {...field} /></FormControl>
+                              <FormControl>
+                                <Input
+                                  type="number"
+                                  {...field}
+                                  onChange={e => field.onChange(e.target.valueAsNumber || 0)}
+                                />
+                              </FormControl>
                               <FormMessage />
                             </FormItem>
                           )}
@@ -545,7 +549,14 @@ export function PerformaInvoiceForm({
                           render={({ field }) => (
                             <FormItem>
                               <FormLabel>Rate/Sqmt</FormLabel>
-                              <FormControl><Input type="number" step="0.01" {...field} /></FormControl>
+                              <FormControl>
+                                <Input
+                                  type="number"
+                                  step="0.01"
+                                  {...field}
+                                  onChange={e => field.onChange(e.target.valueAsNumber || 0)}
+                                />
+                              </FormControl>
                               <FormMessage />
                             </FormItem>
                           )}
@@ -556,7 +567,14 @@ export function PerformaInvoiceForm({
                           render={({ field }) => (
                             <FormItem>
                               <FormLabel>Commission</FormLabel>
-                              <FormControl><Input type="number" step="0.01" {...field} /></FormControl>
+                              <FormControl>
+                                <Input
+                                  type="number"
+                                  step="0.01"
+                                  {...field}
+                                  onChange={e => field.onChange(e.target.valueAsNumber || 0)}
+                                />
+                              </FormControl>
                               <FormMessage />
                             </FormItem>
                           )}
@@ -581,7 +599,7 @@ export function PerformaInvoiceForm({
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel className="flex items-center gap-2"><Ship className="h-4 w-4 text-muted-foreground" />Freight</FormLabel>
-                    <FormControl><Input type="number" step="0.01" {...field} value={field.value || 0} onChange={e => field.onChange(parseFloat(e.target.value) || 0)}/></FormControl>
+                    <FormControl><Input type="number" step="0.01" {...field} value={field.value || 0} onChange={e => field.onChange(e.target.valueAsNumber || 0)}/></FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -592,7 +610,7 @@ export function PerformaInvoiceForm({
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel className="flex items-center gap-2"><Percent className="h-4 w-4 text-muted-foreground" />Discount</FormLabel>
-                    <FormControl><Input type="number" step="0.01" {...field} value={field.value || 0} onChange={e => field.onChange(parseFloat(e.target.value) || 0)}/></FormControl>
+                    <FormControl><Input type="number" step="0.01" {...field} value={field.value || 0} onChange={e => field.onChange(e.target.valueAsNumber || 0)}/></FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
