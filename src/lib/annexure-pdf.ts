@@ -17,6 +17,7 @@ export function generateAnnexurePdf(
     let yPos = 20;
     const pageMargin = 30;
     const contentWidth = doc.internal.pageSize.getWidth() - 2 * pageMargin;
+    const COLOR_BLUE_RGB = [217, 234, 247];
 
     // --- PDF Header ---
     doc.setFontSize(14);
@@ -97,7 +98,7 @@ export function generateAnnexurePdf(
         body: containerTableBody,
         startY: yPos,
         theme: 'grid',
-        headStyles: { fontStyle: 'bold', halign: 'center', fontSize: 9 },
+        headStyles: { fontStyle: 'bold', halign: 'center', fontSize: 9, fillColor: COLOR_BLUE_RGB },
         bodyStyles: { fontSize: 9, halign: 'center' },
         margin: { left: pageMargin, right: pageMargin },
         didDrawPage: data => { yPos = data.cursor?.y ?? yPos; }
