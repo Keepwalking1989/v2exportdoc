@@ -245,6 +245,12 @@ export function generateCustomInvoicePdf(
         ];
     });
 
+    if (tableBody.length === 0) {
+        tableBody.push([
+            { content: 'No items found in document.', colSpan: 7, styles: { halign: 'center', minCellHeight: 50 } }
+        ]);
+    }
+
     autoTable(doc, {
         startY: y,
         head: [['Marks & Nos.\nContainer', 'Sr. No', 'Description Of Goods', 'Boxes', 'Sq.Mtr', 'Rate in $', 'Total Amount\nIn USD $']],
@@ -278,25 +284,26 @@ export function generateCustomInvoicePdf(
     // @ts-ignore
     y = doc.lastAutoTable.finalY;
 
-    // --- Manual TOTAL Row (Drawn AFTER autoTable) ---
-    const totalRowHeight = 35;
-    const table = (doc as any).lastAutoTable; // Now this is safe to use
-    
-    doc.setLineWidth(1);
-    doc.setDrawColor(0,0,0);
-    doc.rect(margin, y, contentWidth, totalRowHeight);
-    
-    doc.setFont('helvetica', 'bold').setFontSize(9);
-    doc.text('TOTAL', margin + 5, y + totalRowHeight / 2 + 3);
+    const table = (doc as any).lastAutoTable;
+    // Only draw the TOTAL row if there were actual items.
+    if (Object.keys(groupedByProduct).length > 0 && table && table.columns && table.columns.length > 6) {
+        const totalRowHeight = 35;
+        doc.setLineWidth(1);
+        doc.setDrawColor(0,0,0);
+        doc.rect(margin, y, contentWidth, totalRowHeight);
+        
+        doc.setFont('helvetica', 'bold').setFontSize(9);
+        doc.text('TOTAL', margin + 5, y + totalRowHeight / 2 + 3);
 
-    const boxColX = table.columns[3].x + table.columns[3].width;
-    const sqmColX = table.columns[4].x + table.columns[4].width;
-    const amountColX = table.columns[6].x + table.columns[6].width;
+        const boxColX = table.columns[3].x + table.columns[3].width;
+        const sqmColX = table.columns[4].x + table.columns[4].width;
+        const amountColX = table.columns[6].x + table.columns[6].width;
 
-    doc.text(grandTotalBoxes.toString(), boxColX - 5, y + totalRowHeight / 2 + 3, { align: 'right' });
-    doc.text(grandTotalSqm.toFixed(2), sqmColX - 5, y + totalRowHeight / 2 + 3, { align: 'right' });
-    doc.text(`$ ${grandTotalAmount.toFixed(2)}`, amountColX - 5, y + totalRowHeight / 2 + 3, { align: 'right' });
-    y += totalRowHeight;
+        doc.text(grandTotalBoxes.toString(), boxColX - 5, y + totalRowHeight / 2 + 3, { align: 'right' });
+        doc.text(grandTotalSqm.toFixed(2), sqmColX - 5, y + totalRowHeight / 2 + 3, { align: 'right' });
+        doc.text(`$ ${grandTotalAmount.toFixed(2)}`, amountColX - 5, y + totalRowHeight / 2 + 3, { align: 'right' });
+        y += totalRowHeight;
+    }
 
     // --- Exchange Rate Section ---
     const exchangeRateSectionHeight = 45;
@@ -386,3 +393,5 @@ export function generateCustomInvoicePdf(
     // --- Save the PDF ---
     doc.save(`Custom_Invoice_${docData.exportInvoiceNumber.replace(/[\\/:*?"<>|]/g, '_')}.pdf`);
 }
+
+    
