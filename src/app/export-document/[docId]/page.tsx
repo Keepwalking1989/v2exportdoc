@@ -53,6 +53,11 @@ const blSchema = z.object({
 });
 type BlFormValues = z.infer<typeof blSchema>;
 
+const brcSchema = z.object({
+  brcDocument: z.string().optional(), // data URI
+});
+type BrcFormValues = z.infer<typeof brcSchema>;
+
 
 const DownloadOption = ({ label }: { label: string }) => (
   <div className="flex justify-between items-center p-3 border rounded-md bg-card hover:bg-muted/50 transition-colors">
@@ -83,6 +88,8 @@ export default function DocumentDataPage() {
   const [isEditingEway, setIsEditingEway] = useState(false);
   const [isEditingShippingBill, setIsEditingShippingBill] = useState(false);
   const [isEditingBl, setIsEditingBl] = useState(false);
+  const [isEditingBrc, setIsEditingBrc] = useState(false);
+
 
   // State for related data
   const [allManufacturers, setAllManufacturers] = useState<Manufacturer[]>([]);
@@ -93,6 +100,8 @@ export default function DocumentDataPage() {
   const ewayBillForm = useForm<EwayBillFormValues>({ resolver: zodResolver(ewayBillSchema) });
   const shippingBillForm = useForm<ShippingBillFormValues>({ resolver: zodResolver(shippingBillSchema) });
   const blForm = useForm<BlFormValues>({ resolver: zodResolver(blSchema) });
+  const brcForm = useForm<BrcFormValues>({ resolver: zodResolver(brcSchema) });
+
 
   const updateDocumentInStorage = (updatedDoc: ExportDocument) => {
     const storedDocs = localStorage.getItem(LOCAL_STORAGE_EXPORT_DOCS_KEY_V2);
@@ -121,10 +130,12 @@ export default function DocumentDataPage() {
           if (!parsedDoc.ewayBillNumber) setIsEditingEway(true);
           if (!parsedDoc.shippingBillNumber) setIsEditingShippingBill(true);
           if (!parsedDoc.blNumber) setIsEditingBl(true);
+          if (!parsedDoc.brcDocument) setIsEditingBrc(true);
           
           ewayBillForm.reset({ ewayBillNumber: parsedDoc.ewayBillNumber, ewayBillDate: parsedDoc.ewayBillDate, ewayBillDocument: parsedDoc.ewayBillDocument });
           shippingBillForm.reset({ shippingBillNumber: parsedDoc.shippingBillNumber, shippingBillDate: parsedDoc.shippingBillDate, shippingBillDocument: parsedDoc.shippingBillDocument });
           blForm.reset({ blNumber: parsedDoc.blNumber, blDate: parsedDoc.blDate, blDocument: parsedDoc.blDocument });
+          brcForm.reset({ brcDocument: parsedDoc.brcDocument });
 
         } else {
           console.error("Document not found");
@@ -141,7 +152,7 @@ export default function DocumentDataPage() {
         setIsLoading(false);
       }
     }
-  }, [docId, ewayBillForm, shippingBillForm, blForm]);
+  }, [docId, ewayBillForm, shippingBillForm, blForm, brcForm]);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>, formSetter: (value: string) => void) => {
     const file = e.target.files?.[0];
@@ -187,6 +198,18 @@ export default function DocumentDataPage() {
     } catch (error) {
       console.error("Failed to save BL details", error);
       toast({ variant: "destructive", title: "Error", description: "Could not save BL details." });
+    }
+  };
+
+  const onSaveBrc = (data: BrcFormValues) => {
+    if (!document) return;
+    try {
+      updateDocumentInStorage({ ...document, ...data });
+      setIsEditingBrc(false);
+      toast({ title: "BRC Document Saved" });
+    } catch (error) {
+      console.error("Failed to save BRC document", error);
+      toast({ variant: "destructive", title: "Error", description: "Could not save BRC document." });
     }
   };
 
@@ -436,7 +459,55 @@ export default function DocumentDataPage() {
             </Card>
           </TabsContent>
           
-          <TabsContent value="brc"><Card className="mt-4"><CardHeader><CardTitle>BRC Document Details</CardTitle></CardHeader><CardContent><p>Fields for BRC document will be added here.</p></CardContent></Card></TabsContent>
+          <TabsContent value="brc">
+            <Card className="mt-4">
+              <CardHeader className="flex flex-row items-center justify-between">
+                <div>
+                  <CardTitle>BRC Document Details</CardTitle>
+                  <CardDescription>Upload or manage the BRC document.</CardDescription>
+                </div>
+                {!isEditingBrc && document?.brcDocument && (
+                  <Button variant="outline" onClick={() => setIsEditingBrc(true)}>
+                    <Edit className="mr-2 h-4 w-4" /> Edit
+                  </Button>
+                )}
+              </CardHeader>
+              <Form {...brcForm}>
+                <form onSubmit={brcForm.handleSubmit(onSaveBrc)}>
+                  <CardContent>
+                    {isEditingBrc ? (
+                      <FormItem>
+                        <FormLabel>BRC Document</FormLabel>
+                        <FormControl>
+                          <Input type="file" onChange={(e) => handleFileChange(e, (val) => brcForm.setValue('brcDocument', val))} accept=".pdf,.jpg,.jpeg,.png" />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    ) : (
+                      <div>
+                        <p className="text-sm text-muted-foreground">BRC Document</p>
+                        {document?.brcDocument ? (
+                          <Button asChild className="mt-2">
+                            <a href={document.brcDocument} download={`BRC_Doc_${document.exportInvoiceNumber}.pdf`}>
+                              <Download className="mr-2 h-4 w-4" /> Download Document
+                            </a>
+                          </Button>
+                        ) : (
+                          <p className="font-semibold">No document uploaded.</p>
+                        )}
+                      </div>
+                    )}
+                  </CardContent>
+                  {isEditingBrc && (
+                    <CardFooter className="justify-end gap-2">
+                      <Button type="button" variant="ghost" onClick={() => { setIsEditingBrc(false); brcForm.reset({ brcDocument: document?.brcDocument }); }}>Cancel</Button>
+                      <Button type="submit">Save Document</Button>
+                    </CardFooter>
+                  )}
+                </form>
+              </Form>
+            </Card>
+          </TabsContent>
         </Tabs>
       </main>
       <footer className="py-6 text-center text-sm text-muted-foreground border-t">© {new Date().getFullYear()} BizForm. All rights reserved.</footer>

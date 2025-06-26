@@ -65,4 +65,8 @@ export interface ExportDocument {
   blNumber?: string;
   blDate?: Date;
   blDocument?: string; // data URI
+
+  // New field for BRC
+  brcDocument?: string; // data URI
 }
+
