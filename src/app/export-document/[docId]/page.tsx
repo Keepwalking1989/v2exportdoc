@@ -4,10 +4,10 @@
 import { useParams, useRouter } from 'next/navigation';
 import { Header } from '@/components/layout/header';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
-import { ArrowLeft, Download, Wind, Sailboat, Nfc, BadgeCheck } from 'lucide-react';
+import { ArrowLeft, Download, Wind, Sailboat, Nfc, BadgeCheck, Edit, CalendarIcon } from 'lucide-react';
 import { useEffect, useState, useMemo } from 'react';
 import type { ExportDocument } from '@/types/export-document';
 import type { Manufacturer } from '@/types/manufacturer';
@@ -16,12 +16,29 @@ import type { Product } from '@/types/product';
 import type { Size } from '@/types/size';
 import { format } from 'date-fns';
 import { Table, TableBody, TableCell, TableFooter, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import * as z from 'zod';
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { Input } from '@/components/ui/input';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Calendar } from '@/components/ui/calendar';
+import { useToast } from '@/hooks/use-toast';
+import { cn } from '@/lib/utils';
 
 const LOCAL_STORAGE_EXPORT_DOCS_KEY_V2 = "bizform_export_documents_v2";
 const LOCAL_STORAGE_MANUFACTURERS_KEY = "bizform_manufacturers";
 const LOCAL_STORAGE_TRANSPORTERS_KEY = "bizform_transporters";
 const LOCAL_STORAGE_PRODUCTS_KEY = "bizform_products";
 const LOCAL_STORAGE_SIZES_KEY = "bizform_sizes";
+
+const ewayBillSchema = z.object({
+  ewayBillNumber: z.string().optional(),
+  ewayBillDate: z.date().optional(),
+  ewayBillDocument: z.string().optional(), // data URI
+});
+
+type EwayBillFormValues = z.infer<typeof ewayBillSchema>;
 
 const DownloadOption = ({ label }: { label: string }) => (
   <div className="flex justify-between items-center p-3 border rounded-md bg-card hover:bg-muted/50 transition-colors">
@@ -43,14 +60,21 @@ export default function DocumentDataPage() {
   const router = useRouter();
   const params = useParams();
   const docId = params.docId as string;
+  const { toast } = useToast();
+
   const [document, setDocument] = useState<ExportDocument | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isEditingEway, setIsEditingEway] = useState(false);
 
   // State for related data
   const [allManufacturers, setAllManufacturers] = useState<Manufacturer[]>([]);
   const [allTransporters, setAllTransporters] = useState<Transporter[]>([]);
   const [allProducts, setAllProducts] = useState<Product[]>([]);
   const [allSizes, setAllSizes] = useState<Size[]>([]);
+
+  const form = useForm<EwayBillFormValues>({
+    resolver: zodResolver(ewayBillSchema),
+  });
 
   useEffect(() => {
     if (docId && typeof window !== 'undefined') {
@@ -59,10 +83,23 @@ export default function DocumentDataPage() {
         const allDocs: ExportDocument[] = storedDocs ? JSON.parse(storedDocs) : [];
         const foundDoc = allDocs.find(d => d.id === docId);
         if (foundDoc) {
-          setDocument({
+          const parsedDoc = {
             ...foundDoc,
             exportInvoiceDate: new Date(foundDoc.exportInvoiceDate),
+            ewayBillDate: foundDoc.ewayBillDate ? new Date(foundDoc.ewayBillDate) : undefined,
+          };
+          setDocument(parsedDoc);
+          
+          if (!parsedDoc.ewayBillNumber) {
+            setIsEditingEway(true);
+          }
+          
+          form.reset({
+            ewayBillNumber: parsedDoc.ewayBillNumber || '',
+            ewayBillDate: parsedDoc.ewayBillDate,
+            ewayBillDocument: parsedDoc.ewayBillDocument || '',
           });
+
         } else {
           console.error("Document not found");
         }
@@ -79,7 +116,49 @@ export default function DocumentDataPage() {
         setIsLoading(false);
       }
     }
-  }, [docId]);
+  }, [docId, form]);
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        form.setValue('ewayBillDocument', reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const onSaveEwayBill = (data: EwayBillFormValues) => {
+    if (!document) return;
+    try {
+      const storedDocs = localStorage.getItem(LOCAL_STORAGE_EXPORT_DOCS_KEY_V2);
+      let allDocs: ExportDocument[] = storedDocs ? JSON.parse(storedDocs) : [];
+      
+      const updatedDocs = allDocs.map(doc => {
+        if (doc.id === docId) {
+          const updatedDoc = { ...doc, ...data };
+          setDocument(updatedDoc); // Update state locally to re-render UI
+          return updatedDoc;
+        }
+        return doc;
+      });
+
+      localStorage.setItem(LOCAL_STORAGE_EXPORT_DOCS_KEY_V2, JSON.stringify(updatedDocs));
+      setIsEditingEway(false);
+      toast({
+        title: "Eway Bill Details Saved",
+        description: "The information has been successfully updated.",
+      });
+    } catch (error) {
+      console.error("Failed to save Eway Bill details", error);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Could not save Eway Bill details.",
+      });
+    }
+  };
 
   const ewayBillData = useMemo(() => {
     if (!document || !allManufacturers.length || !allSizes.length || !allProducts.length) {
@@ -328,6 +407,116 @@ export default function DocumentDataPage() {
                         ))}
                       </CardContent>
                     </Card>
+
+                    <Separator className="my-8" />
+                    
+                    <Card>
+                      <CardHeader className="flex flex-row items-center justify-between">
+                          <div>
+                              <CardTitle>Eway Bill Document Entry</CardTitle>
+                              <CardDescription>Enter the Eway Bill details once available.</CardDescription>
+                          </div>
+                          {!isEditingEway && document?.ewayBillNumber && (
+                              <Button variant="outline" onClick={() => setIsEditingEway(true)}>
+                                  <Edit className="mr-2 h-4 w-4" /> Edit
+                              </Button>
+                          )}
+                      </CardHeader>
+                      <Form {...form}>
+                          <form onSubmit={form.handleSubmit(onSaveEwayBill)}>
+                              <CardContent className="space-y-6">
+                                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                      {isEditingEway ? (
+                                          <FormField
+                                              control={form.control}
+                                              name="ewayBillNumber"
+                                              render={({ field }) => (
+                                                  <FormItem>
+                                                      <FormLabel>Eway Bill Number</FormLabel>
+                                                      <FormControl>
+                                                          <Input placeholder="Enter Eway Bill Number" {...field} />
+                                                      </FormControl>
+                                                      <FormMessage />
+                                                  </FormItem>
+                                              )}
+                                          />
+                                      ) : (
+                                          <DetailRow label="Eway Bill Number" value={document?.ewayBillNumber} />
+                                      )}
+
+                                      {isEditingEway ? (
+                                          <FormField
+                                              control={form.control}
+                                              name="ewayBillDate"
+                                              render={({ field }) => (
+                                                  <FormItem className="flex flex-col">
+                                                      <FormLabel>Eway Bill Date</FormLabel>
+                                                      <Popover>
+                                                          <PopoverTrigger asChild>
+                                                              <FormControl>
+                                                                  <Button
+                                                                      variant={"outline"}
+                                                                      className={cn("w-full pl-3 text-left font-normal", !field.value && "text-muted-foreground")}
+                                                                  >
+                                                                      {field.value ? format(field.value, "PPP") : <span>Pick a date</span>}
+                                                                      <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                                                                  </Button>
+                                                              </FormControl>
+                                                          </PopoverTrigger>
+                                                          <PopoverContent className="w-auto p-0" align="start">
+                                                              <Calendar mode="single" selected={field.value} onSelect={field.onChange} initialFocus />
+                                                          </PopoverContent>
+                                                      </Popover>
+                                                      <FormMessage />
+                                                  </FormItem>
+                                              )}
+                                          />
+                                      ) : (
+                                          <DetailRow label="Eway Bill Date" value={document?.ewayBillDate ? format(new Date(document.ewayBillDate), "PPP") : 'N/A'} />
+                                      )}
+                                  </div>
+                                  <div>
+                                      {isEditingEway ? (
+                                          <FormItem>
+                                              <FormLabel>Eway Bill Document</FormLabel>
+                                              <FormControl>
+                                                  <Input type="file" onChange={handleFileChange} accept=".pdf,.jpg,.jpeg,.png" />
+                                              </FormControl>
+                                              <FormMessage />
+                                          </FormItem>
+                                      ) : (
+                                          <div>
+                                              <p className="text-sm text-muted-foreground">Eway Bill Document</p>
+                                              {document?.ewayBillDocument ? (
+                                                  <Button asChild className="mt-2">
+                                                      <a href={document.ewayBillDocument} download={`EwayBill_${document.exportInvoiceNumber}.pdf`}>
+                                                          <Download className="mr-2 h-4 w-4" /> Download Document
+                                                      </a>
+                                                  </Button>
+                                              ) : (
+                                                  <p className="font-semibold">No document uploaded.</p>
+                                              )}
+                                          </div>
+                                      )}
+                                  </div>
+                              </CardContent>
+                              {isEditingEway && (
+                                  <CardFooter className="justify-end gap-2">
+                                      <Button type="button" variant="ghost" onClick={() => {
+                                          setIsEditingEway(false);
+                                          form.reset({
+                                              ewayBillNumber: document?.ewayBillNumber || '',
+                                              ewayBillDate: document?.ewayBillDate,
+                                              ewayBillDocument: document?.ewayBillDocument || ''
+                                          });
+                                      }}>Cancel</Button>
+                                      <Button type="submit">Save Details</Button>
+                                  </CardFooter>
+                              )}
+                          </form>
+                      </Form>
+                    </Card>
+
                   </div>
                 ) : (
                   <p>Could not generate Eway Bill data. Ensure all related information (manufacturer, products, etc.) is available.</p>

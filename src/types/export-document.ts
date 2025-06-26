@@ -50,4 +50,9 @@ export interface ExportDocument {
   freight?: number;
   gst?: string;
   containerItems?: ExportDocumentContainerItem[];
+
+  // New fields for Eway Bill
+  ewayBillNumber?: string;
+  ewayBillDate?: Date;
+  ewayBillDocument?: string; // Storing file as data URI
 }
