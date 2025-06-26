@@ -280,7 +280,7 @@ export default function DocumentDataPage() {
               {ewayBillData ? (
                 <div className="space-y-6">
                   <Card><CardContent className="p-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4"><DetailRow label="Export Invoice No" value={ewayBillData.exportInvoiceNumber} /><DetailRow label="Export Invoice Date" value={ewayBillData.exportInvoiceDate} /><DetailRow label="Manufacturer Name" value={ewayBillData.manufacturerName} /><DetailRow label="Manufacturer Address" value={`${ewayBillData.manufacturerAddress || ''}, ${ewayBillData.manufacturerPincode || ''}`} /><DetailRow label="Ship To" value="MUNDRA PORT" /><DetailRow label="Port Pincode" value="370421" /><DetailRow label="Transporter Name" value={ewayBillData.transporterName} /><DetailRow label="Transporter GST" value={ewayBillData.transporterGst} /></CardContent></Card>
-                  <Card><CardHeader><CardTitle>Item Details</CardTitle></CardHeader><CardContent><Table><TableHeader><TableRow><TableHead>HSN</TableHead><TableHead>Description</TableHead><TableHead>Size</TableHead><TableHead>Qty (Boxes)</TableHead><TableHead>Amount</TableHead><TableHead>GST</TableHead><TableHead>GST Amt</TableHead><TableHead>Total Amt</TableHead></TableRow></TableHeader><TableBody>{ewayBillData.aggregatedItems.map((item, index) => (<TableRow key={index}><TableCell>{item.hsnCode}</TableCell><TableCell>Polished Glazed Vitrified Tiles ( PGVT )</TableCell><TableCell>{item.size}</TableCell><TableCell>{item.quantity}</TableCell><TableCell>{item.amount.toFixed(2)}</TableCell><TableCell>{ewayBillData.gst || 'N/A'}</TableCell><TableCell>{item.gstAmount.toFixed(2)}</TableCell><TableCell>{item.totalAmount.toFixed(2)}</TableCell></TableRow>))}</TableBody><TableFooter><TableRow className="font-bold"><TableCell colSpan={4}>Grand Total</TableCell><TableCell>{ewayBillData.grandTotal.amount.toFixed(2)}</TableCell><TableCell colSpan={1}></TableCell><TableCell>{ewayBillData.grandTotal.gstAmount.toFixed(2)}</TableCell><TableCell>{ewayBillData.grandTotal.totalAmount.toFixed(2)}</TableCell></TableRow></TableFooter></Table></CardContent></Card>
+                  <Card><CardHeader><CardTitle>Item Details</CardTitle></CardHeader><CardContent><Table><TableHeader><TableRow><TableHead>HSN</TableHead><TableHead>Description</TableHead><TableHead>Size</TableHead><TableHead>Qty (Boxes)</TableHead><TableHead>Amount</TableHead><TableHead>GST</TableHead><TableHead>GST Amt</TableHead><TableHead>Total Amt</TableHead></TableRow></TableHeader><TableBody>{ewayBillData.aggregatedItems.map((item, index) => (<TableRow key={index}><TableCell>{item.hsnCode}</TableCell><TableCell>Polished Glazed Vitrified Tiles ( PGVT ) </TableCell><TableCell>{item.size}</TableCell><TableCell>{item.quantity}</TableCell><TableCell>{item.amount.toFixed(2)}</TableCell><TableCell>{ewayBillData.gst || 'N/A'}</TableCell><TableCell>{item.gstAmount.toFixed(2)}</TableCell><TableCell>{item.totalAmount.toFixed(2)}</TableCell></TableRow>))}</TableBody><TableFooter><TableRow className="font-bold"><TableCell colSpan={4}>Grand Total</TableCell><TableCell>{ewayBillData.grandTotal.amount.toFixed(2)}</TableCell><TableCell colSpan={1}></TableCell><TableCell>{ewayBillData.grandTotal.gstAmount.toFixed(2)}</TableCell><TableCell>{ewayBillData.grandTotal.totalAmount.toFixed(2)}</TableCell></TableRow></TableFooter></Table></CardContent></Card>
                   <Card><CardHeader><CardTitle>Container Details</CardTitle></CardHeader><CardContent className="space-y-4">{ewayBillData.containerDetails.map((container, index) => (<Card key={index} className="bg-muted/30"><CardContent className="p-4 grid grid-cols-1 md:grid-cols-4 gap-4"><DetailRow label="Reason" value="Export In Multi vehicle" /><DetailRow label="Truck Number" value={container.truckNumber} /><DetailRow label="Bulti Number" value={container.builtyNo} /><DetailRow label="Box Quantity" value={container.boxQuantity.toString()} /></CardContent></Card>))}</CardContent></Card>
                   <Separator className="my-8" />
                   <Card>
@@ -394,7 +394,48 @@ export default function DocumentDataPage() {
             </div>
           </TabsContent>
 
-          <TabsContent value="rfid"><Card className="mt-4"><CardHeader><CardTitle>RFID Details</CardTitle></CardHeader><CardContent><p>Fields for RFID details will be added here.</p></CardContent></Card></TabsContent>
+          <TabsContent value="rfid">
+            <Card className="mt-4">
+              <CardHeader>
+                <CardTitle>RFID Details</CardTitle>
+                <CardDescription>
+                  Summary of RFID and related document details for each container.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Associated Document Numbers</CardTitle>
+                  </CardHeader>
+                  <CardContent className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    <DetailRow label="Shipping Bill Number" value={document?.shippingBillNumber} />
+                    <DetailRow label="Shipping Bill Date" value={document?.shippingBillDate ? format(new Date(document.shippingBillDate), "PPP") : 'N/A'} />
+                    <DetailRow label="Eway Bill Number" value={document?.ewayBillNumber} />
+                  </CardContent>
+                </Card>
+                
+                <Separator />
+                <h3 className="text-lg font-semibold text-primary font-headline">Container-Specific RFID Seals</h3>
+                {document?.containerItems && document.containerItems.length > 0 ? (
+                  document.containerItems.map((container, index) => (
+                    <Card key={container.id || index} className="bg-muted/30">
+                      <CardHeader>
+                          <CardTitle className="text-base">Container: {container.containerNo || `Container ${index + 1}`}</CardTitle>
+                      </CardHeader>
+                      <CardContent className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <DetailRow label="RFID Seal" value={container.rfidSeal} />
+                        <DetailRow label="Container No." value={container.containerNo} />
+                        <DetailRow label="Truck Number" value={container.truckNumber} />
+                      </CardContent>
+                    </Card>
+                  ))
+                ) : (
+                  <p className="text-muted-foreground">No container information available.</p>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+          
           <TabsContent value="brc"><Card className="mt-4"><CardHeader><CardTitle>BRC Document Details</CardTitle></CardHeader><CardContent><p>Fields for BRC document will be added here.</p></CardContent></Card></TabsContent>
         </Tabs>
       </main>
@@ -402,3 +443,5 @@ export default function DocumentDataPage() {
     </div>
   );
 }
+
+    
