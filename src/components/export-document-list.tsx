@@ -1,6 +1,7 @@
 
 "use client";
 
+import Link from "next/link";
 import type { ExportDocument } from "@/types/export-document";
 import type { Company } from "@/types/company"; // For Exporter
 import type { Manufacturer } from "@/types/manufacturer"; // For Manufacturer
@@ -9,8 +10,9 @@ import type { Transporter } from "@/types/transporter"; // For Transporter
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
-import { FileText, Edit, Trash2, Download } from "lucide-react";
+import { FileText, Edit, Trash2, Download, FileType } from "lucide-react";
 import { format } from "date-fns";
 
 interface ExportDocumentListProps {
@@ -62,85 +64,108 @@ export function ExportDocumentList({
         <CardDescription>View and manage your saved export documents.</CardDescription>
       </CardHeader>
       <CardContent>
-        <div className="rounded-md border">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead className="font-headline">Doc ID</TableHead>
-                <TableHead className="font-headline">Export Invoice #</TableHead>
-                <TableHead className="font-headline">Exporter</TableHead>
-                <TableHead className="font-headline">Manufacturer</TableHead>
-                <TableHead className="font-headline">Transporter</TableHead>
-                <TableHead className="font-headline">Container Details</TableHead>
-                <TableHead className="font-headline">PO ID</TableHead>
-                <TableHead className="font-headline text-right">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {documents.map((doc) => {
-                const exporterName = allExporters.find(e => e.id === doc.exporterId)?.companyName || "N/A";
-                const manufacturerName = doc.manufacturerId ? (allManufacturers.find(m => m.id === doc.manufacturerId)?.companyName || "N/A") : "N/A";
-                const transporterName = doc.transporterId ? (allTransporters.find(t => t.id === doc.transporterId)?.companyName || "N/A") : "N/A";
-                const containerDetails = doc.containerItems?.map(item => {
-                  let details = [];
-                  if (item.bookingNo) details.push(`Booking: ${item.bookingNo}`);
-                  if (item.containerNo) details.push(`Container: ${item.containerNo}`);
-                  if (item.truckNumber) details.push(`Truck: ${item.truckNumber}`);
-                  if (item.totalPallets) details.push(`Pallets: ${item.totalPallets}`);
-                  if (item.productItems && item.productItems.length > 0) {
-                    details.push(`Products: ${item.productItems.length}`);
-                  }
-                  if (item.sampleItems && item.sampleItems.length > 0) {
-                    details.push(`Samples: ${item.sampleItems.length}`);
-                  }
-                  if (item.description) details.push(`Desc: ${item.description}`);
-                  return details.join(' | ');
-                }).filter(Boolean).join('\n') || "N/A";
+        <TooltipProvider>
+          <div className="rounded-md border">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="font-headline">Doc ID</TableHead>
+                  <TableHead className="font-headline">Export Invoice #</TableHead>
+                  <TableHead className="font-headline">Exporter</TableHead>
+                  <TableHead className="font-headline">Manufacturer</TableHead>
+                  <TableHead className="font-headline">Transporter</TableHead>
+                  <TableHead className="font-headline">Container Details</TableHead>
+                  <TableHead className="font-headline">PO ID</TableHead>
+                  <TableHead className="font-headline text-right">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {documents.map((doc) => {
+                  const exporterName = allExporters.find(e => e.id === doc.exporterId)?.companyName || "N/A";
+                  const manufacturerName = doc.manufacturerId ? (allManufacturers.find(m => m.id === doc.manufacturerId)?.companyName || "N/A") : "N/A";
+                  const transporterName = doc.transporterId ? (allTransporters.find(t => t.id === doc.transporterId)?.companyName || "N/A") : "N/A";
+                  const containerDetails = doc.containerItems?.map(item => {
+                    let details: string[] = [];
+                    if (item.bookingNo) details.push(`Booking: ${item.bookingNo}`);
+                    if (item.containerNo) details.push(`Container: ${item.containerNo}`);
+                    if (item.truckNumber) details.push(`Truck: ${item.truckNumber}`);
+                    if (item.totalPallets) details.push(`Pallets: ${item.totalPallets}`);
+                    if (item.productItems && item.productItems.length > 0) {
+                      details.push(`Products: ${item.productItems.length}`);
+                    }
+                    if (item.sampleItems && item.sampleItems.length > 0) {
+                      details.push(`Samples: ${item.sampleItems.length}`);
+                    }
+                    if (item.description) details.push(`Desc: ${item.description}`);
+                    return details.join(' | ');
+                  }).filter(Boolean).join('\n') || "N/A";
 
-                return (
-                  <TableRow key={doc.id}>
-                    <TableCell className="font-medium">ED-{doc.id.slice(-6)}</TableCell>
-                    <TableCell>{doc.exportInvoiceNumber}</TableCell>
-                    <TableCell>{exporterName}</TableCell>
-                    <TableCell>{manufacturerName}</TableCell>
-                    <TableCell>{transporterName}</TableCell>
-                    <TableCell className="whitespace-pre-line">{containerDetails}</TableCell>
-                    <TableCell>{doc.purchaseOrderId ? `PO-${doc.purchaseOrderId.slice(-6)}` : "N/A"}</TableCell>
-                    <TableCell className="text-right space-x-1">
-                      <Button variant="ghost" size="icon" onClick={() => onEditDocument(doc.id)} className="hover:text-primary" title="Edit">
-                        <Edit className="h-4 w-4" />
-                      </Button>
-                      <AlertDialog>
-                        <AlertDialogTrigger asChild>
-                           <Button variant="ghost" size="icon" className="hover:text-destructive" title="Delete">
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </AlertDialogTrigger>
-                        <AlertDialogContent>
-                          <AlertDialogHeader>
-                            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-                            <AlertDialogDescription>
-                              This action cannot be undone. This will permanently delete the Export Document ED-{doc.id.slice(-6)}.
-                            </AlertDialogDescription>
-                          </AlertDialogHeader>
-                          <AlertDialogFooter>
-                            <AlertDialogCancel>Cancel</AlertDialogCancel>
-                            <AlertDialogAction onClick={() => onDeleteDocument(doc.id)}>
-                              Delete
-                            </AlertDialogAction>
-                          </AlertDialogFooter>
-                        </AlertDialogContent>
-                      </AlertDialog>
-                      <Button variant="ghost" size="icon" onClick={() => onDownloadPdf(doc.id)} className="hover:text-blue-600" title="Download PDF">
-                        <Download className="h-4 w-4" />
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                );
-              })}
-            </TableBody>
-          </Table>
-        </div>
+                  return (
+                    <TableRow key={doc.id}>
+                      <TableCell className="font-medium">ED-{doc.id.slice(-6)}</TableCell>
+                      <TableCell>{doc.exportInvoiceNumber}</TableCell>
+                      <TableCell>{exporterName}</TableCell>
+                      <TableCell>{manufacturerName}</TableCell>
+                      <TableCell>{transporterName}</TableCell>
+                      <TableCell className="whitespace-pre-line">{containerDetails}</TableCell>
+                      <TableCell>{doc.purchaseOrderId ? `PO-${doc.purchaseOrderId.slice(-6)}` : "N/A"}</TableCell>
+                      <TableCell className="text-right space-x-0.5">
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button variant="ghost" size="icon" onClick={() => onEditDocument(doc.id)} className="hover:text-primary">
+                              <Edit className="h-4 w-4" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent><p>Edit Document</p></TooltipContent>
+                        </Tooltip>
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                              <Tooltip>
+                                <TooltipTrigger asChild><Button variant="ghost" size="icon" className="hover:text-destructive"><Trash2 className="h-4 w-4" /></Button></TooltipTrigger>
+                                <TooltipContent><p>Delete</p></TooltipContent>
+                              </Tooltip>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                              <AlertDialogDescription>
+                                This action cannot be undone. This will permanently delete the Export Document ED-{doc.id.slice(-6)}.
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>Cancel</AlertDialogCancel>
+                              <AlertDialogAction onClick={() => onDeleteDocument(doc.id)}>
+                                Delete
+                              </AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                              <Button variant="ghost" size="icon" onClick={() => onDownloadPdf(doc.id)} className="hover:text-blue-600">
+                                <Download className="h-4 w-4" />
+                              </Button>
+                          </TooltipTrigger>
+                          <TooltipContent><p>Download PDF</p></TooltipContent>
+                        </Tooltip>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                              <Button asChild variant="ghost" size="icon" className="hover:text-purple-600">
+                                  <Link href={`/export-document/${doc.id}`}>
+                                      <FileType className="h-4 w-4" />
+                                  </Link>
+                              </Button>
+                          </TooltipTrigger>
+                          <TooltipContent><p>Document Data</p></TooltipContent>
+                        </Tooltip>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
+            </Table>
+          </div>
+        </TooltipProvider>
       </CardContent>
     </Card>
   );
