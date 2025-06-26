@@ -146,8 +146,13 @@ export function generateAnnexurePdf(
 
     const drawCenteredWrappedText = (text: string) => {
         const wrappedLines = doc.splitTextToSize(text, effectiveContentWidth);
+        const textHeight = wrappedLines.length * lineHeight;
+        if (yPos + textHeight > doc.internal.pageSize.getHeight() - 30) {
+            doc.addPage();
+            yPos = 30;
+        }
         doc.text(wrappedLines, contentWidth / 2 + pageMargin, yPos, { align: 'center' });
-        yPos += wrappedLines.length * lineHeight;
+        yPos += textHeight;
     };
     
     const footerLines1 = [
@@ -158,20 +163,17 @@ export function generateAnnexurePdf(
     footerLines1.forEach(drawCenteredWrappedText);
 
     const underlinedText = "EXPORT UNDER SELF SEALING UNDER Circular No.: 59/2010 Dated : 23.12.2010";
-    doc.text(underlinedText, contentWidth / 2 + pageMargin, yPos, { align: 'center' });
+    drawCenteredWrappedText(underlinedText);
     const textWidth = doc.getTextWidth(underlinedText);
+    // Adjust yPos back to the baseline of the text that was just drawn
+    yPos -= lineHeight;
     const textX = (contentWidth / 2 + pageMargin) - (textWidth / 2);
     doc.setLineWidth(0.5);
     doc.line(textX, yPos + 1, textX + textWidth, yPos + 1);
     yPos += lineHeight;
 
-    const footerLines2 = [
-        "Examined the export goods covered under this invoice description of the goods with reference to DBK & MEIS Scheme Value cap p/kg.Net",
-        "Weight of Ceramic Glazed Wall Tiles are as under",
-        "Certified that the description and value of the goods covered by this invoice have been checked by me and the goods have been packed and",
-        "sealed with lead seal one time lock seal checked by me and the goods have been packed and sealed with lead seal/ one time lock seal."
-    ];
-    footerLines2.forEach(drawCenteredWrappedText);
+    const combinedFooterText = "Examined the export goods covered under this invoice description of the goods with reference to DBK & MEIS Scheme Value cap p/kg.Net Weight of Ceramic Glazed Wall Tiles are as under. Certified that the description and value of the goods covered by this invoice have been checked by me and the goods have been packed and sealed with lead seal one time lock seal checked by me and the goods have been packed and sealed with lead seal/ one time lock seal.";
+    drawCenteredWrappedText(combinedFooterText);
     
     yPos += 10;
 
