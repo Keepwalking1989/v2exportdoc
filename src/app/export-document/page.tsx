@@ -88,7 +88,8 @@ export default function ExportDocumentPage() {
             containerItems: (doc.containerItems || []).map((item: any) => ({
                 ...item,
                 weighingDateTime: item.weighingDateTime ? new Date(item.weighingDateTime) : undefined,
-                productItems: item.productItems || [], // Ensure productItems array exists
+                productItems: item.productItems || [],
+                sampleItems: item.sampleItems || [],
             })),
         })) : [];
         setExportDocuments(currentDocs);
@@ -165,7 +166,8 @@ export default function ExportDocumentPage() {
         containerItems: formData.containerItems?.map(item => ({
             ...item, 
             id: item.id || Math.random().toString(36).substring(2,9),
-            productItems: item.productItems?.map(p => ({...p, id: p.id || Math.random().toString(36).substring(2,9)}))
+            productItems: item.productItems?.map(p => ({...p, id: p.id || Math.random().toString(36).substring(2,9)})),
+            sampleItems: item.sampleItems?.map(s => ({...s, id: s.id || Math.random().toString(36).substring(2,9)})),
         })) || [],
     };
 

@@ -87,10 +87,13 @@ export function ExportDocumentList({
                   if (item.containerNo) details.push(`Container: ${item.containerNo}`);
                   if (item.truckNumber) details.push(`Truck: ${item.truckNumber}`);
                   if (item.totalPallets) details.push(`Pallets: ${item.totalPallets}`);
-                  if (item.description) details.push(`Desc: ${item.description}`);
                   if (item.productItems && item.productItems.length > 0) {
                     details.push(`Products: ${item.productItems.length}`);
                   }
+                  if (item.sampleItems && item.sampleItems.length > 0) {
+                    details.push(`Samples: ${item.sampleItems.length}`);
+                  }
+                  if (item.description) details.push(`Desc: ${item.description}`);
                   return details.join(' | ');
                 }).filter(Boolean).join('\n') || "N/A";
 

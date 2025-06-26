@@ -16,7 +16,7 @@ import {
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Combobox, type ComboboxOption } from "@/components/ui/combobox";
 import { useToast } from "@/hooks/use-toast";
-import { FileSignature, Briefcase, Factory, Save, XCircle, CalendarIcon, Hash, Globe, Ship, Anchor, FileText, Truck, BadgeCheck, ArrowLeftRight, Bell, CalendarClock, Percent, PlusCircle, Trash2, Stamp, Radio, Weight, ListStart, ListEnd, Boxes, NotebookText, FileScan, Clock, Package, Layers, DollarSign } from "lucide-react";
+import { FileSignature, Briefcase, Factory, Save, XCircle, CalendarIcon, Hash, Globe, Ship, Anchor, FileText, Truck, BadgeCheck, ArrowLeftRight, Bell, CalendarClock, Percent, PlusCircle, Trash2, Stamp, Radio, Weight, ListStart, ListEnd, Boxes, NotebookText, FileScan, Clock, Package, Layers, DollarSign, Gift } from "lucide-react";
 import React, { useEffect, useMemo, useRef } from "react";
 import type { Company } from "@/types/company"; // For Exporter
 import type { Manufacturer } from "@/types/manufacturer"; // For Manufacturer
@@ -31,6 +31,15 @@ import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { Textarea } from "@/components/ui/textarea";
 import { Separator } from "@/components/ui/separator";
+
+const productItemSchema = z.object({
+  id: z.string().optional(),
+  productId: z.string().min(1, 'Product is required'),
+  boxes: z.coerce.number().positive('Boxes must be > 0'),
+  netWeight: z.coerce.number().nonnegative('Net Weight cannot be negative').optional(),
+  grossWeight: z.coerce.number().nonnegative('Gross Weight cannot be negative').optional(),
+  rate: z.coerce.number().nonnegative('Rate cannot be negative').optional(),
+});
 
 const formSchema = z.object({
   exporterId: z.string().min(1, "Exporter is required"),
@@ -67,14 +76,8 @@ const formSchema = z.object({
     description: z.string().optional(),
     weighingSlipNo: z.string().optional(),
     weighingDateTime: z.coerce.date().optional(),
-    productItems: z.array(z.object({
-      id: z.string().optional(),
-      productId: z.string().min(1, 'Product is required'),
-      boxes: z.coerce.number().positive('Boxes must be > 0'),
-      netWeight: z.coerce.number().nonnegative('Net Weight cannot be negative').optional(),
-      grossWeight: z.coerce.number().nonnegative('Gross Weight cannot be negative').optional(),
-      rate: z.coerce.number().nonnegative('Rate cannot be negative').optional(),
-    })).optional(),
+    productItems: z.array(productItemSchema).optional(),
+    sampleItems: z.array(productItemSchema).optional(),
   })).optional(),
 });
 
@@ -111,6 +114,7 @@ const defaultNewContainerItem = {
   weighingSlipNo: "",
   weighingDateTime: new Date(),
   productItems: [],
+  sampleItems: [],
 };
 
 const getDefaultFormValues = (nextInvoiceNumber: string): ExportDocumentFormValues => ({
@@ -136,15 +140,14 @@ const getDefaultFormValues = (nextInvoiceNumber: string): ExportDocumentFormValu
   containerItems: [defaultNewContainerItem],
 });
 
-interface ContainerProductManagerProps {
+interface ItemManagerProps {
     containerIndex: number;
     control: Control<ExportDocumentFormValues>;
     allProducts: Product[];
     allSizes: Size[];
 }
 
-// New Component to fix the hook order issue
-interface ContainerProductItemProps {
+interface ItemProps {
     containerIndex: number;
     productIndex: number;
     control: Control<ExportDocumentFormValues>;
@@ -153,9 +156,10 @@ interface ContainerProductItemProps {
     allProducts: Product[];
     allSizes: Size[];
     handleProductChange: (productIndex: number, productId: string) => void;
+    fieldArrayName: 'productItems' | 'sampleItems';
 }
 
-const ContainerProductItem: React.FC<ContainerProductItemProps> = ({
+const ContainerProductItem: React.FC<ItemProps> = ({
     containerIndex,
     productIndex,
     control,
@@ -164,42 +168,53 @@ const ContainerProductItem: React.FC<ContainerProductItemProps> = ({
     allProducts,
     allSizes,
     handleProductChange,
+    fieldArrayName,
 }) => {
     const { setValue } = useFormContext<ExportDocumentFormValues>();
     
+    const productOrBoxesChanged = useRef(false);
+
     const currentItem = useWatch({
         control,
-        name: `containerItems.${containerIndex}.productItems.${productIndex}`,
+        name: `containerItems.${containerIndex}.${fieldArrayName}.${productIndex}`,
     }) || {};
+    
+    const { productId, boxes, rate } = currentItem;
 
     const { sqm, amount, netWeight } = useMemo(() => {
-        const product = allProducts.find(p => p.id === currentItem.productId);
+        const product = allProducts.find(p => p.id === productId);
         const size = product ? allSizes.find(s => s.id === product.sizeId) : undefined;
         
         if (!product || !size) return { sqm: 0, amount: 0, netWeight: 0 };
         
-        const boxes = Number(currentItem.boxes) || 0;
-        const rate = Number(currentItem.rate) || 0;
+        const numBoxes = Number(boxes) || 0;
+        const numRate = Number(rate) || 0;
         
-        const calculatedSqm = boxes * (size.sqmPerBox || 0);
-        const calculatedAmount = calculatedSqm * rate;
-        const calculatedNetWeight = boxes * (size.boxWeight || 0);
+        const calculatedSqm = numBoxes * (size.sqmPerBox || 0);
+        const calculatedAmount = calculatedSqm * numRate;
+        const calculatedNetWeight = numBoxes * (size.boxWeight || 0);
 
         return { sqm: calculatedSqm, amount: calculatedAmount, netWeight: calculatedNetWeight };
-    }, [currentItem.productId, currentItem.boxes, currentItem.rate, allProducts, allSizes]);
+    }, [productId, boxes, rate, allProducts, allSizes]);
     
-    const productOrBoxesChanged = useRef(false);
     useEffect(() => {
         productOrBoxesChanged.current = true;
-    }, [currentItem.productId, currentItem.boxes]);
+    }, [productId, boxes]);
 
     useEffect(() => {
+        const currentNetWeight = form.getValues(`containerItems.${containerIndex}.${fieldArrayName}.${productIndex}.netWeight`);
+        const currentGrossWeight = form.getValues(`containerItems.${containerIndex}.${fieldArrayName}.${productIndex}.grossWeight`);
+
         if (productOrBoxesChanged.current) {
-            setValue(`containerItems.${containerIndex}.productItems.${productIndex}.netWeight`, netWeight);
-            setValue(`containerItems.${containerIndex}.productItems.${productIndex}.grossWeight`, netWeight);
-            productOrBoxesChanged.current = false;
+             setValue(`containerItems.${containerIndex}.${fieldArrayName}.${productIndex}.netWeight`, netWeight);
+             if (currentGrossWeight === currentNetWeight || currentGrossWeight === 0 || !currentGrossWeight) {
+                 setValue(`containerItems.${containerIndex}.${fieldArrayName}.${productIndex}.grossWeight`, netWeight);
+             }
+             productOrBoxesChanged.current = false;
         }
-    }, [netWeight, setValue, containerIndex, productIndex]);
+    }, [netWeight, setValue, containerIndex, productIndex, fieldArrayName]);
+
+    const {form} = useFormContext<ExportDocumentFormValues>();
     
     return (
       <div className="p-3 border rounded-md space-y-3 relative bg-background/80">
@@ -216,7 +231,7 @@ const ContainerProductItem: React.FC<ContainerProductItemProps> = ({
         
         <FormField
             control={control}
-            name={`containerItems.${containerIndex}.productItems.${productIndex}.productId`}
+            name={`containerItems.${containerIndex}.${fieldArrayName}.${productIndex}.productId`}
             render={({ field }) => (
                 <FormItem>
                     <FormLabel>Product</FormLabel>
@@ -237,7 +252,7 @@ const ContainerProductItem: React.FC<ContainerProductItemProps> = ({
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 items-start">
             <FormField
                 control={control}
-                name={`containerItems.${containerIndex}.productItems.${productIndex}.boxes`}
+                name={`containerItems.${containerIndex}.${fieldArrayName}.${productIndex}.boxes`}
                 render={({ field }) => (
                     <FormItem>
                         <FormLabel className="flex items-center gap-1"><Boxes className="h-4 w-4 text-muted-foreground"/>Boxes</FormLabel>
@@ -261,7 +276,7 @@ const ContainerProductItem: React.FC<ContainerProductItemProps> = ({
             </FormItem>
             <FormField
                 control={control}
-                name={`containerItems.${containerIndex}.productItems.${productIndex}.rate`}
+                name={`containerItems.${containerIndex}.${fieldArrayName}.${productIndex}.rate`}
                 render={({ field }) => (
                     <FormItem>
                         <FormLabel className="flex items-center gap-1"><DollarSign className="h-4 w-4 text-muted-foreground"/>Rate</FormLabel>
@@ -274,7 +289,7 @@ const ContainerProductItem: React.FC<ContainerProductItemProps> = ({
             />
             <FormField
               control={control}
-              name={`containerItems.${containerIndex}.productItems.${productIndex}.netWeight`}
+              name={`containerItems.${containerIndex}.${fieldArrayName}.${productIndex}.netWeight`}
               render={({ field }) => (
               <FormItem>
                 <FormLabel className="flex items-center gap-1"><Weight className="h-4 w-4 text-muted-foreground"/>Net Wt.</FormLabel>
@@ -283,6 +298,10 @@ const ContainerProductItem: React.FC<ContainerProductItemProps> = ({
                       type="number"
                       placeholder="e.g. 1000"
                       {...field}
+                      onChange={(e) => {
+                          field.onChange(e.target.valueAsNumber || 0);
+                          productOrBoxesChanged.current = false;
+                      }}
                       className={cn(Number(field.value) > 27000 && "border-destructive text-destructive focus-visible:ring-destructive")}
                     />
                 </FormControl>
@@ -292,7 +311,7 @@ const ContainerProductItem: React.FC<ContainerProductItemProps> = ({
             />
             <FormField
               control={control}
-              name={`containerItems.${containerIndex}.productItems.${productIndex}.grossWeight`}
+              name={`containerItems.${containerIndex}.${fieldArrayName}.${productIndex}.grossWeight`}
               render={({ field }) => (
               <FormItem>
                 <FormLabel className="flex items-center gap-1"><Weight className="h-4 w-4 text-muted-foreground"/>Gross Wt.</FormLabel>
@@ -301,6 +320,7 @@ const ContainerProductItem: React.FC<ContainerProductItemProps> = ({
                       type="number"
                       placeholder="e.g. 1000"
                       {...field}
+                       onChange={(e) => field.onChange(e.target.valueAsNumber || 0)}
                       className={cn(Number(field.value) > 27000 && "border-destructive text-destructive focus-visible:ring-destructive")}
                     />
                 </FormControl>
@@ -325,7 +345,7 @@ const ContainerProductItem: React.FC<ContainerProductItemProps> = ({
 };
 
 
-const ContainerProductManager: React.FC<ContainerProductManagerProps> = ({ containerIndex, control, allProducts, allSizes }) => {
+const ContainerProductManager: React.FC<ItemManagerProps> = ({ containerIndex, control, allProducts, allSizes }) => {
     const { fields, append, remove } = useFieldArray({
         control,
         name: `containerItems.${containerIndex}.productItems`,
@@ -339,7 +359,7 @@ const ContainerProductManager: React.FC<ContainerProductManagerProps> = ({ conta
     }) || [];
 
     const totalContainerAmount = useMemo(() => {
-        if (productItems.length < 2) {
+        if (!productItems || productItems.length < 2) {
             return 0;
         }
 
@@ -382,20 +402,9 @@ const ContainerProductManager: React.FC<ContainerProductManagerProps> = ({ conta
     
     return (
         <div className="mt-4">
-            <h4 className="text-md font-semibold mb-2 flex items-center justify-between">
-                <span className="flex items-center gap-2">
-                    <Package className="h-5 w-5 text-primary" />
-                    Products in this Container
-                </span>
-                <Button
-                    type="button"
-                    variant="outline"
-                    size="default"
-                    onClick={() => append({ productId: '', boxes: 1, rate: 0, netWeight: 0, grossWeight: 0 })}
-                    disabled={productOptions.length === 0}
-                >
-                    <PlusCircle className="mr-2 h-4 w-4" /> Add Product
-                </Button>
+            <h4 className="text-md font-semibold mb-2 flex items-center gap-2">
+                <Package className="h-5 w-5 text-primary" />
+                Products in this Container
             </h4>
 
             <div className="space-y-4 mt-2">
@@ -410,6 +419,7 @@ const ContainerProductManager: React.FC<ContainerProductManagerProps> = ({ conta
                         allProducts={allProducts}
                         allSizes={allSizes}
                         handleProductChange={handleProductChange}
+                        fieldArrayName="productItems"
                     />
                 ))}
                 {fields.length === 0 && (
@@ -431,6 +441,65 @@ const ContainerProductManager: React.FC<ContainerProductManagerProps> = ({ conta
                     </div>
                 </>
             )}
+        </div>
+    );
+};
+
+const ContainerSampleManager: React.FC<ItemManagerProps> = ({ containerIndex, control, allProducts, allSizes }) => {
+    const { fields, append, remove } = useFieldArray({
+        control,
+        name: `containerItems.${containerIndex}.sampleItems`,
+    });
+    
+    const { setValue } = useFormContext<ExportDocumentFormValues>();
+
+    const productOptions: ComboboxOption[] = useMemo(() =>
+        allProducts.map(p => {
+            const size = allSizes.find(s => s.id === p.sizeId);
+            return {
+                value: p.id,
+                label: `${p.designName} (${size?.size || 'N/A'})`
+            };
+        }), [allProducts, allSizes]);
+
+    const handleProductChange = (productIndex: number, productId: string) => {
+        const product = allProducts.find(p => p.id === productId);
+        if (product) {
+            const size = allSizes.find(s => s.id === product.sizeId);
+            if (size) {
+                setValue(`containerItems.${containerIndex}.sampleItems.${productIndex}.rate`, 0);
+            }
+        }
+    };
+    
+    return (
+        <div className="mt-4">
+            <h4 className="text-md font-semibold mb-2 flex items-center gap-2">
+                <Gift className="h-5 w-5 text-primary" />
+                Sample Items in this Container
+            </h4>
+
+            <div className="space-y-4 mt-2">
+                {fields.map((productField, productIndex) => (
+                    <ContainerProductItem
+                        key={productField.id}
+                        containerIndex={containerIndex}
+                        productIndex={productIndex}
+                        control={control}
+                        remove={remove}
+                        productOptions={productOptions}
+                        allProducts={allProducts}
+                        allSizes={allSizes}
+                        handleProductChange={handleProductChange}
+                        fieldArrayName="sampleItems"
+                    />
+                ))}
+                {fields.length === 0 && (
+                     <div className="p-2 border border-dashed rounded-md text-center text-muted-foreground text-sm min-h-[50px] flex items-center justify-center">
+                        <p>{productOptions.length > 0 ? "No samples added to this container yet." : "No products available to add as samples."}</p>
+                    </div>
+                )}
+            </div>
         </div>
     );
 };
@@ -458,6 +527,16 @@ export function ExportDocumentForm({
   const { fields, append, remove } = useFieldArray({
     control: form.control,
     name: "containerItems",
+  });
+
+  const { fields: productFields, append: appendProduct } = useFieldArray({
+      control: form.control,
+      name: `containerItems.0.productItems`
+  });
+
+  const { fields: sampleFields, append: appendSample } = useFieldArray({
+      control: form.control,
+      name: `containerItems.0.sampleItems`
   });
 
   const selectedManufacturerId = form.watch("manufacturerId");
@@ -502,6 +581,7 @@ export function ExportDocumentForm({
               ...item,
               weighingDateTime: item.weighingDateTime ? new Date(item.weighingDateTime) : undefined,
               productItems: item.productItems || [],
+              sampleItems: item.sampleItems || [],
             }))
           : [defaultNewContainerItem],
       });
@@ -1148,7 +1228,33 @@ export function ExportDocumentForm({
                                 />
                             </div>
                             <Separator className="my-4" />
+                            <div className="flex items-center gap-4">
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    onClick={() => appendProduct({ productId: '', boxes: 1, rate: 0, netWeight: 0, grossWeight: 0 })}
+                                    className="flex-1"
+                                    >
+                                    <PlusCircle className="mr-2 h-4 w-4" /> Add Product
+                                </Button>
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    onClick={() => appendSample({ productId: '', boxes: 1, rate: 0, netWeight: 0, grossWeight: 0 })}
+                                    className="flex-1"
+                                >
+                                    <Gift className="mr-2 h-4 w-4" /> Add Sample
+                                </Button>
+                            </div>
+
                             <ContainerProductManager
+                                containerIndex={index}
+                                control={form.control}
+                                allProducts={allProducts}
+                                allSizes={allSizes}
+                            />
+                             <Separator className="my-6 border-dashed"/>
+                             <ContainerSampleManager
                                 containerIndex={index}
                                 control={form.control}
                                 allProducts={allProducts}
@@ -1185,5 +1291,3 @@ export function ExportDocumentForm({
     </Card>
   );
 }
-
-    

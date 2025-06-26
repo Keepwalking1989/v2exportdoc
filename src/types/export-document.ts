@@ -24,6 +24,7 @@ export interface ExportDocumentContainerItem {
   weighingSlipNo?: string;
   weighingDateTime?: Date;
   productItems?: ExportDocumentProductItem[];
+  sampleItems?: ExportDocumentProductItem[];
 }
 
 export interface ExportDocument {
