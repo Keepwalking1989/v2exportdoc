@@ -377,8 +377,80 @@ export function generateCustomInvoicePdf(
     autoTable(doc, {
         startY: yPos,
         theme: 'grid',
+        body: [[{ content: footerText, styles: { ...classOneStyles, halign: 'left' }}]],
+        margin: { left: pageMargin, right: pageMargin },
+        didDrawPage: data => { yPos = data.cursor?.y ?? yPos; }
+    });
+    // @ts-ignore
+    yPos = doc.lastAutoTable.finalY;
+
+    autoTable(doc, {
+        startY: yPos,
+        theme: 'grid',
+        body: [[{ content: 'supplier No 1', styles: { ...classOneStyles, halign: 'left' }}]],
+        margin: { left: pageMargin, right: pageMargin },
+        didDrawPage: data => { yPos = data.cursor?.y ?? yPos; }
+    });
+    // @ts-ignore
+    yPos = doc.lastAutoTable.finalY;
+
+    autoTable(doc, {
+        startY: yPos,
+        theme: 'grid',
+        body: [[
+            { content: 'Name', styles: { ...classOneStyles } },
+            { content: manufacturer.companyName, styles: { ...classTwoStyles, halign: 'left' } },
+            { content: 'GST NO', styles: { ...classOneStyles } },
+            { content: manufacturer.gstNumber, styles: { ...classTwoStyles, halign: 'left' } },
+        ]],
+        margin: { left: pageMargin, right: pageMargin },
+        didDrawPage: data => { yPos = data.cursor?.y ?? yPos; }
+    });
+    // @ts-ignore
+    yPos = doc.lastAutoTable.finalY;
+
+    const taxInvoiceText = `${docData.manufacturerInvoiceNumber || 'N/A'} & ${docData.manufacturerInvoiceDate ? format(new Date(docData.manufacturerInvoiceDate), 'dd/MM/yyyy') : 'N/A'}`;
+    autoTable(doc, {
+        startY: yPos,
+        theme: 'grid',
+        body: [[
+            { content: 'Tax Invoice No & Date', styles: { ...classOneStyles } },
+            { content: taxInvoiceText, styles: { ...classTwoStyles, halign: 'left' } },
+        ]],
+        columnStyles: {
+            0: { cellWidth: '25%' },
+            1: { cellWidth: '75%' },
+        },
+        margin: { left: pageMargin, right: pageMargin },
+        didDrawPage: data => { yPos = data.cursor?.y ?? yPos; }
+    });
+    // @ts-ignore
+    yPos = doc.lastAutoTable.finalY;
+
+    autoTable(doc, {
+        startY: yPos,
+        theme: 'grid',
+        body: [[{ content: 'Export Under GST Circular No. 26/2017 Custom Dt. 01/07/2017', styles: { ...classOneStyles, halign: 'left' }}]],
+        margin: { left: pageMargin, right: pageMargin },
+        didDrawPage: data => { yPos = data.cursor?.y ?? yPos; }
+    });
+    // @ts-ignore
+    yPos = doc.lastAutoTable.finalY;
+
+    autoTable(doc, {
+        startY: yPos,
+        theme: 'grid',
+        body: [[{ content: 'We claim Duty rebate file.', styles: { ...classOneStyles, halign: 'left' }}]],
+        margin: { left: pageMargin, right: pageMargin },
+        didDrawPage: data => { yPos = data.cursor?.y ?? yPos; }
+    });
+    // @ts-ignore
+    yPos = doc.lastAutoTable.finalY;
+
+    autoTable(doc, {
+        startY: yPos,
+        theme: 'grid',
         body: [
-            [{ content: footerText, styles: { ...classOneStyles, halign: 'left' }}],
             [
                 { content: `Declaration:\n${declarationText}`, styles: {...classTwoStyles, ...classThreeStyles, halign: 'left', minCellHeight: 50} },
                 { content: `Signature & Date:\n${format(new Date(), 'dd/MM/yyyy')}\n\nFOR, ${exporter.companyName}\n\n\nAUTHORISED SIGNATURE`, styles: {...classTwoStyles, halign: 'center', minCellHeight: 50} }
