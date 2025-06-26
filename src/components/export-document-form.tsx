@@ -91,6 +91,7 @@ interface ExportDocumentFormProps {
   allProducts: Product[];
   allSizes: Size[];
   sourcePoId?: string | null;
+  nextExportInvoiceNumber: string;
 }
 
 const defaultTerms = "30 % advance Remaining Against BL";
@@ -112,11 +113,11 @@ const defaultNewContainerItem = {
   productItems: [],
 };
 
-const getDefaultFormValues = (): ExportDocumentFormValues => ({
+const getDefaultFormValues = (nextInvoiceNumber: string): ExportDocumentFormValues => ({
   exporterId: "",
   manufacturerId: "",
   transporterId: "",
-  exportInvoiceNumber: "",
+  exportInvoiceNumber: nextInvoiceNumber,
   exportInvoiceDate: new Date(),
   manufacturerInvoiceNumber: "",
   manufacturerInvoiceDate: undefined,
@@ -164,47 +165,39 @@ const ContainerProductItem: React.FC<ContainerProductItemProps> = ({
     allSizes,
     handleProductChange,
 }) => {
-    // We use the FormContext to get access to setValue and formState without excessive prop drilling.
-    const { setValue } = useFormContext<ExportDocumentFormValues>();
+    const { setValue, watch } = useFormContext<ExportDocumentFormValues>();
     
-    // Watch all the values needed for calculations
     const currentItem = useWatch({
         control,
         name: `containerItems.${containerIndex}.productItems.${productIndex}`,
     }) || {};
 
-    const { sqm, amount } = useMemo(() => {
+    const { sqm, amount, netWeight } = useMemo(() => {
         const product = allProducts.find(p => p.id === currentItem.productId);
-        if (!product) return { sqm: 0, amount: 0 };
+        const size = product ? allSizes.find(s => s.id === product.sizeId) : undefined;
         
-        const size = allSizes.find(s => s.id === product.sizeId);
-        if (!size) return { sqm: 0, amount: 0 };
-
+        if (!product || !size) return { sqm: 0, amount: 0, netWeight: 0 };
+        
         const boxes = Number(currentItem.boxes) || 0;
         const rate = Number(currentItem.rate) || 0;
         
         const calculatedSqm = boxes * (size.sqmPerBox || 0);
         const calculatedAmount = calculatedSqm * rate;
+        const calculatedNetWeight = boxes * (size.boxWeight || 0);
 
-        return { sqm: calculatedSqm, amount: calculatedAmount };
+        return { sqm: calculatedSqm, amount: calculatedAmount, netWeight: calculatedNetWeight };
     }, [currentItem.productId, currentItem.boxes, currentItem.rate, allProducts, allSizes]);
 
     // Effect to auto-calculate Net and Gross Weight
     useEffect(() => {
-      const product = allProducts.find(p => p.id === currentItem.productId);
-      if (!product) return;
-      const size = allSizes.find(s => s.id === product.sizeId);
-      if (!size) return;
-
-      const boxes = Number(currentItem.boxes) || 0;
-      const boxWeight = size.boxWeight || 0;
-      const calculatedNetWeight = boxes * boxWeight;
-      
-      if (calculatedNetWeight !== currentItem.netWeight) {
-         setValue(`containerItems.${containerIndex}.productItems.${productIndex}.netWeight`, calculatedNetWeight);
-         setValue(`containerItems.${containerIndex}.productItems.${productIndex}.grossWeight`, calculatedNetWeight);
-      }
-    }, [currentItem.boxes, currentItem.productId, currentItem.netWeight, allProducts, allSizes, setValue, containerIndex, productIndex]);
+        if (netWeight !== currentItem.netWeight) {
+           setValue(`containerItems.${containerIndex}.productItems.${productIndex}.netWeight`, netWeight);
+        }
+        // Only update gross weight if it's not manually set to something different
+        if (Number(currentItem.grossWeight) !== netWeight) {
+           setValue(`containerItems.${containerIndex}.productItems.${productIndex}.grossWeight`, netWeight);
+        }
+    }, [netWeight, currentItem.netWeight, currentItem.grossWeight, setValue, containerIndex, productIndex]);
     
     return (
       <div className="p-3 border rounded-md space-y-3 relative bg-background/80">
@@ -239,7 +232,7 @@ const ContainerProductItem: React.FC<ContainerProductItemProps> = ({
             )}
         />
 
-        <div className="grid grid-cols-2 md:grid-cols-3 gap-4 items-start">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 items-start">
             <FormField
                 control={control}
                 name={`containerItems.${containerIndex}.productItems.${productIndex}.boxes`}
@@ -442,11 +435,12 @@ export function ExportDocumentForm({
   allProducts,
   allSizes,
   sourcePoId,
+  nextExportInvoiceNumber,
 }: ExportDocumentFormProps) {
   const { toast } = useToast();
   const form = useForm<ExportDocumentFormValues>({
     resolver: zodResolver(formSchema),
-    defaultValues: getDefaultFormValues(),
+    defaultValues: getDefaultFormValues(nextExportInvoiceNumber),
   });
   
   const { fields, append, remove } = useFieldArray({
@@ -500,9 +494,9 @@ export function ExportDocumentForm({
           : [defaultNewContainerItem],
       });
     } else {
-      form.reset(getDefaultFormValues());
+      form.reset(getDefaultFormValues(nextExportInvoiceNumber));
     }
-  }, [isEditing, initialData, form]);
+  }, [isEditing, initialData, form, nextExportInvoiceNumber]);
 
 
   const exporterOptions: ComboboxOption[] = useMemo(() =>
@@ -527,7 +521,7 @@ export function ExportDocumentForm({
       description: `Document has been successfully ${isEditing ? 'updated' : 'saved'}.`,
     });
     if (!isEditing) {
-      form.reset(getDefaultFormValues());
+      form.reset(getDefaultFormValues(nextExportInvoiceNumber));
     }
   }
 
@@ -557,7 +551,7 @@ export function ExportDocumentForm({
                     <FormItem>
                     <FormLabel className="flex items-center gap-2"><Hash className="h-4 w-4 text-muted-foreground" />Export Invoice No.</FormLabel>
                     <FormControl>
-                        <Input placeholder="e.g. EXP-2024-001" {...field} />
+                        <Input placeholder="e.g. EXP/HEM/001/25-26" {...field} />
                     </FormControl>
                     <FormMessage />
                     </FormItem>
@@ -661,88 +655,91 @@ export function ExportDocumentForm({
                 )}
                 />
             </div>
-            <FormField
-              control={form.control}
-              name="exporterId"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="flex items-center gap-2">
-                    <Briefcase className="h-4 w-4 text-muted-foreground" />
-                    Exporter *
-                  </FormLabel>
-                  <Combobox
-                    options={exporterOptions}
-                    value={field.value}
-                    onChange={field.onChange}
-                    placeholder="Select Exporter..."
-                    searchPlaceholder="Search Exporters..."
-                    emptySearchMessage="No exporter found. Add on Exporter page."
-                    disabled={exporterOptions.length === 0}
-                  />
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="manufacturerId"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="flex items-center gap-2">
-                    <Factory className="h-4 w-4 text-muted-foreground" />
-                    Manufacturer (Optional)
-                  </FormLabel>
-                  <Combobox
-                    options={manufacturerOptions}
-                    value={field.value}
-                    onChange={field.onChange}
-                    placeholder="Select Manufacturer..."
-                    searchPlaceholder="Search Manufacturers..."
-                    emptySearchMessage="No manufacturer found. Add on Manufacturer page."
-                    disabled={manufacturerOptions.length === 0}
-                  />
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <FormField
                 control={form.control}
-                name="permissionNumber"
+                name="exporterId"
                 render={({ field }) => (
                     <FormItem>
-                    <FormLabel className="flex items-center gap-2"><BadgeCheck className="h-4 w-4 text-muted-foreground" />Permission No.</FormLabel>
-                    <FormControl>
-                        <Input placeholder="Auto-filled from Manufacturer" {...field} />
-                    </FormControl>
+                    <FormLabel className="flex items-center gap-2">
+                        <Briefcase className="h-4 w-4 text-muted-foreground" />
+                        Exporter *
+                    </FormLabel>
+                    <Combobox
+                        options={exporterOptions}
+                        value={field.value}
+                        onChange={field.onChange}
+                        placeholder="Select Exporter..."
+                        searchPlaceholder="Search Exporters..."
+                        emptySearchMessage="No exporter found. Add on Exporter page."
+                        disabled={exporterOptions.length === 0}
+                    />
                     <FormMessage />
                     </FormItem>
                 )}
-            />
+                />
+                <FormField
+                control={form.control}
+                name="manufacturerId"
+                render={({ field }) => (
+                    <FormItem>
+                    <FormLabel className="flex items-center gap-2">
+                        <Factory className="h-4 w-4 text-muted-foreground" />
+                        Manufacturer (Optional)
+                    </FormLabel>
+                    <Combobox
+                        options={manufacturerOptions}
+                        value={field.value}
+                        onChange={field.onChange}
+                        placeholder="Select Manufacturer..."
+                        searchPlaceholder="Search Manufacturers..."
+                        emptySearchMessage="No manufacturer found. Add on Manufacturer page."
+                        disabled={manufacturerOptions.length === 0}
+                    />
+                    <FormMessage />
+                    </FormItem>
+                )}
+                />
+            </div>
 
-            <FormField
-              control={form.control}
-              name="transporterId"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="flex items-center gap-2">
-                    <Truck className="h-4 w-4 text-muted-foreground" />
-                    Transporter (Optional)
-                  </FormLabel>
-                  <Combobox
-                    options={transporterOptions}
-                    value={field.value}
-                    onChange={field.onChange}
-                    placeholder="Select Transporter..."
-                    searchPlaceholder="Search Transporters..."
-                    emptySearchMessage="No transporter found. Add on Transporter page."
-                    disabled={transporterOptions.length === 0}
-                  />
-                  <FormMessage />
-                </FormItem>
-              )}
- />
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                 <FormField
+                    control={form.control}
+                    name="permissionNumber"
+                    render={({ field }) => (
+                        <FormItem>
+                        <FormLabel className="flex items-center gap-2"><BadgeCheck className="h-4 w-4 text-muted-foreground" />Permission No.</FormLabel>
+                        <FormControl>
+                            <Input placeholder="Auto-filled from Manufacturer" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                        </FormItem>
+                    )}
+                />
+                <FormField
+                control={form.control}
+                name="transporterId"
+                render={({ field }) => (
+                    <FormItem>
+                    <FormLabel className="flex items-center gap-2">
+                        <Truck className="h-4 w-4 text-muted-foreground" />
+                        Transporter (Optional)
+                    </FormLabel>
+                    <Combobox
+                        options={transporterOptions}
+                        value={field.value}
+                        onChange={field.onChange}
+                        placeholder="Select Transporter..."
+                        searchPlaceholder="Search Transporters..."
+                        emptySearchMessage="No transporter found. Add on Transporter page."
+                        disabled={transporterOptions.length === 0}
+                    />
+                    <FormMessage />
+                    </FormItem>
+                )}
+    />
+            </div>
+            
 
             <FormField
                 control={form.control}

@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { Header } from "@/components/layout/header";
 import { ExportDocumentForm, type ExportDocumentFormValues } from "@/components/export-document-form";
@@ -24,6 +24,37 @@ const LOCAL_STORAGE_TRANSPORTERS_KEY = "bizform_transporters"; // Transporters
 const LOCAL_STORAGE_PRODUCTS_KEY = "bizform_products";
 const LOCAL_STORAGE_SIZES_KEY = "bizform_sizes";
 
+function getCurrentIndianFinancialYear(): string {
+  const now = new Date();
+  const currentMonth = now.getMonth(); 
+  const currentYear = now.getFullYear();
+
+  if (currentMonth >= 3) { 
+    return `${currentYear.toString().slice(-2)}-${(currentYear + 1).toString().slice(-2)}`;
+  } else { 
+    return `${(currentYear - 1).toString().slice(-2)}-${currentYear.toString().slice(-2)}`;
+  }
+}
+
+const getNextExportInvoiceNumberInternal = (currentDocs: ExportDocument[], financialYear: string): string => {
+    const prefix = `EXP/HEM/`;
+    const yearSuffix = `/${financialYear}`;
+
+    const invoiceNumbersThisYear = currentDocs
+      .map(doc => doc.exportInvoiceNumber)
+      .filter(num => num && num.startsWith(prefix) && num.endsWith(yearSuffix))
+      .map(num => {
+        const numberPart = num.substring(prefix.length, num.length - yearSuffix.length);
+        return parseInt(numberPart, 10);
+      })
+      .filter(num => !isNaN(num))
+      .sort((a, b) => b - a);
+
+    const nextNum = (invoiceNumbersThisYear[0] || 0) + 1;
+    return `${prefix}${nextNum.toString().padStart(3, '0')}${yearSuffix}`;
+};
+
+
 export default function ExportDocumentPage() {
   const { toast } = useToast();
   const router = useRouter();
@@ -31,6 +62,7 @@ export default function ExportDocumentPage() {
   const formRef = useRef<HTMLDivElement>(null);
 
   const [exportDocuments, setExportDocuments] = useState<ExportDocument[]>([]);
+  const [nextExportInvoiceNumber, setNextExportInvoiceNumber] = useState<string>("");
   const [allPOs, setAllPOs] = useState<PurchaseOrder[]>([]);
   const [allExporters, setAllExporters] = useState<Company[]>([]);
   const [allManufacturers, setAllManufacturers] = useState<Manufacturer[]>([]); // State for manufacturers
@@ -60,6 +92,8 @@ export default function ExportDocumentPage() {
             })),
         })) : [];
         setExportDocuments(currentDocs);
+        setNextExportInvoiceNumber(getNextExportInvoiceNumberInternal(currentDocs, getCurrentIndianFinancialYear()));
+
 
         setAllPOs(JSON.parse(localStorage.getItem(LOCAL_STORAGE_PO_KEY) || "[]").map((po:any)=>({...po, poDate: new Date(po.poDate)})));
         setAllExporters(JSON.parse(localStorage.getItem(LOCAL_STORAGE_COMPANIES_KEY) || "[]"));
@@ -146,6 +180,10 @@ export default function ExportDocumentPage() {
     if (typeof window !== "undefined") {
       localStorage.setItem(LOCAL_STORAGE_EXPORT_DOCS_KEY_V2, JSON.stringify(updatedDocs));
     }
+
+    if (!docToEdit) {
+        setNextExportInvoiceNumber(getNextExportInvoiceNumberInternal(updatedDocs, getCurrentIndianFinancialYear()));
+    }
     
     const action = docToEdit ? "updated" : "saved";
     toast({ title: `Document ${action}`, description: `Export Document ED-${finalDocData.id.slice(-6)} has been successfully ${action}.` });
@@ -170,6 +208,7 @@ export default function ExportDocumentPage() {
         setDocToEdit(null); 
         router.replace('/export-document', { scroll: false });
     }
+    setNextExportInvoiceNumber(getNextExportInvoiceNumberInternal(updatedDocs, getCurrentIndianFinancialYear()));
     toast({ title: "Document Deleted", description: `Export Document ED-${deletedDocIdShort} has been deleted.` });
   };
 
@@ -215,6 +254,7 @@ export default function ExportDocumentPage() {
               isEditing={!!docToEdit}
               onSave={handleSaveExportDocument}
               onCancelEdit={handleCancelEdit}
+              nextExportInvoiceNumber={nextExportInvoiceNumber}
               allExporters={allExporters}
               allManufacturers={allManufacturers}
               allTransporters={allTransporters}
