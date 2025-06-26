@@ -132,7 +132,7 @@ export function Header() {
       <div className="container flex h-16 items-center justify-between">
         <Link href="/" className="flex items-center space-x-2">
           <Building className="h-6 w-6 text-primary" />
-          <span className="font-headline text-xl font-bold text-primary">BizForm</span>
+          <span className="font-headline text-xl font-bold text-primary">HEMITH ERP</span>
         </Link>
         {isMobile ? (
           <Sheet open={isMobileMenuOpen} onOpenChange={setIsMobileMenuOpen}>
@@ -146,7 +146,7 @@ export function Header() {
               <div className="flex justify-between items-center p-4 border-b">
                  <Link href="/" className="flex items-center space-x-2" onClick={() => setIsMobileMenuOpen(false)}>
                     <Building className="h-6 w-6 text-primary" />
-                    <span className="font-headline text-xl font-bold text-primary">BizForm</span>
+                    <span className="font-headline text-xl font-bold text-primary">HEMITH ERP</span>
                   </Link>
                 <Button variant="ghost" size="icon" onClick={() => setIsMobileMenuOpen(false)}>
                   <XIcon className="h-6 w-6" />
