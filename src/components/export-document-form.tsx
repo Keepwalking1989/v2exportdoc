@@ -165,7 +165,7 @@ const ContainerProductItem: React.FC<ContainerProductItemProps> = ({
     allSizes,
     handleProductChange,
 }) => {
-    const { setValue, watch } = useFormContext<ExportDocumentFormValues>();
+    const { setValue } = useFormContext<ExportDocumentFormValues>();
     
     const currentItem = useWatch({
         control,
@@ -188,16 +188,12 @@ const ContainerProductItem: React.FC<ContainerProductItemProps> = ({
         return { sqm: calculatedSqm, amount: calculatedAmount, netWeight: calculatedNetWeight };
     }, [currentItem.productId, currentItem.boxes, currentItem.rate, allProducts, allSizes]);
 
-    // Effect to auto-calculate Net and Gross Weight
+    // Effect to auto-calculate Net and Gross Weight when product or boxes change.
+    // Manual edits will be preserved until the product or box count is changed again.
     useEffect(() => {
-        if (netWeight !== currentItem.netWeight) {
-           setValue(`containerItems.${containerIndex}.productItems.${productIndex}.netWeight`, netWeight);
-        }
-        // Only update gross weight if it's not manually set to something different
-        if (Number(currentItem.grossWeight) !== netWeight) {
-           setValue(`containerItems.${containerIndex}.productItems.${productIndex}.grossWeight`, netWeight);
-        }
-    }, [netWeight, currentItem.netWeight, currentItem.grossWeight, setValue, containerIndex, productIndex]);
+      setValue(`containerItems.${containerIndex}.productItems.${productIndex}.netWeight`, netWeight);
+      setValue(`containerItems.${containerIndex}.productItems.${productIndex}.grossWeight`, netWeight);
+    }, [netWeight, setValue, containerIndex, productIndex]);
     
     return (
       <div className="p-3 border rounded-md space-y-3 relative bg-background/80">
