@@ -171,21 +171,23 @@ export function generateCustomInvoicePdf(
     doc.text(docData.vesselFlightNo || 'N/A', margin + 5, y + 18);
     doc.rect(margin + colWidths2[0], y, colWidths2[1], gridRowHeight);
     doc.text(docData.portOfLoading || 'N/A', margin + colWidths2[0] + 5, y + 18);
-    doc.rect(margin + colWidths2[0] + colWidths2[1], y, colWidths2[2], gridRowHeight * 2 + gridRowHeight); // Span 3 rows
+    doc.rect(margin + colWidths2[0] + colWidths2[1], y, colWidths2[2] * 2, gridRowHeight * 2); // Span 2 rows high, 1 row wide
     const termsText = doc.splitTextToSize(docData.termsOfDeliveryAndPayment || 'N/A', colWidths2[2] - 10);
     doc.text(termsText, margin + colWidths2[0] + colWidths2[1] + 5, y + 18);
-    y += gridRowHeight;
-
-    drawBlueHeader('Port Of Discharge', margin, y, colWidths2[0], headerHeight);
-    drawBlueHeader('Final Destination', margin + colWidths2[0], y, colWidths2[1], headerHeight);
-    y += headerHeight;
-    doc.rect(margin, y, colWidths2[0], gridRowHeight);
-    doc.text(docData.portOfDischarge || 'N/A', margin + 5, y + 18);
-    doc.rect(margin + colWidths2[0], y, colWidths2[1], gridRowHeight);
-    doc.text(docData.finalDestination || 'N/A', margin + colWidths2[0] + 5, y + 18);
-    y += gridRowHeight;
-
-    y += gridRowHeight; // an empty row height for the spanned terms cell
+    
+    const yAfterTerms = y + gridRowHeight * 2;
+    let tempY = y;
+    
+    tempY += gridRowHeight;
+    drawBlueHeader('Port Of Discharge', margin, tempY, colWidths2[0], headerHeight);
+    drawBlueHeader('Final Destination', margin + colWidths2[0], tempY, colWidths2[1], headerHeight);
+    tempY += headerHeight;
+    doc.rect(margin, tempY, colWidths2[0], gridRowHeight);
+    doc.text(docData.portOfDischarge || 'N/A', margin + 5, tempY + 18);
+    doc.rect(margin + colWidths2[0], tempY, colWidths2[1], gridRowHeight);
+    doc.text(docData.finalDestination || 'N/A', margin + colWidths2[0] + 5, tempY + 18);
+    
+    y = yAfterTerms;
 
     // --- Main Product Table ---
     const allItems: (ExportDocumentProductItem & { type: 'product' | 'sample' })[] = [];
@@ -272,23 +274,28 @@ export function generateCustomInvoicePdf(
         },
         didDrawPage: (data) => { y = data.cursor?.y || y; }
     });
+    
     // @ts-ignore
     y = doc.lastAutoTable.finalY;
 
-    // --- Manual TOTAL Row ---
+    // --- Manual TOTAL Row (Drawn AFTER autoTable) ---
     const totalRowHeight = 35;
+    const table = (doc as any).lastAutoTable; // Now this is safe to use
+    
     doc.setLineWidth(1);
+    doc.setDrawColor(0,0,0);
     doc.rect(margin, y, contentWidth, totalRowHeight);
+    
     doc.setFont('helvetica', 'bold').setFontSize(9);
     doc.text('TOTAL', margin + 5, y + totalRowHeight / 2 + 3);
-    const table = (doc as any).lastAutoTable;
-    const boxColX = table.columns[3].x;
-    const sqmColX = table.columns[4].x;
-    const amountColX = table.columns[6].x;
-    const amountColW = table.columns[6].width;
+
+    const boxColX = table.columns[3].x + table.columns[3].width;
+    const sqmColX = table.columns[4].x + table.columns[4].width;
+    const amountColX = table.columns[6].x + table.columns[6].width;
+
     doc.text(grandTotalBoxes.toString(), boxColX - 5, y + totalRowHeight / 2 + 3, { align: 'right' });
-    doc.text(grandTotalSqm.toFixed(2), sqmColX + 5, y + 15);
-    doc.text(`$ ${grandTotalAmount.toFixed(2)}`, amountColX + amountColW - 5, y + 25, { align: 'right' });
+    doc.text(grandTotalSqm.toFixed(2), sqmColX - 5, y + totalRowHeight / 2 + 3, { align: 'right' });
+    doc.text(`$ ${grandTotalAmount.toFixed(2)}`, amountColX - 5, y + totalRowHeight / 2 + 3, { align: 'right' });
     y += totalRowHeight;
 
     // --- Exchange Rate Section ---
