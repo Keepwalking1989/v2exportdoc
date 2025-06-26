@@ -286,15 +286,16 @@ export function generateCustomInvoicePdf(
         groupedSamples.forEach(item => {
             grandTotalBoxes += item.boxes;
             grandTotalSqm += item.sqm;
+            grandTotalAmount += item.total;
             
             tableBody.push([
                 item.hsnCode,
                 srNoCounter++,
-                item.description, // No "(Sample...)" text
+                item.description,
                 item.boxes.toString(),
                 item.sqm.toFixed(2),
-                '0.00', // Rate is 0
-                '0.00'  // Total is 0
+                item.rate.toFixed(2),
+                item.total.toFixed(2)
             ]);
         });
     }
@@ -386,8 +387,8 @@ export function generateCustomInvoicePdf(
         theme: 'grid',
         body: [
             [
-                { content: 'Total No. Of Pkgs.', styles: {...classOneStyles, halign: 'left'} },
-                { content: 'Amount In Words', styles: {...classOneStyles, halign: 'left'} },
+                { content: 'Total No. Of Pkgs.', styles: {...classOneStyles, halign: 'left', cellPadding: 1} },
+                { content: 'Amount In Words', styles: {...classOneStyles, halign: 'left', cellPadding: 1} },
             ],
              [
                 { content: grandTotalBoxes.toString(), styles: {...classTwoStyles, halign: 'center', cellPadding: 1 } },
@@ -407,7 +408,7 @@ export function generateCustomInvoicePdf(
     autoTable(doc, {
         startY: yPos,
         theme: 'grid',
-        body: [[{ content: footerText, styles: { ...classOneStyles, halign: 'center' }}]],
+        body: [[{ content: footerText, styles: { ...classOneStyles, halign: 'center', cellPadding: 1 }}]],
         margin: { left: pageMargin, right: pageMargin },
         styles: { cellPadding: 1 },
         didDrawPage: data => { yPos = data.cursor?.y ?? yPos; }
@@ -418,7 +419,7 @@ export function generateCustomInvoicePdf(
     autoTable(doc, {
         startY: yPos,
         theme: 'grid',
-        body: [[{ content: 'supplier No 1', styles: { ...classOneStyles, halign: 'center' }}]],
+        body: [[{ content: 'supplier No 1', styles: { ...classOneStyles, halign: 'center', cellPadding: 1 }}]],
         margin: { left: pageMargin, right: pageMargin },
         styles: { cellPadding: 1 },
         didDrawPage: data => { yPos = data.cursor?.y ?? yPos; }
@@ -430,10 +431,10 @@ export function generateCustomInvoicePdf(
         startY: yPos,
         theme: 'grid',
         body: [[
-            { content: 'Name', styles: { ...classOneStyles } },
-            { content: manufacturer.companyName, styles: { ...classTwoStyles, halign: 'left' } },
-            { content: 'GST NO', styles: { ...classOneStyles } },
-            { content: manufacturer.gstNumber, styles: { ...classTwoStyles, halign: 'left' } },
+            { content: 'Name', styles: { ...classOneStyles, cellPadding: 1 } },
+            { content: manufacturer.companyName, styles: { ...classTwoStyles, halign: 'left', cellPadding: 1 } },
+            { content: 'GST NO', styles: { ...classOneStyles, cellPadding: 1 } },
+            { content: manufacturer.gstNumber, styles: { ...classTwoStyles, halign: 'left', cellPadding: 1 } },
         ]],
         margin: { left: pageMargin, right: pageMargin },
         styles: { cellPadding: 1 },
@@ -447,15 +448,14 @@ export function generateCustomInvoicePdf(
         startY: yPos,
         theme: 'grid',
         body: [[
-            { content: 'Tax Invoice No & Date', styles: { ...classOneStyles } },
-            { content: taxInvoiceText, styles: { ...classTwoStyles, halign: 'left' } },
+            { content: 'Tax Invoice No & Date', styles: { ...classOneStyles, cellPadding: 1 } },
+            { content: taxInvoiceText, styles: { ...classTwoStyles, halign: 'left', cellPadding: 1 } },
         ]],
         columnStyles: {
             0: { cellWidth: '25%' },
             1: { cellWidth: '75%' },
         },
         margin: { left: pageMargin, right: pageMargin },
-        styles: { cellPadding: 1 },
         didDrawPage: data => { yPos = data.cursor?.y ?? yPos; }
     });
     // @ts-ignore
@@ -464,7 +464,7 @@ export function generateCustomInvoicePdf(
     autoTable(doc, {
         startY: yPos,
         theme: 'grid',
-        body: [[{ content: 'Export Under GST Circular No. 26/2017 Custom Dt. 01/07/2017', styles: { ...classOneStyles, halign: 'center' }}]],
+        body: [[{ content: 'Export Under GST Circular No. 26/2017 Custom Dt. 01/07/2017', styles: { ...classOneStyles, halign: 'center', cellPadding: 1 }}]],
         margin: { left: pageMargin, right: pageMargin },
         styles: { cellPadding: 1 },
         didDrawPage: data => { yPos = data.cursor?.y ?? yPos; }
@@ -475,7 +475,7 @@ export function generateCustomInvoicePdf(
     autoTable(doc, {
         startY: yPos,
         theme: 'grid',
-        body: [[{ content: 'We claim Duty rebate file.', styles: { ...classOneStyles, halign: 'center' }}]],
+        body: [[{ content: 'We claim Duty rebate file.', styles: { ...classOneStyles, halign: 'center', cellPadding: 1 }}]],
         margin: { left: pageMargin, right: pageMargin },
         styles: { cellPadding: 1 },
         didDrawPage: data => { yPos = data.cursor?.y ?? yPos; }
