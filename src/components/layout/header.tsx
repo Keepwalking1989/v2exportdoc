@@ -1,4 +1,3 @@
-
 "use client";
 
 import Link from "next/link";
@@ -103,6 +102,9 @@ export function Header() {
            <Link href="/transaction" passHref>
             <MenubarItem>Transactions</MenubarItem>
           </Link>
+           <Link href="/gst" passHref>
+            <MenubarItem>GST</MenubarItem>
+          </Link>
         </MenubarContent>
       </MenubarMenu>
     </>
@@ -148,6 +150,7 @@ export function Header() {
       </Button>
       <div className="pl-6">
         <Button variant="ghost" className="justify-start font-normal w-full" asChild onClick={() => setIsMobileMenuOpen(false)}><Link href="/transaction">Transactions</Link></Button>
+         <Button variant="ghost" className="justify-start font-normal w-full" asChild onClick={() => setIsMobileMenuOpen(false)}><Link href="/gst">GST</Link></Button>
       </div>
 
     </nav>
