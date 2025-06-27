@@ -90,11 +90,17 @@ export function TransactionList({
         return bill?.invoiceNumber || 'Unknown Bill';
       }).join(', ');
       
+      const isPayableParty = ['manufacturer', 'transporter', 'supplier', 'pallet'].includes(t.partyType);
+      const transactionFlow = t.type === 'credit' && isPayableParty 
+        ? 'Payment Made' 
+        : 'Payment Received';
+
       return {
         ...t,
         partyDetails: getPartyDetails(t.partyType, t.partyId),
         exportInvoiceNumber: exportDoc?.exportInvoiceNumber,
-        relatedInvoiceNumbers: relatedInvoiceNumbers
+        relatedInvoiceNumbers: relatedInvoiceNumbers,
+        transactionFlow
       };
     });
   }, [transactions, allClients, allManufacturers, allTransporters, allSuppliers, allPallets, allExportDocuments, allManuBills, allTransBills, allSupplyBills]);
@@ -153,12 +159,13 @@ export function TransactionList({
               <TableBody>
                 {paginatedTransactions.map((t) => {
                   const PartyIcon = t.partyDetails.icon;
+                  const isPaymentMade = t.transactionFlow === 'Payment Made';
                   return (
                     <TableRow key={t.id}>
                       <TableCell>
-                        <Badge variant={t.type === 'credit' ? 'default' : 'secondary'} className={cn(t.type === 'credit' ? 'bg-green-600 hover:bg-green-700' : 'bg-red-600 hover:bg-red-700')}>
-                          {t.type === 'credit' ? <ArrowUpCircle className="mr-1"/> : <ArrowDownCircle className="mr-1"/>}
-                          {t.type.charAt(0).toUpperCase() + t.type.slice(1)}
+                        <Badge variant={'outline'} className={cn(isPaymentMade ? 'border-red-600 text-red-600' : 'border-green-600 text-green-600')}>
+                          {isPaymentMade ? <ArrowDownCircle className="mr-1"/> : <ArrowUpCircle className="mr-1"/>}
+                          {t.transactionFlow}
                         </Badge>
                       </TableCell>
                       <TableCell>{format(new Date(t.date), "dd/MM/yyyy")}</TableCell>
@@ -175,7 +182,7 @@ export function TransactionList({
                         )}
                       </TableCell>
                       <TableCell>{t.description}</TableCell>
-                      <TableCell className={cn("text-right font-mono", t.type === 'credit' ? 'text-green-600' : 'text-red-600')}>
+                      <TableCell className={cn("text-right font-mono", isPaymentMade ? 'text-red-600' : 'text-green-600')}>
                           {t.amount.toLocaleString(undefined, { style: 'currency', currency: t.currency, minimumFractionDigits: 2 })}
                       </TableCell>
                       <TableCell className="text-right space-x-1">

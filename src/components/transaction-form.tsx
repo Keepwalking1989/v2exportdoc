@@ -22,7 +22,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Combobox, type ComboboxOption } from "@/components/ui/combobox";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
-import { CalendarIcon, Save, XCircle, ArrowLeftRight, CreditCard, Landmark, Truck, Building2, User, Palette, Package, DollarSign, NotebookText, Link as LinkIcon, FileText, ArrowUp, ArrowDown } from "lucide-react";
+import { CalendarIcon, Save, XCircle, ArrowLeftRight, Landmark, Truck, Building2, User, Palette, Package, DollarSign, NotebookText, Link as LinkIcon, FileText, ArrowUp, ArrowDown } from "lucide-react";
 import React, { useEffect, useMemo, useState } from "react";
 import type { Transaction } from "@/types/transaction";
 import type { Client } from "@/types/client";
@@ -114,7 +114,7 @@ export function TransactionForm({
 
   const isGovernmentParty = useMemo(() => ['gst', 'duty_drawback', 'road_tp'].includes(partyType), [partyType]);
   const isGovPartyWithDocLink = useMemo(() => ['gst', 'duty_drawback'].includes(partyType), [partyType]);
-  const isDebitToCompany = useMemo(() => ['manufacturer', 'transporter', 'supplier', 'pallet'].includes(partyType), [partyType]);
+  const isPayableParty = useMemo(() => ['manufacturer', 'transporter', 'supplier', 'pallet'].includes(partyType), [partyType]);
 
   useEffect(() => {
     if (isEditing && initialData) {
@@ -161,7 +161,7 @@ export function TransactionForm({
   
   // Effect to find unpaid bills for the selected party
   useEffect(() => {
-    if (!partyId || !isDebitToCompany) {
+    if (!partyId || !isPayableParty) {
       setUnpaidBills([]);
       return;
     }
@@ -184,7 +184,7 @@ export function TransactionForm({
     }
     setUnpaidBills(bills);
 
-  }, [partyId, partyType, isDebitToCompany, allManuBills, allTransBills, allSupplyBills]);
+  }, [partyId, partyType, isPayableParty, allManuBills, allTransBills, allSupplyBills]);
 
   // Effect to calculate total amount from selected invoices
   useEffect(() => {
@@ -265,13 +265,13 @@ export function TransactionForm({
                         <FormControl>
                           <RadioGroupItem value="credit" />
                         </FormControl>
-                        <FormLabel className="font-normal flex items-center gap-2"><ArrowUp className="text-green-600"/> Payment Made (Credit)</FormLabel>
+                        <FormLabel className="font-normal flex items-center gap-2"><ArrowDown className="text-red-600"/> Payment Made</FormLabel>
                       </FormItem>
                       <FormItem className="flex items-center space-x-2 space-y-0">
                         <FormControl>
                           <RadioGroupItem value="debit" />
                         </FormControl>
-                        <FormLabel className="font-normal flex items-center gap-2"><ArrowDown className="text-blue-600" /> Payment Received (Debit)</FormLabel>
+                        <FormLabel className="font-normal flex items-center gap-2"><ArrowUp className="text-green-600" /> Payment Received</FormLabel>
                       </FormItem>
                     </RadioGroup>
                   </FormControl>
@@ -357,7 +357,7 @@ export function TransactionForm({
               )}
             </div>
             
-            {transactionType === 'credit' && isDebitToCompany && unpaidBills.length > 0 && (
+            {transactionType === 'credit' && isPayableParty && unpaidBills.length > 0 && (
                 <Card>
                     <CardHeader>
                         <CardTitle>Select Invoices to Pay</CardTitle>
