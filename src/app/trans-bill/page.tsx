@@ -58,7 +58,7 @@ export default function TransBillPage() {
     const transaction: Transaction = {
       id: `trans_bill_${bill.id}`,
       date: bill.invoiceDate,
-      type: 'credit', // A bill received is a credit to the payable account (money owed)
+      type: 'debit', // A bill from a transporter is a debit on their account (increases what is owed to them)
       partyType: 'transporter',
       partyId: bill.transporterId,
       sourceBillId: bill.id,

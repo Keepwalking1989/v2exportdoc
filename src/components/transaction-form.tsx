@@ -22,7 +22,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Combobox, type ComboboxOption } from "@/components/ui/combobox";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
-import { CalendarIcon, Save, XCircle, ArrowLeftRight, CreditCard, Landmark, Truck, Building2, User, Palette, Package, DollarSign, NotebookText, Link as LinkIcon, FileText } from "lucide-react";
+import { CalendarIcon, Save, XCircle, ArrowLeftRight, CreditCard, Landmark, Truck, Building2, User, Palette, Package, DollarSign, NotebookText, Link as LinkIcon, FileText, ArrowUp, ArrowDown } from "lucide-react";
 import React, { useEffect, useMemo, useState } from "react";
 import type { Transaction } from "@/types/transaction";
 import type { Client } from "@/types/client";
@@ -72,11 +72,11 @@ interface TransactionFormProps {
 const defaultValues: TransactionFormValues = {
   date: new Date(),
   type: 'credit',
-  partyType: 'client',
+  partyType: 'manufacturer',
   partyId: "",
   exportDocumentId: "",
   relatedInvoices: [],
-  currency: 'USD',
+  currency: 'INR',
   amount: 0,
   description: ""
 };
@@ -128,15 +128,16 @@ export function TransactionForm({
     if (isEditing) return;
 
     const currentPartyType = form.getValues('partyType');
-    const isValidForCredit = ['client', 'gst', 'duty_drawback', 'road_tp'].includes(currentPartyType);
-    const isValidForDebit = isDebitToCompany;
+    const isValidForCredit = ['manufacturer', 'transporter', 'supplier', 'pallet'].includes(currentPartyType);
+    const isValidForDebit = ['client', 'gst', 'duty_drawback', 'road_tp'].includes(currentPartyType);
 
     if (transactionType === 'credit' && !isValidForCredit) {
-      form.setValue('partyType', 'client');
-    } else if (transactionType === 'debit' && !isValidForDebit) {
       form.setValue('partyType', 'manufacturer');
+    } else if (transactionType === 'debit' && !isValidForDebit) {
+      form.setValue('partyType', 'client');
     }
-  }, [transactionType, form, isEditing, isDebitToCompany]);
+  }, [transactionType, form, isEditing]);
+
 
   useEffect(() => {
     if (isEditing && !form.formState.isDirty) return;
@@ -243,7 +244,7 @@ export function TransactionForm({
           <ArrowLeftRight className="h-6 w-6 text-primary" />
           {isEditing ? "Edit Transaction" : "New Transaction"}
         </CardTitle>
-        <CardDescription>Record a credit (payment received) or debit (payment made).</CardDescription>
+        <CardDescription>Record a payment made or received.</CardDescription>
       </CardHeader>
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)}>
@@ -264,13 +265,13 @@ export function TransactionForm({
                         <FormControl>
                           <RadioGroupItem value="credit" />
                         </FormControl>
-                        <FormLabel className="font-normal flex items-center gap-2"><CreditCard /> Credit (Received)</FormLabel>
+                        <FormLabel className="font-normal flex items-center gap-2"><ArrowUp className="text-green-600"/> Payment Made (Credit)</FormLabel>
                       </FormItem>
                       <FormItem className="flex items-center space-x-2 space-y-0">
                         <FormControl>
                           <RadioGroupItem value="debit" />
                         </FormControl>
-                        <FormLabel className="font-normal flex items-center gap-2"><Landmark/> Debit (Paid)</FormLabel>
+                        <FormLabel className="font-normal flex items-center gap-2"><ArrowDown className="text-blue-600" /> Payment Received (Debit)</FormLabel>
                       </FormItem>
                     </RadioGroup>
                   </FormControl>
@@ -293,19 +294,19 @@ export function TransactionForm({
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          {transactionType === 'credit' ? (
+                          {transactionType === 'credit' ? ( // Payment Made To
                              <>
-                                <SelectItem value="client"><User className="inline-block mr-2 h-4 w-4"/>Client</SelectItem>
-                                <SelectItem value="gst"><Landmark className="inline-block mr-2 h-4 w-4"/>Government (GST)</SelectItem>
-                                <SelectItem value="duty_drawback"><Landmark className="inline-block mr-2 h-4 w-4"/>Government (Duty Drawback)</SelectItem>
-                                <SelectItem value="road_tp"><Landmark className="inline-block mr-2 h-4 w-4"/>Government (Road TP)</SelectItem>
-                             </>
-                          ) : (
-                            <>
                               <SelectItem value="manufacturer"><Building2 className="inline-block mr-2 h-4 w-4"/>Manufacturer</SelectItem>
                               <SelectItem value="transporter"><Truck className="inline-block mr-2 h-4 w-4"/>Transporter</SelectItem>
                               <SelectItem value="supplier"><Package className="inline-block mr-2 h-4 w-4"/>Supplier</SelectItem>
                               <SelectItem value="pallet"><Palette className="inline-block mr-2 h-4 w-4"/>Pallet</SelectItem>
+                             </>
+                          ) : ( // Payment Received From
+                            <>
+                              <SelectItem value="client"><User className="inline-block mr-2 h-4 w-4"/>Client</SelectItem>
+                              <SelectItem value="gst"><Landmark className="inline-block mr-2 h-4 w-4"/>Government (GST)</SelectItem>
+                              <SelectItem value="duty_drawback"><Landmark className="inline-block mr-2 h-4 w-4"/>Government (Duty Drawback)</SelectItem>
+                              <SelectItem value="road_tp"><Landmark className="inline-block mr-2 h-4 w-4"/>Government (Road TP)</SelectItem>
                             </>
                           )}
                         </SelectContent>
@@ -356,11 +357,11 @@ export function TransactionForm({
               )}
             </div>
             
-            {isDebitToCompany && unpaidBills.length > 0 && (
+            {transactionType === 'credit' && isDebitToCompany && unpaidBills.length > 0 && (
                 <Card>
                     <CardHeader>
                         <CardTitle>Select Invoices to Pay</CardTitle>
-                        <CardDescription>Select one or more invoices. The total amount will be suggested automatically.</CardDescription>
+                        <CardDescription>Select one or more invoices. The total amount will be suggested automatically, but can be edited for partial payments.</CardDescription>
                     </CardHeader>
                     <CardContent>
                         <FormField
@@ -413,7 +414,7 @@ export function TransactionForm({
 
              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <FormField control={form.control} name="date" render={({ field }) => (<FormItem className="flex flex-col"><FormLabel>Date *</FormLabel><Popover><PopoverTrigger asChild><FormControl><Button variant="outline" className={cn("w-full justify-start text-left font-normal", !field.value && "text-muted-foreground")}>{field.value ? format(field.value, "PPP") : <span>Pick date</span>}<CalendarIcon className="ml-auto h-4 w-4 opacity-50"/></Button></FormControl></PopoverTrigger><PopoverContent className="w-auto p-0"><Calendar mode="single" selected={field.value} onSelect={field.onChange} initialFocus/></PopoverContent></Popover><FormMessage /></FormItem>)} />
-                <FormField control={form.control} name="amount" render={({ field }) => (<FormItem><FormLabel>Amount *</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormMessage /></FormItem>)} />
+                <FormField control={form.control} name="amount" render={({ field }) => (<FormItem><FormLabel>Amount *</FormLabel><FormControl><Input type="number" {...field} step="0.01" /></FormControl><FormMessage /></FormItem>)} />
                 <FormField
                   control={form.control}
                   name="currency"

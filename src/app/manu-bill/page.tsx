@@ -57,7 +57,7 @@ export default function ManuBillPage() {
     const transaction: Transaction = {
       id: `manu_bill_${bill.id}`,
       date: bill.invoiceDate,
-      type: 'credit', // A bill received is a credit to the payable account (money owed)
+      type: 'debit', // A bill from a supplier is a debit on their account (increases what is owed to them)
       partyType: 'manufacturer',
       partyId: bill.manufacturerId,
       sourceBillId: bill.id,
