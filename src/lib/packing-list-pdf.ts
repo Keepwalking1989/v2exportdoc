@@ -151,39 +151,44 @@ export function generatePackingListPdf(
     const tableBody: any[] = [];
     let srNoCounter = 1;
 
-    // Process all items together to calculate totals correctly
-    const allItems: ExportDocumentProductItem[] = [];
+    // New logic: separate products and samples
+    const allProductItems: ExportDocumentProductItem[] = [];
+    const allSampleItems: ExportDocumentProductItem[] = [];
     docData.containerItems?.forEach(container => {
-        (container.productItems || []).forEach(item => allItems.push(item));
-        (container.sampleItems || []).forEach(item => allItems.push(item));
+        (container.productItems || []).forEach(item => allProductItems.push(item));
+        (container.sampleItems || []).forEach(item => allSampleItems.push(item));
     });
 
-    const groupedItems = allItems.reduce((acc, item) => {
-        const key = item.productId; // Group only by product for packing list
-        if (!acc[key]) {
+    const groupItems = (items: ExportDocumentProductItem[]) => {
+        return items.reduce((acc, item) => {
+            const key = item.productId; // Group only by product for packing list
+            if (!acc[key]) {
+                const product = allProducts.find(p => p.id === item.productId);
+                const size = product ? allSizes.find(s => s.id === product.sizeId) : undefined;
+                acc[key] = {
+                    hsnCode: size?.hsnCode || 'N/A',
+                    description: `${product?.designName || 'Unknown'} (${size?.size || 'N/A'})`,
+                    boxes: 0,
+                    sqm: 0,
+                    netWt: 0,
+                    grossWt: 0,
+                };
+            }
             const product = allProducts.find(p => p.id === item.productId);
             const size = product ? allSizes.find(s => s.id === product.sizeId) : undefined;
-            acc[key] = {
-                hsnCode: size?.hsnCode || 'N/A',
-                description: `${product?.designName || 'Unknown'} (${size?.size || 'N/A'})`,
-                boxes: 0,
-                sqm: 0,
-                netWt: 0,
-                grossWt: 0,
-            };
-        }
-        const product = allProducts.find(p => p.id === item.productId);
-        const size = product ? allSizes.find(s => s.id === product.sizeId) : undefined;
-        const sqmForThisItem = (item.boxes || 0) * (size?.sqmPerBox || 0);
-        
-        acc[key].boxes += item.boxes || 0;
-        acc[key].sqm += sqmForThisItem;
-        acc[key].netWt += item.netWeight || 0;
-        acc[key].grossWt += item.grossWeight || 0;
-        return acc;
-    }, {} as Record<string, any>);
+            const sqmForThisItem = (item.boxes || 0) * (size?.sqmPerBox || 0);
+            
+            acc[key].boxes += item.boxes || 0;
+            acc[key].sqm += sqmForThisItem;
+            acc[key].netWt += item.netWeight || 0;
+            acc[key].grossWt += item.grossWeight || 0;
+            return acc;
+        }, {} as Record<string, any>);
+    };
 
-    Object.values(groupedItems).forEach(item => {
+    // Process regular products
+    const groupedProducts = Object.values(groupItems(allProductItems));
+    groupedProducts.forEach(item => {
         grandTotalBoxes += item.boxes;
         grandTotalSqm += item.sqm;
         grandTotalNetWt += item.netWt;
@@ -199,6 +204,35 @@ export function generatePackingListPdf(
             item.grossWt.toFixed(2)
         ]);
     });
+
+    // Process sample products
+    if (allSampleItems.length > 0) {
+        tableBody.push([
+            { 
+                content: 'Free Of Cost Samples', 
+                colSpan: 7,
+                styles: { fontStyle: 'bold', halign: 'center' } 
+            }
+        ]);
+
+        const groupedSamples = Object.values(groupItems(allSampleItems));
+        groupedSamples.forEach(item => {
+            grandTotalBoxes += item.boxes;
+            grandTotalSqm += item.sqm;
+            grandTotalNetWt += item.netWt;
+            grandTotalGrossWt += item.grossWt;
+
+            tableBody.push([
+                item.hsnCode,
+                srNoCounter++,
+                item.description,
+                item.boxes.toString(),
+                item.sqm.toFixed(2),
+                item.netWt.toFixed(2),
+                item.grossWt.toFixed(2)
+            ]);
+        });
+    }
 
     // Add empty rows
     const emptyRowCount = 5;
