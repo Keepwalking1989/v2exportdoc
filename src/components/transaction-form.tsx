@@ -35,7 +35,7 @@ import { RadioGroup, RadioGroupItem } from "./ui/radio-group";
 const formSchema = z.object({
   date: z.date(),
   type: z.enum(['credit', 'debit']),
-  partyType: z.enum(['client', 'manufacturer', 'transporter', 'supplier', 'pallet']),
+  partyType: z.enum(['client', 'manufacturer', 'transporter', 'supplier', 'pallet', 'gst', 'duty_drawback', 'road_tp']),
   partyId: z.string().min(1, "Please select a party."),
   currency: z.enum(['USD', 'EUR', 'INR']),
   amount: z.coerce.number().positive("Amount must be a positive number."),
@@ -85,32 +85,48 @@ export function TransactionForm({
   const transactionType = useWatch({ control: form.control, name: 'type' });
   const partyType = useWatch({ control: form.control, name: 'partyType' });
 
-  useEffect(() => {
-    if (transactionType === 'credit') {
-      form.setValue('partyType', 'client');
-      form.setValue('currency', 'USD');
-    } else { // debit
-      form.setValue('partyType', 'manufacturer');
-      form.setValue('currency', 'INR');
-    }
-    form.setValue('partyId', ''); // Reset party selection when type changes
-  }, [transactionType, form]);
-
-  useEffect(() => {
-    form.setValue('partyId', ''); // Reset party selection when party type changes
-  }, [partyType, form]);
-
+  const isGovernmentParty = useMemo(() => ['gst', 'duty_drawback', 'road_tp'].includes(partyType), [partyType]);
 
   useEffect(() => {
     if (isEditing && initialData) {
-      form.reset({
-        ...initialData,
-        date: new Date(initialData.date),
-      });
+      form.reset({ ...initialData, date: new Date(initialData.date) });
     } else {
       form.reset(defaultValues);
     }
   }, [isEditing, initialData, form]);
+
+  useEffect(() => {
+    if (isEditing) return; // Don't auto-reset when editing
+
+    const currentPartyType = form.getValues('partyType');
+    const isValidForCredit = ['client', 'gst', 'duty_drawback', 'road_tp'].includes(currentPartyType);
+    const isValidForDebit = ['manufacturer', 'transporter', 'supplier', 'pallet'].includes(currentPartyType);
+
+    if (transactionType === 'credit' && !isValidForCredit) {
+      form.setValue('partyType', 'client');
+    } else if (transactionType === 'debit' && !isValidForDebit) {
+      form.setValue('partyType', 'manufacturer');
+    }
+  }, [transactionType, form, isEditing]);
+
+  useEffect(() => {
+    // When party type changes, reset the selected party and adjust currency
+    if (isEditing && !form.formState.isDirty) {
+      // Don't run on initial load of an edit form
+    } else {
+      form.setValue('partyId', '');
+    }
+
+    if (isGovernmentParty) {
+      form.setValue('partyId', partyType); // Auto-set ID for gov types
+      form.setValue('currency', 'INR');
+    } else if (partyType === 'client') {
+      form.setValue('currency', 'USD');
+    } else { // It's a debit to a company
+      form.setValue('currency', 'INR');
+    }
+  }, [partyType, isGovernmentParty, form, isEditing]);
+
 
   const partyOptions = useMemo((): ComboboxOption[] => {
     switch (partyType) {
@@ -157,20 +173,20 @@ export function TransactionForm({
                   <FormControl>
                     <RadioGroup
                       onValueChange={field.onChange}
-                      defaultValue={field.value}
+                      value={field.value}
                       className="flex space-x-4"
                     >
                       <FormItem className="flex items-center space-x-2 space-y-0">
                         <FormControl>
                           <RadioGroupItem value="credit" />
                         </FormControl>
-                        <FormLabel className="font-normal flex items-center gap-2"><CreditCard /> Credit (Payment Received)</FormLabel>
+                        <FormLabel className="font-normal flex items-center gap-2"><CreditCard /> Credit (Received)</FormLabel>
                       </FormItem>
                       <FormItem className="flex items-center space-x-2 space-y-0">
                         <FormControl>
                           <RadioGroupItem value="debit" />
                         </FormControl>
-                        <FormLabel className="font-normal flex items-center gap-2"><Landmark/> Debit (Payment Made)</FormLabel>
+                        <FormLabel className="font-normal flex items-center gap-2"><Landmark/> Debit (Paid)</FormLabel>
                       </FormItem>
                     </RadioGroup>
                   </FormControl>
@@ -194,7 +210,12 @@ export function TransactionForm({
                         </FormControl>
                         <SelectContent>
                           {transactionType === 'credit' ? (
-                             <SelectItem value="client"><User className="inline-block mr-2 h-4 w-4"/>Client</SelectItem>
+                             <>
+                                <SelectItem value="client"><User className="inline-block mr-2 h-4 w-4"/>Client</SelectItem>
+                                <SelectItem value="gst"><Landmark className="inline-block mr-2 h-4 w-4"/>Government (GST)</SelectItem>
+                                <SelectItem value="duty_drawback"><Landmark className="inline-block mr-2 h-4 w-4"/>Government (Duty Drawback)</SelectItem>
+                                <SelectItem value="road_tp"><Landmark className="inline-block mr-2 h-4 w-4"/>Government (Road TP)</SelectItem>
+                             </>
                           ) : (
                             <>
                               <SelectItem value="manufacturer"><Building2 className="inline-block mr-2 h-4 w-4"/>Manufacturer</SelectItem>
@@ -209,24 +230,26 @@ export function TransactionForm({
                     </FormItem>
                   )}
                 />
-               <FormField
-                  control={form.control}
-                  name="partyId"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Party *</FormLabel>
-                      <Combobox
-                        options={partyOptions}
-                        value={field.value}
-                        onChange={field.onChange}
-                        placeholder="Select a party..."
-                        disabled={partyOptions.length === 0}
-                        emptySearchMessage="No parties of this type found."
-                      />
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+              {!isGovernmentParty && (
+                 <FormField
+                    control={form.control}
+                    name="partyId"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Party *</FormLabel>
+                        <Combobox
+                          options={partyOptions}
+                          value={field.value}
+                          onChange={field.onChange}
+                          placeholder="Select a party..."
+                          disabled={partyOptions.length === 0}
+                          emptySearchMessage="No parties of this type found."
+                        />
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+              )}
             </div>
             
              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -241,14 +264,9 @@ export function TransactionForm({
                       <Select onValueChange={field.onChange} value={field.value}>
                         <FormControl><SelectTrigger><SelectValue/></SelectTrigger></FormControl>
                         <SelectContent>
-                          {transactionType === 'credit' ? (
-                            <>
-                              <SelectItem value="USD">USD</SelectItem>
-                              <SelectItem value="EUR">EUR</SelectItem>
-                            </>
-                          ) : (
-                            <SelectItem value="INR">INR</SelectItem>
-                          )}
+                          <SelectItem value="USD">USD</SelectItem>
+                          <SelectItem value="EUR">EUR</SelectItem>
+                          <SelectItem value="INR">INR</SelectItem>
                         </SelectContent>
                       </Select>
                       <FormMessage />

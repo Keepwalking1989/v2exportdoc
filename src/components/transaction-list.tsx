@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
-import { Search, ChevronLeft, ChevronRight, Edit, Trash2, ArrowUpCircle, ArrowDownCircle } from "lucide-react";
+import { Search, ChevronLeft, ChevronRight, Edit, Trash2, ArrowUpCircle, ArrowDownCircle, User, Building2, Truck, Package, Palette, Landmark } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { Transaction } from "@/types/transaction";
 import type { Client } from "@/types/client";
@@ -44,27 +44,33 @@ export function TransactionList({
   const [searchTerm, setSearchTerm] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
 
-  const getPartyName = (type: Transaction['partyType'], id: string): string => {
+  const getPartyDetails = (type: Transaction['partyType'], id: string): { name: string; icon: React.ElementType } => {
     switch (type) {
       case 'client':
-        return allClients.find(c => c.id === id)?.companyName || 'Unknown Client';
+        return { name: allClients.find(c => c.id === id)?.companyName || 'Unknown Client', icon: User };
       case 'manufacturer':
-        return allManufacturers.find(m => m.id === id)?.companyName || 'Unknown Manufacturer';
+        return { name: allManufacturers.find(m => m.id === id)?.companyName || 'Unknown Manufacturer', icon: Building2 };
       case 'transporter':
-        return allTransporters.find(t => t.id === id)?.companyName || 'Unknown Transporter';
+        return { name: allTransporters.find(t => t.id === id)?.companyName || 'Unknown Transporter', icon: Truck };
       case 'supplier':
-        return allSuppliers.find(s => s.id === id)?.companyName || 'Unknown Supplier';
+        return { name: allSuppliers.find(s => s.id === id)?.companyName || 'Unknown Supplier', icon: Package };
       case 'pallet':
-        return allPallets.find(p => p.id === id)?.companyName || 'Unknown Pallet Co.';
+        return { name: allPallets.find(p => p.id === id)?.companyName || 'Unknown Pallet Co.', icon: Palette };
+      case 'gst':
+        return { name: 'Government (GST)', icon: Landmark };
+      case 'duty_drawback':
+        return { name: 'Government (Duty Drawback)', icon: Landmark };
+      case 'road_tp':
+        return { name: 'Government (Road TP)', icon: Landmark };
       default:
-        return 'Unknown Party';
+        return { name: 'Unknown Party', icon: User };
     }
   };
 
   const enrichedTransactions = useMemo(() => {
     return transactions.map(t => ({
       ...t,
-      partyName: getPartyName(t.partyType, t.partyId)
+      partyDetails: getPartyDetails(t.partyType, t.partyId)
     }));
   }, [transactions, allClients, allManufacturers, allTransporters, allSuppliers, allPallets]);
 
@@ -72,7 +78,7 @@ export function TransactionList({
     if (!searchTerm) return enrichedTransactions;
     const lowercasedFilter = searchTerm.toLowerCase();
     return enrichedTransactions.filter(t =>
-      t.partyName.toLowerCase().includes(lowercasedFilter) ||
+      t.partyDetails.name.toLowerCase().includes(lowercasedFilter) ||
       t.description?.toLowerCase().includes(lowercasedFilter) ||
       t.amount.toString().includes(lowercasedFilter)
     );
@@ -119,46 +125,54 @@ export function TransactionList({
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {paginatedTransactions.map((t) => (
-                  <TableRow key={t.id}>
-                    <TableCell>
-                      <Badge variant={t.type === 'credit' ? 'default' : 'secondary'} className={cn(t.type === 'credit' ? 'bg-green-600 hover:bg-green-700' : 'bg-red-600 hover:bg-red-700')}>
-                        {t.type === 'credit' ? <ArrowUpCircle className="mr-1"/> : <ArrowDownCircle className="mr-1"/>}
-                        {t.type.charAt(0).toUpperCase() + t.type.slice(1)}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>{format(new Date(t.date), "dd/MM/yyyy")}</TableCell>
-                    <TableCell>{t.partyName}</TableCell>
-                    <TableCell>{t.description}</TableCell>
-                    <TableCell className={cn("text-right font-mono", t.type === 'credit' ? 'text-green-600' : 'text-red-600')}>
-                        {t.amount.toLocaleString(undefined, { style: 'currency', currency: t.currency, minimumFractionDigits: 2 })}
-                    </TableCell>
-                    <TableCell className="text-right space-x-1">
-                       <Button variant="ghost" size="icon" onClick={() => onEditTransaction(t.id)} className="hover:text-primary">
-                        <Edit className="h-4 w-4" />
-                      </Button>
-                      <AlertDialog>
-                        <AlertDialogTrigger asChild>
-                          <Button variant="ghost" size="icon" className="hover:text-destructive">
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </AlertDialogTrigger>
-                        <AlertDialogContent>
-                          <AlertDialogHeader>
-                            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-                            <AlertDialogDescription>
-                              This action will mark this transaction as deleted.
-                            </AlertDialogDescription>
-                          </AlertDialogHeader>
-                          <AlertDialogFooter>
-                            <AlertDialogCancel>Cancel</AlertDialogCancel>
-                            <AlertDialogAction onClick={() => onDeleteTransaction(t.id)}>Delete</AlertDialogAction>
-                          </AlertDialogFooter>
-                        </AlertDialogContent>
-                      </AlertDialog>
-                    </TableCell>
-                  </TableRow>
-                ))}
+                {paginatedTransactions.map((t) => {
+                  const PartyIcon = t.partyDetails.icon;
+                  return (
+                    <TableRow key={t.id}>
+                      <TableCell>
+                        <Badge variant={t.type === 'credit' ? 'default' : 'secondary'} className={cn(t.type === 'credit' ? 'bg-green-600 hover:bg-green-700' : 'bg-red-600 hover:bg-red-700')}>
+                          {t.type === 'credit' ? <ArrowUpCircle className="mr-1"/> : <ArrowDownCircle className="mr-1"/>}
+                          {t.type.charAt(0).toUpperCase() + t.type.slice(1)}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>{format(new Date(t.date), "dd/MM/yyyy")}</TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          <PartyIcon className="h-4 w-4 text-muted-foreground" />
+                          {t.partyDetails.name}
+                        </div>
+                      </TableCell>
+                      <TableCell>{t.description}</TableCell>
+                      <TableCell className={cn("text-right font-mono", t.type === 'credit' ? 'text-green-600' : 'text-red-600')}>
+                          {t.amount.toLocaleString(undefined, { style: 'currency', currency: t.currency, minimumFractionDigits: 2 })}
+                      </TableCell>
+                      <TableCell className="text-right space-x-1">
+                         <Button variant="ghost" size="icon" onClick={() => onEditTransaction(t.id)} className="hover:text-primary">
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <Button variant="ghost" size="icon" className="hover:text-destructive">
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                              <AlertDialogDescription>
+                                This action will mark this transaction as deleted.
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>Cancel</AlertDialogCancel>
+                              <AlertDialogAction onClick={() => onDeleteTransaction(t.id)}>Delete</AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
               </TableBody>
             </Table>
           </div>
@@ -185,4 +199,3 @@ export function TransactionList({
     </Card>
   );
 }
-
