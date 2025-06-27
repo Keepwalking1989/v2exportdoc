@@ -60,7 +60,7 @@ function amountToWordsUSD(amount: number): string {
 export function generateCustomInvoicePdf(
     docData: ExportDocument,
     exporter: Company,
-    manufacturer: Manufacturer,
+    manufacturersWithDetails: (Manufacturer & { invoiceNumber: string, invoiceDate?: Date })[],
     allProducts: Product[],
     allSizes: Size[]
 ) {
@@ -416,50 +416,40 @@ export function generateCustomInvoicePdf(
     // @ts-ignore
     yPos = doc.lastAutoTable.finalY;
 
+    // --- Manufacturer Details Section ---
     autoTable(doc, {
         startY: yPos,
         theme: 'grid',
-        body: [[{ content: 'supplier No 1', styles: { ...classOneStyles, halign: 'center', cellPadding: 1 }}]],
+        body: [[{ content: 'SUPPLIER DETAILS', styles: { ...classOneStyles, halign: 'center' } }]],
         margin: { left: pageMargin, right: pageMargin },
-        styles: { cellPadding: 1 },
         didDrawPage: data => { yPos = data.cursor?.y ?? yPos; }
     });
     // @ts-ignore
     yPos = doc.lastAutoTable.finalY;
 
-    autoTable(doc, {
-        startY: yPos,
-        theme: 'grid',
-        body: [[
-            { content: 'Name', styles: { ...classOneStyles, cellPadding: 1 } },
-            { content: manufacturer.companyName, styles: { ...classTwoStyles, halign: 'left', cellPadding: 1 } },
-            { content: 'GST NO', styles: { ...classOneStyles, cellPadding: 1 } },
-            { content: manufacturer.gstNumber, styles: { ...classTwoStyles, halign: 'left', cellPadding: 1 } },
-        ]],
-        margin: { left: pageMargin, right: pageMargin },
-        styles: { cellPadding: 1 },
-        didDrawPage: data => { yPos = data.cursor?.y ?? yPos; }
+    manufacturersWithDetails.forEach(manu => {
+        const taxInvoiceText = `${manu.invoiceNumber || 'N/A'} & ${manu.invoiceDate ? format(new Date(manu.invoiceDate), 'dd/MM/yyyy') : 'N/A'}`;
+        autoTable(doc, {
+            startY: yPos,
+            theme: 'grid',
+            body: [
+                [
+                    { content: 'Name', styles: { ...classOneStyles, cellPadding: 1 } },
+                    { content: manu.companyName, styles: { ...classTwoStyles, halign: 'left', cellPadding: 1 } },
+                    { content: 'GST NO', styles: { ...classOneStyles, cellPadding: 1 } },
+                    { content: manu.gstNumber, styles: { ...classTwoStyles, halign: 'left', cellPadding: 1 } },
+                ],
+                [
+                    { content: 'Tax Invoice No & Date', styles: { ...classOneStyles, cellPadding: 1 } },
+                    { content: taxInvoiceText, styles: { ...classTwoStyles, halign: 'left', cellPadding: 1 }, colSpan: 3 },
+                ]
+            ],
+            margin: { left: pageMargin, right: pageMargin },
+            didDrawPage: data => { yPos = data.cursor?.y ?? yPos; }
+        });
+        // @ts-ignore
+        yPos = doc.lastAutoTable.finalY;
     });
-    // @ts-ignore
-    yPos = doc.lastAutoTable.finalY;
-
-    const taxInvoiceText = `${docData.manufacturerInvoiceNumber || 'N/A'} & ${docData.manufacturerInvoiceDate ? format(new Date(docData.manufacturerInvoiceDate), 'dd/MM/yyyy') : 'N/A'}`;
-    autoTable(doc, {
-        startY: yPos,
-        theme: 'grid',
-        body: [[
-            { content: 'Tax Invoice No & Date', styles: { ...classOneStyles, cellPadding: 1 } },
-            { content: taxInvoiceText, styles: { ...classTwoStyles, halign: 'left', cellPadding: 1 } },
-        ]],
-        columnStyles: {
-            0: { cellWidth: '25%' },
-            1: { cellWidth: '75%' },
-        },
-        margin: { left: pageMargin, right: pageMargin },
-        didDrawPage: data => { yPos = data.cursor?.y ?? yPos; }
-    });
-    // @ts-ignore
-    yPos = doc.lastAutoTable.finalY;
 
     autoTable(doc, {
         startY: yPos,

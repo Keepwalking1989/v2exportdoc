@@ -37,7 +37,7 @@ const classThreeStyles = {
 export function generatePackingListPdf(
     docData: ExportDocument,
     exporter: Company,
-    manufacturer: Manufacturer, // Though not directly displayed, might be useful in future
+    manufacturer: Manufacturer | undefined, // Though not directly displayed, might be useful in future
     allProducts: Product[],
     allSizes: Size[]
 ) {

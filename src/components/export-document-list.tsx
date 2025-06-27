@@ -72,9 +72,8 @@ export function ExportDocumentList({
                   <TableHead className="font-headline">Doc ID</TableHead>
                   <TableHead className="font-headline">Export Invoice #</TableHead>
                   <TableHead className="font-headline">Exporter</TableHead>
-                  <TableHead className="font-headline">Manufacturer</TableHead>
+                  <TableHead className="font-headline">Manufacturers</TableHead>
                   <TableHead className="font-headline">Transporter</TableHead>
-                  <TableHead className="font-headline">Container Details</TableHead>
                   <TableHead className="font-headline">PO ID</TableHead>
                   <TableHead className="font-headline text-right">Actions</TableHead>
                 </TableRow>
@@ -82,32 +81,19 @@ export function ExportDocumentList({
               <TableBody>
                 {documents.map((doc) => {
                   const exporterName = allExporters.find(e => e.id === doc.exporterId)?.companyName || "N/A";
-                  const manufacturerName = doc.manufacturerId ? (allManufacturers.find(m => m.id === doc.manufacturerId)?.companyName || "N/A") : "N/A";
+                  const manufacturerNames = doc.manufacturerDetails
+                    ?.map(md => allManufacturers.find(m => m.id === md.manufacturerId)?.companyName)
+                    .filter(Boolean)
+                    .join(", ") || "N/A";
                   const transporterName = doc.transporterId ? (allTransporters.find(t => t.id === doc.transporterId)?.companyName || "N/A") : "N/A";
-                  const containerDetails = doc.containerItems?.map(item => {
-                    let details: string[] = [];
-                    if (item.bookingNo) details.push(`Booking: ${item.bookingNo}`);
-                    if (item.containerNo) details.push(`Container: ${item.containerNo}`);
-                    if (item.truckNumber) details.push(`Truck: ${item.truckNumber}`);
-                    if (item.totalPallets) details.push(`Pallets: ${item.totalPallets}`);
-                    if (item.productItems && item.productItems.length > 0) {
-                      details.push(`Products: ${item.productItems.length}`);
-                    }
-                    if (item.sampleItems && item.sampleItems.length > 0) {
-                      details.push(`Samples: ${item.sampleItems.length}`);
-                    }
-                    if (item.description) details.push(`Desc: ${item.description}`);
-                    return details.join(' | ');
-                  }).filter(Boolean).join('\n') || "N/A";
-
+                  
                   return (
                     <TableRow key={doc.id}>
                       <TableCell className="font-medium">ED-{doc.id.slice(-6)}</TableCell>
                       <TableCell>{doc.exportInvoiceNumber}</TableCell>
                       <TableCell>{exporterName}</TableCell>
-                      <TableCell>{manufacturerName}</TableCell>
+                      <TableCell>{manufacturerNames}</TableCell>
                       <TableCell>{transporterName}</TableCell>
-                      <TableCell className="whitespace-pre-line">{containerDetails}</TableCell>
                       <TableCell>{doc.purchaseOrderId ? `PO-${doc.purchaseOrderId.slice(-6)}` : "N/A"}</TableCell>
                       <TableCell className="text-right space-x-0.5">
                         <Tooltip>

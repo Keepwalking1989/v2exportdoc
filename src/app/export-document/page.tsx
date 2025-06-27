@@ -87,8 +87,11 @@ export default function ExportDocumentPage() {
         const currentDocs = activeDocs.map((doc: any) => ({
             ...doc,
             exportInvoiceDate: doc.exportInvoiceDate ? new Date(doc.exportInvoiceDate) : new Date(),
-            manufacturerInvoiceDate: doc.manufacturerInvoiceDate ? new Date(doc.manufacturerInvoiceDate) : undefined,
             exchangeDate: doc.exchangeDate ? new Date(doc.exchangeDate) : undefined,
+            manufacturerDetails: (doc.manufacturerDetails || []).map((md: any) => ({
+                ...md,
+                invoiceDate: md.invoiceDate ? new Date(md.invoiceDate) : undefined,
+            })),
             containerItems: (doc.containerItems || []).map((item: any) => ({
                 ...item,
                 weighingDateTime: item.weighingDateTime ? new Date(item.weighingDateTime) : undefined,
@@ -170,6 +173,7 @@ export default function ExportDocumentPage() {
         id: docToEdit ? docToEdit.id : Date.now().toString(),
         purchaseOrderId: docToEdit ? docToEdit.purchaseOrderId : sourcePoIdForNewDoc || undefined,
         isDeleted: docToEdit ? docToEdit.isDeleted : false,
+        manufacturerDetails: formData.manufacturerDetails?.map(md => ({...md, id: md.id || Math.random().toString(36).substring(2,9)})),
         containerItems: formData.containerItems?.map(item => ({
             ...item, 
             id: item.id || Math.random().toString(36).substring(2,9),
@@ -190,7 +194,16 @@ export default function ExportDocumentPage() {
     if (typeof window !== "undefined") {
       localStorage.setItem(LOCAL_STORAGE_EXPORT_DOCS_KEY_V2, JSON.stringify(updatedDocs));
     }
-    setExportDocuments(updatedDocs.filter(d => !d.isDeleted));
+
+    const activeDocs = updatedDocs.filter(d => !d.isDeleted);
+    const parsedDocs = activeDocs.map((doc: any) => ({
+        ...doc,
+        exportInvoiceDate: doc.exportInvoiceDate ? new Date(doc.exportInvoiceDate) : new Date(),
+        exchangeDate: doc.exchangeDate ? new Date(doc.exchangeDate) : undefined,
+        manufacturerDetails: (doc.manufacturerDetails || []).map((md: any) => ({...md, invoiceDate: md.invoiceDate ? new Date(md.invoiceDate) : undefined})),
+        containerItems: (doc.containerItems || []).map((item: any) => ({...item, weighingDateTime: item.weighingDateTime ? new Date(item.weighingDateTime) : undefined})),
+    }));
+    setExportDocuments(parsedDocs);
 
     if (!docToEdit) {
         setNextExportInvoiceNumber(getNextExportInvoiceNumberInternal(updatedDocs, getCurrentIndianFinancialYear()));

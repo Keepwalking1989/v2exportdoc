@@ -4,14 +4,14 @@
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { format } from 'date-fns';
-import type { ExportDocument } from '@/types/export-document';
+import type { ExportDocument, ManufacturerInfo } from '@/types/export-document';
 import type { Company } from '@/types/company'; // Exporter
 import type { Manufacturer } from '@/types/manufacturer';
 
 export function generateAnnexurePdf(
     docData: ExportDocument,
     exporter: Company,
-    manufacturer: Manufacturer
+    manufacturersWithDetails: (Manufacturer & { invoiceNumber: string, invoiceDate?: Date })[]
 ) {
     const doc = new jsPDF({ unit: 'pt', format: 'a4' });
     let yPos = 20;
@@ -29,6 +29,10 @@ export function generateAnnexurePdf(
     doc.text('A.R.-IV MORBI. DIVISION - I-MORBI. COMMISSIONERATE - RAJKOT.', contentWidth / 2 + pageMargin, yPos, { align: 'center' });
     yPos += 20;
 
+    const manufacturerDetailsText = manufacturersWithDetails.map(m => 
+        `STUFFING DETAIL - ${m.companyName}\n${m.address}\nPERMISSION NO. - ${docData.permissionNumber || 'N/A'}`
+    ).join('\n\n');
+
     // --- Main Body using a structured table for alignment ---
     const bodyData = [];
     
@@ -36,8 +40,7 @@ export function generateAnnexurePdf(
     bodyData.push({ label: '2a  ICE No:', value: exporter.iecNumber || 'N/A' });
     bodyData.push({ label: ' b  Branch Code:', value: 'N/A' });
     bodyData.push({ label: ' c  BIN No:', value: exporter.gstNumber ? exporter.gstNumber.substring(2, 12) : 'N/A' });
-    const manufacturerDetails = `STUFFING DETAIL - ${manufacturer.companyName}\n${manufacturer.address}\nPERMISSION NO. - ${docData.permissionNumber || 'N/A'}`;
-    bodyData.push({ label: '3   Name Of The Manufacturer (Stuffing Details):', value: manufacturerDetails });
+    bodyData.push({ label: '3   Name Of The Manufacturer (Stuffing Details):', value: manufacturerDetailsText });
     bodyData.push({ label: '4   Date Of Examination:', value: docData.exportInvoiceDate ? format(new Date(docData.exportInvoiceDate), 'dd/MM/yyyy') : 'N/A' });
     bodyData.push({ label: '5   Name of the Inspector of GST', value: 'SELF SEALNG' });
     bodyData.push({ label: '6   Name of the supdt. Of GST', value: 'SELF SEALNG' });
@@ -48,7 +51,6 @@ export function generateAnnexurePdf(
         const sampleBoxes = (container.sampleItems || []).reduce((sum, item) => sum + (item.boxes || 0), 0);
         return acc + productBoxes + sampleBoxes;
     }, 0);
-    // Using a multiline string to force the layout from the image
     bodyData.push({ label: '8a  Particulars Of Export Invoice:\n b  Export Invoice No.:\n\n c  Total No.Of Packages:', value: `\n${docData.exportInvoiceNumber}\n\n${totalBoxes}` });
     const consigneeDetails = `Davare Floors, Inc.\n19 E 60 TH ST, Hialeah,FL.33013 . USA`; // Hardcoded as per image
     bodyData.push({ label: ' d  Name & Address Of The Conignee', value: consigneeDetails });

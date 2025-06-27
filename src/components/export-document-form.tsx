@@ -2,7 +2,7 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useForm, useFieldArray, Controller, Control, UseFormSetValue, useWatch, useFormContext } from "react-hook-form";
+import { useForm, useFieldArray, Controller, Control, useWatch } from "react-hook-form";
 import * as z from "zod";
 import { Button } from "@/components/ui/button";
 import {
@@ -41,14 +41,21 @@ const productItemSchema = z.object({
   rate: z.coerce.number().nonnegative('Rate cannot be negative').optional(),
 });
 
+const manufacturerInfoSchema = z.object({
+  id: z.string(),
+  manufacturerId: z.string().min(1, "Manufacturer is required."),
+  invoiceNumber: z.string().min(1, "Invoice number is required."),
+  invoiceDate: z.date().optional(),
+});
+
 const formSchema = z.object({
   exporterId: z.string().min(1, "Exporter is required"),
-  manufacturerId: z.string().optional(),
   transporterId: z.string().optional(),
   exportInvoiceNumber: z.string().min(1, "Export Invoice Number is required."),
   exportInvoiceDate: z.date({ required_error: "Export Invoice Date is required." }),
-  manufacturerInvoiceNumber: z.string().optional(),
-  manufacturerInvoiceDate: z.date().optional(),
+  
+  manufacturerDetails: z.array(manufacturerInfoSchema).min(1, "At least one manufacturer is required."),
+
   permissionNumber: z.string().optional(),
   countryOfFinalDestination: z.string().min(1, "Country of Final Destination is required."),
   vesselFlightNo: z.string().optional(),
@@ -117,14 +124,19 @@ const defaultNewContainerItem = {
   sampleItems: [],
 };
 
+const defaultNewManufacturerItem = {
+    id: Date.now().toString(),
+    manufacturerId: "",
+    invoiceNumber: "",
+    invoiceDate: new Date(),
+};
+
 const getDefaultFormValues = (nextInvoiceNumber: string): ExportDocumentFormValues => ({
   exporterId: "",
-  manufacturerId: "",
   transporterId: "",
   exportInvoiceNumber: nextInvoiceNumber,
   exportInvoiceDate: new Date(),
-  manufacturerInvoiceNumber: "",
-  manufacturerInvoiceDate: undefined,
+  manufacturerDetails: [defaultNewManufacturerItem],
   permissionNumber: "",
   countryOfFinalDestination: "",
   vesselFlightNo: "",
@@ -170,7 +182,7 @@ const ContainerProductItem: React.FC<ItemProps> = ({
     handleProductChange,
     fieldArrayName,
 }) => {
-    const { getValues, setValue } = useFormContext<ExportDocumentFormValues>();
+    const { getValues, setValue } = useForm<ExportDocumentFormValues>();
     const productOrBoxesChanged = useRef(false);
 
     const currentItem = useWatch({
@@ -207,7 +219,6 @@ const ContainerProductItem: React.FC<ItemProps> = ({
             
             setValue(`containerItems.${containerIndex}.${fieldArrayName}.${productIndex}.netWeight`, netWeight);
             
-            // Only update gross weight if it was matching net weight or not set
             if (Number(currentGrossWeight) === Number(currentNetWeight) || !currentGrossWeight) {
                 setValue(`containerItems.${containerIndex}.${fieldArrayName}.${productIndex}.grossWeight`, netWeight);
             }
@@ -351,7 +362,7 @@ const ContainerProductManager: React.FC<ItemManagerProps> = ({ containerIndex, c
         name: `containerItems.${containerIndex}.productItems`,
     });
     
-    const { setValue } = useFormContext<ExportDocumentFormValues>();
+    const { setValue } = useForm<ExportDocumentFormValues>();
 
     const productOptions: ComboboxOption[] = useMemo(() =>
         allProducts.map(p => {
@@ -420,7 +431,7 @@ const ContainerSampleManager: React.FC<ItemManagerProps> = ({ containerIndex, co
         name: `containerItems.${containerIndex}.sampleItems`,
     });
     
-    const { setValue } = useFormContext<ExportDocumentFormValues>();
+    const { setValue } = useForm<ExportDocumentFormValues>();
 
     const productOptions: ComboboxOption[] = useMemo(() =>
         allProducts.map(p => {
@@ -585,23 +596,15 @@ export function ExportDocumentForm({
     defaultValues: getDefaultFormValues(nextExportInvoiceNumber),
   });
   
-  const { fields, append, remove } = useFieldArray({
+  const { fields: containerFields, append: appendContainer, remove: removeContainer } = useFieldArray({
     control: form.control,
     name: "containerItems",
   });
 
-  const selectedManufacturerId = form.watch("manufacturerId");
-
-  useEffect(() => {
-    if (selectedManufacturerId) {
-      const selectedManufacturer = allManufacturers.find(m => m.id === selectedManufacturerId);
-      if (selectedManufacturer) {
-        form.setValue("permissionNumber", selectedManufacturer.stuffingPermissionNumber || "");
-      }
-    } else {
-        form.setValue("permissionNumber", "");
-    }
-  }, [selectedManufacturerId, allManufacturers, form]);
+  const { fields: manufacturerFields, append: appendManufacturer, remove: removeManufacturer } = useFieldArray({
+    control: form.control,
+    name: "manufacturerDetails",
+  });
 
 
   useEffect(() => {
@@ -609,12 +612,10 @@ export function ExportDocumentForm({
       form.reset({
         ...initialData,
         exporterId: initialData.exporterId || "",
-        manufacturerId: initialData.manufacturerId || "",
         transporterId: initialData.transporterId || "",
         exportInvoiceNumber: initialData.exportInvoiceNumber || "",
         exportInvoiceDate: initialData.exportInvoiceDate ? new Date(initialData.exportInvoiceDate) : new Date(),
-        manufacturerInvoiceNumber: initialData.manufacturerInvoiceNumber || "",
-        manufacturerInvoiceDate: initialData.manufacturerInvoiceDate ? new Date(initialData.manufacturerInvoiceDate) : undefined,
+        manufacturerDetails: initialData.manufacturerDetails?.map(md => ({...md, invoiceDate: md.invoiceDate ? new Date(md.invoiceDate) : undefined})) || [defaultNewManufacturerItem],
         permissionNumber: initialData.permissionNumber || "",
         countryOfFinalDestination: initialData.countryOfFinalDestination || "",
         vesselFlightNo: initialData.vesselFlightNo || "",
@@ -742,108 +743,105 @@ export function ExportDocumentForm({
                 )}
                 />
             </div>
-             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <FormField
-                control={form.control}
-                name="manufacturerInvoiceNumber"
-                render={({ field }) => (
-                    <FormItem>
-                    <FormLabel className="flex items-center gap-2"><Hash className="h-4 w-4 text-muted-foreground" />Manufacturer Invoice No.</FormLabel>
-                    <FormControl>
-                        <Input placeholder="e.g. MAN-INV-001" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                    </FormItem>
-                )}
+            
+            <FormField
+            control={form.control}
+            name="exporterId"
+            render={({ field }) => (
+                <FormItem>
+                <FormLabel className="flex items-center gap-2">
+                    <Briefcase className="h-4 w-4 text-muted-foreground" />
+                    Exporter *
+                </FormLabel>
+                <Combobox
+                    options={exporterOptions}
+                    value={field.value}
+                    onChange={field.onChange}
+                    placeholder="Select Exporter..."
+                    searchPlaceholder="Search Exporters..."
+                    emptySearchMessage="No exporter found. Add on Exporter page."
+                    disabled={exporterOptions.length === 0}
                 />
-                <FormField
-                control={form.control}
-                name="manufacturerInvoiceDate"
-                render={({ field }) => (
-                    <FormItem className="flex flex-col">
-                    <FormLabel className="flex items-center gap-2"><CalendarIcon className="h-4 w-4 text-muted-foreground" />Manufacturer Invoice Date</FormLabel>
-                    <Popover>
-                        <PopoverTrigger asChild>
-                        <FormControl>
+                <FormMessage />
+                </FormItem>
+            )}
+            />
+
+            <Card>
+                <CardHeader>
+                    <CardTitle className="flex items-center justify-between">
+                        Manufacturer Details
+                        <Button type="button" size="sm" onClick={() => appendManufacturer(defaultNewManufacturerItem)}>
+                            <PlusCircle className="mr-2 h-4 w-4" /> Add Manufacturer
+                        </Button>
+                    </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {manufacturerFields.map((field, index) => {
+                    const selectedManufacturer = allManufacturers.find(m => m.id === form.getValues(`manufacturerDetails.${index}.manufacturerId`));
+                    const manufacturerFirstName = selectedManufacturer ? selectedManufacturer.companyName.split(" ")[0] : "Manufacturer";
+                    
+                    return (
+                        <div key={field.id} className="p-4 border rounded-md space-y-4 relative bg-card/50">
                             <Button
-                            variant={"outline"}
-                            className={cn(
-                                "w-full pl-3 text-left font-normal",
-                                !field.value && "text-muted-foreground"
-                            )}
+                                type="button"
+                                variant="destructive"
+                                size="icon"
+                                onClick={() => manufacturerFields.length > 1 && removeManufacturer(index)}
+                                className="absolute top-2 right-2 h-7 w-7"
+                                disabled={manufacturerFields.length <= 1}
                             >
-                            {field.value ? (
-                                format(field.value, "PPP")
-                            ) : (
-                                <span>Pick a date</span>
-                            )}
-                            <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                                <Trash2 className="h-4 w-4" />
+                                <span className="sr-only">Remove Manufacturer</span>
                             </Button>
-                        </FormControl>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0" align="start">
-                        <Calendar
-                            mode="single"
-                            selected={field.value}
-                            onSelect={field.onChange}
-                            disabled={(date) =>
-                            date > new Date() || date < new Date("2000-01-01")
-                            }
-                            initialFocus
-                        />
-                        </PopoverContent>
-                    </Popover>
-                    <FormMessage />
-                    </FormItem>
-                )}
-                />
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <FormField
-                control={form.control}
-                name="exporterId"
-                render={({ field }) => (
-                    <FormItem>
-                    <FormLabel className="flex items-center gap-2">
-                        <Briefcase className="h-4 w-4 text-muted-foreground" />
-                        Exporter *
-                    </FormLabel>
-                    <Combobox
-                        options={exporterOptions}
-                        value={field.value}
-                        onChange={field.onChange}
-                        placeholder="Select Exporter..."
-                        searchPlaceholder="Search Exporters..."
-                        emptySearchMessage="No exporter found. Add on Exporter page."
-                        disabled={exporterOptions.length === 0}
-                    />
-                    <FormMessage />
-                    </FormItem>
-                )}
-                />
-                <FormField
-                control={form.control}
-                name="manufacturerId"
-                render={({ field }) => (
-                    <FormItem>
-                    <FormLabel className="flex items-center gap-2">
-                        <Factory className="h-4 w-4 text-muted-foreground" />
-                        Manufacturer (Optional)
-                    </FormLabel>
-                    <Combobox
-                        options={manufacturerOptions}
-                        value={field.value}
-                        onChange={field.onChange}
-                        placeholder="Select Manufacturer..."
-                        searchPlaceholder="Search Manufacturers..."
-                        emptySearchMessage="No manufacturer found. Add on Manufacturer page."
-                        disabled={manufacturerOptions.length === 0}
-                    />
-                    <FormMessage />
-                    </FormItem>
-                )}
-                />
-            </div>
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                <FormField
+                                    control={form.control}
+                                    name={`manufacturerDetails.${index}.manufacturerId`}
+                                    render={({ field }) => (
+                                        <FormItem>
+                                            <FormLabel><Factory className="inline mr-2 h-4 w-4 text-muted-foreground" />Manufacturer *</FormLabel>
+                                            <Combobox options={manufacturerOptions} {...field} placeholder="Select Manufacturer..."/>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
+                                <FormField
+                                    control={form.control}
+                                    name={`manufacturerDetails.${index}.invoiceNumber`}
+                                    render={({ field }) => (
+                                        <FormItem>
+                                            <FormLabel><Hash className="inline mr-2 h-4 w-4 text-muted-foreground" />{manufacturerFirstName}'s Invoice No. *</FormLabel>
+                                            <FormControl><Input placeholder="e.g. MAN-INV-001" {...field} /></FormControl>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
+                                 <FormField
+                                    control={form.control}
+                                    name={`manufacturerDetails.${index}.invoiceDate`}
+                                    render={({ field }) => (
+                                        <FormItem className="flex flex-col">
+                                        <FormLabel><CalendarIcon className="inline mr-2 h-4 w-4 text-muted-foreground" />Invoice Date</FormLabel>
+                                        <Popover>
+                                            <PopoverTrigger asChild>
+                                            <FormControl>
+                                                <Button variant="outline" className={cn("w-full justify-start", !field.value && "text-muted-foreground")}>{field.value ? format(field.value, "PPP") : <span>Pick date</span>}<CalendarIcon className="ml-auto h-4 w-4"/></Button>
+                                            </FormControl>
+                                            </PopoverTrigger>
+                                            <PopoverContent><Calendar mode="single" selected={field.value} onSelect={field.onChange}/></PopoverContent>
+                                        </Popover>
+                                        <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
+                            </div>
+                        </div>
+                    );
+                  })}
+                </CardContent>
+            </Card>
+
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                  <FormField
@@ -853,7 +851,7 @@ export function ExportDocumentForm({
                         <FormItem>
                         <FormLabel className="flex items-center gap-2"><BadgeCheck className="h-4 w-4 text-muted-foreground" />Permission No.</FormLabel>
                         <FormControl>
-                            <Input placeholder="Auto-filled from Manufacturer" {...field} />
+                            <Input placeholder="Enter Permission Number" {...field} />
                         </FormControl>
                         <FormMessage />
                         </FormItem>
@@ -1069,21 +1067,21 @@ export function ExportDocumentForm({
               <CardHeader>
                   <CardTitle className="flex items-center justify-between">
                       Container Items
-                      <Button type="button" size="sm" onClick={() => append(defaultNewContainerItem)}>
+                      <Button type="button" size="sm" onClick={() => appendContainer(defaultNewContainerItem)}>
                           <PlusCircle className="mr-2 h-4 w-4" /> Add Container
                       </Button>
                   </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                  {fields.map((field, index) => (
+                  {containerFields.map((field, index) => (
                       <div key={field.id} className="p-4 border rounded-md space-y-4 relative bg-card/50">
                           <Button
                               type="button"
                               variant="destructive"
                               size="icon"
-                                    onClick={() => fields.length > 1 && remove(index)} // Prevent removing the last container
+                                    onClick={() => containerFields.length > 1 && removeContainer(index)} // Prevent removing the last container
                               className="absolute top-2 right-2 h-7 w-7"
-                              disabled={fields.length <= 1}
+                              disabled={containerFields.length <= 1}
                           >
                               <Trash2 className="h-4 w-4" />
                               <span className="sr-only">Remove Item</span>

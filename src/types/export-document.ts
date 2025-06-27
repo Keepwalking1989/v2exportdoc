@@ -27,16 +27,23 @@ export interface ExportDocumentContainerItem {
   sampleItems?: ExportDocumentProductItem[];
 }
 
+export interface ManufacturerInfo {
+  id: string; // React key for useFieldArray
+  manufacturerId: string;
+  invoiceNumber: string;
+  invoiceDate?: Date;
+}
+
 export interface ExportDocument {
-  id: string; // Unique ID for the Export Document
+  id:string; // Unique ID for the Export Document
   exporterId: string; // ID of the selected Exporter
   purchaseOrderId?: string; // ID of the source Purchase Order, if applicable
-  manufacturerId?: string; // ID of the selected Manufacturer
   transporterId?: string; // ID of the selected Transporter
   exportInvoiceNumber: string; // The user-facing invoice number
   exportInvoiceDate: Date; // The date of the export invoice
-  manufacturerInvoiceNumber?: string;
-  manufacturerInvoiceDate?: Date;
+  
+  manufacturerDetails?: ManufacturerInfo[]; // Replaces single manufacturer fields
+
   permissionNumber?: string;
   countryOfFinalDestination: string; // Country of Final Destination
   vesselFlightNo?: string;
