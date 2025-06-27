@@ -6,10 +6,11 @@ import { useParams, useRouter } from 'next/navigation';
 import { Header } from '@/components/layout/header';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, ArrowDownCircle, ArrowUpCircle } from 'lucide-react';
+import { ArrowLeft, ArrowDownCircle, ArrowUpCircle, Search, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
+import { Input } from "@/components/ui/input";
 
 import type { Transaction } from '@/types/transaction';
 import type { Manufacturer } from '@/types/manufacturer';
@@ -26,6 +27,8 @@ const LOCAL_STORAGE_PALLETS_KEY = "bizform_pallets";
 
 type Party = Manufacturer | Transporter | Supplier | Pallet;
 
+const ITEMS_PER_PAGE = 5;
+
 export default function PartyTransactionPage() {
     const router = useRouter();
     const params = useParams();
@@ -34,6 +37,12 @@ export default function PartyTransactionPage() {
     const [transactions, setTransactions] = useState<Transaction[]>([]);
     const [party, setParty] = useState<Party | null>(null);
     const [isLoading, setIsLoading] = useState(true);
+
+    // State for search and pagination
+    const [debitSearchTerm, setDebitSearchTerm] = useState('');
+    const [creditSearchTerm, setCreditSearchTerm] = useState('');
+    const [debitCurrentPage, setDebitCurrentPage] = useState(1);
+    const [creditCurrentPage, setCreditCurrentPage] = useState(1);
 
     useEffect(() => {
         if (!partyType || !partyId) return;
@@ -68,21 +77,43 @@ export default function PartyTransactionPage() {
         }
     }, [partyType, partyId]);
 
-    const { creditTransactions, debitTransactions, totalCredit, totalDebit, balance } = useMemo(() => {
-        const credits = transactions.filter(t => t.type === 'credit');
-        const debits = transactions.filter(t => t.type === 'debit');
-
-        const creditTotal = credits.reduce((acc, t) => acc + t.amount, 0);
-        const debitTotal = debits.reduce((acc, t) => acc + t.amount, 0);
-
+    const { totalCredit, totalDebit, balance } = useMemo(() => {
+        const creditTotal = transactions.filter(t => t.type === 'credit').reduce((acc, t) => acc + t.amount, 0);
+        const debitTotal = transactions.filter(t => t.type === 'debit').reduce((acc, t) => acc + t.amount, 0);
         return {
-            creditTransactions: credits,
-            debitTransactions: debits,
             totalCredit: creditTotal,
             totalDebit: debitTotal,
             balance: creditTotal - debitTotal,
         };
     }, [transactions]);
+
+    // Debit filtering and pagination
+    const filteredDebits = useMemo(() => {
+        const debits = transactions.filter(t => t.type === 'debit');
+        if (!debitSearchTerm) return debits;
+        return debits.filter(t => t.description?.toLowerCase().includes(debitSearchTerm.toLowerCase()));
+    }, [transactions, debitSearchTerm]);
+
+    const paginatedDebits = useMemo(() => {
+        const startIndex = (debitCurrentPage - 1) * ITEMS_PER_PAGE;
+        return filteredDebits.slice(startIndex, startIndex + ITEMS_PER_PAGE);
+    }, [filteredDebits, debitCurrentPage]);
+    
+    const totalDebitPages = Math.ceil(filteredDebits.length / ITEMS_PER_PAGE);
+
+    // Credit filtering and pagination
+    const filteredCredits = useMemo(() => {
+        const credits = transactions.filter(t => t.type === 'credit');
+        if (!creditSearchTerm) return credits;
+        return credits.filter(t => t.description?.toLowerCase().includes(creditSearchTerm.toLowerCase()));
+    }, [transactions, creditSearchTerm]);
+
+    const paginatedCredits = useMemo(() => {
+        const startIndex = (creditCurrentPage - 1) * ITEMS_PER_PAGE;
+        return filteredCredits.slice(startIndex, startIndex + ITEMS_PER_PAGE);
+    }, [filteredCredits, creditCurrentPage]);
+
+    const totalCreditPages = Math.ceil(filteredCredits.length / ITEMS_PER_PAGE);
     
     const partyTypeName = partyType.charAt(0).toUpperCase() + partyType.slice(1);
 
@@ -162,41 +193,18 @@ export default function PartyTransactionPage() {
                             <CardDescription>A list of all payments made to this company.</CardDescription>
                         </CardHeader>
                         <CardContent>
-                        <div className="rounded-md border h-96 overflow-auto">
-                            <Table>
-                                <TableHeader className="sticky top-0 bg-background">
-                                    <TableRow>
-                                        <TableHead>Date</TableHead>
-                                        <TableHead>Description</TableHead>
-                                        <TableHead className="text-right">Amount (INR)</TableHead>
-                                    </TableRow>
-                                </TableHeader>
-                                <TableBody>
-                                    {debitTransactions.length > 0 ? debitTransactions.map(t => (
-                                        <TableRow key={t.id}>
-                                            <TableCell>{format(t.date, "dd/MM/yyyy")}</TableCell>
-                                            <TableCell>{t.description || 'N/A'}</TableCell>
-                                            <TableCell className="text-right font-mono text-destructive">
-                                                ₹{t.amount.toFixed(2)}
-                                            </TableCell>
-                                        </TableRow>
-                                    )) : (
-                                        <TableRow>
-                                            <TableCell colSpan={3} className="text-center text-muted-foreground">No debit transactions found.</TableCell>
-                                        </TableRow>
-                                    )}
-                                </TableBody>
-                            </Table>
-                        </div>
-                        </CardContent>
-                    </Card>
-
-                    <Card>
-                        <CardHeader>
-                            <CardTitle className="flex items-center gap-2"><ArrowUpCircle className="text-green-600"/> Credits (Receipts/Returns)</CardTitle>
-                            <CardDescription>A list of all payments or credits received from this company.</CardDescription>
-                        </CardHeader>
-                        <CardContent>
+                            <div className="mb-4">
+                                <div className="relative">
+                                    <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                                    <Input
+                                        type="search"
+                                        placeholder="Search by description..."
+                                        value={debitSearchTerm}
+                                        onChange={(e) => setDebitSearchTerm(e.target.value)}
+                                        className="pl-8 w-full"
+                                    />
+                                </div>
+                            </div>
                             <div className="rounded-md border h-96 overflow-auto">
                                 <Table>
                                     <TableHeader className="sticky top-0 bg-background">
@@ -207,7 +215,79 @@ export default function PartyTransactionPage() {
                                         </TableRow>
                                     </TableHeader>
                                     <TableBody>
-                                        {creditTransactions.length > 0 ? creditTransactions.map(t => (
+                                        {paginatedDebits.length > 0 ? paginatedDebits.map(t => (
+                                            <TableRow key={t.id}>
+                                                <TableCell>{format(t.date, "dd/MM/yyyy")}</TableCell>
+                                                <TableCell>{t.description || 'N/A'}</TableCell>
+                                                <TableCell className="text-right font-mono text-destructive">
+                                                    ₹{t.amount.toFixed(2)}
+                                                </TableCell>
+                                            </TableRow>
+                                        )) : (
+                                            <TableRow>
+                                                <TableCell colSpan={3} className="text-center text-muted-foreground">No debit transactions found.</TableCell>
+                                            </TableRow>
+                                        )}
+                                    </TableBody>
+                                </Table>
+                            </div>
+                            {totalDebitPages > 1 && (
+                                <div className="flex items-center justify-between mt-4">
+                                    <Button
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={() => setDebitCurrentPage((p) => Math.max(1, p - 1))}
+                                        disabled={debitCurrentPage === 1}
+                                    >
+                                        <ChevronLeft className="h-4 w-4 mr-1" />
+                                        Previous
+                                    </Button>
+                                    <span className="text-sm text-muted-foreground">
+                                        Page {debitCurrentPage} of {totalDebitPages}
+                                    </span>
+                                    <Button
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={() => setDebitCurrentPage((p) => Math.min(totalDebitPages, p + 1))}
+                                        disabled={debitCurrentPage === totalDebitPages}
+                                    >
+                                        Next
+                                        <ChevronRight className="h-4 w-4 ml-1" />
+                                    </Button>
+                                </div>
+                            )}
+                        </CardContent>
+                    </Card>
+
+                    <Card>
+                        <CardHeader>
+                            <CardTitle className="flex items-center gap-2"><ArrowUpCircle className="text-green-600"/> Credits (Receipts/Returns)</CardTitle>
+                            <CardDescription>A list of all payments or credits received from this company.</CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                            <div className="mb-4">
+                                <div className="relative">
+                                    <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                                    <Input
+                                        type="search"
+                                        placeholder="Search by description..."
+                                        value={creditSearchTerm}
+                                        onChange={(e) => setCreditSearchTerm(e.target.value)}
+                                        className="pl-8 w-full"
+                                    />
+                                </div>
+                            </div>
+                            <div className="rounded-md border h-96 overflow-auto">
+                                <Table>
+                                    <TableHeader className="sticky top-0 bg-background">
+                                        <TableRow>
+                                            <TableHead>Date</TableHead>
+                                            <TableHead>Description</TableHead>
+                                            <TableHead className="text-right">Amount (INR)</TableHead>
+                                        </TableRow>
+                                    </TableHeader>
+                                    <TableBody>
+                                        {paginatedCredits.length > 0 ? paginatedCredits.map(t => (
                                             <TableRow key={t.id}>
                                                 <TableCell>{format(t.date, "dd/MM/yyyy")}</TableCell>
                                                 <TableCell>{t.description || 'N/A'}</TableCell>
@@ -223,6 +303,31 @@ export default function PartyTransactionPage() {
                                     </TableBody>
                                 </Table>
                             </div>
+                             {totalCreditPages > 1 && (
+                                <div className="flex items-center justify-between mt-4">
+                                    <Button
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={() => setCreditCurrentPage((p) => Math.max(1, p - 1))}
+                                        disabled={creditCurrentPage === 1}
+                                    >
+                                        <ChevronLeft className="h-4 w-4 mr-1" />
+                                        Previous
+                                    </Button>
+                                    <span className="text-sm text-muted-foreground">
+                                        Page {creditCurrentPage} of {totalCreditPages}
+                                    </span>
+                                    <Button
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={() => setCreditCurrentPage((p) => Math.min(totalCreditPages, p + 1))}
+                                        disabled={creditCurrentPage === totalCreditPages}
+                                    >
+                                        Next
+                                        <ChevronRight className="h-4 w-4 ml-1" />
+                                    </Button>
+                                </div>
+                            )}
                         </CardContent>
                     </Card>
                 </div>
