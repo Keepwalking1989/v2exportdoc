@@ -325,7 +325,7 @@ export function generatePackingListPdf(
             { content: `Declaration:\nWe declare that this Invoice shows the actual price of the goods described and that all particulars are true and correct.`, styles: {...classTwoStyles, ...classThreeStyles, halign: 'left', minCellHeight: 50, valign: 'top'} },
             { content: `Signature & Date:\n${format(new Date(), 'dd/MM/yyyy')}\n\nFOR, ${exporter.companyName}\n\n\nAUTHORISED SIGNATURE`, styles: {...classTwoStyles, halign: 'center', minCellHeight: 50} }
         ]],
-        columnStyles: { 0: { cellWidth: '40%' }, 1: { cellWidth: '60%' } },
+        columnStyles: { 0: { cellWidth: '50%' }, 1: { cellWidth: '50%' } },
         margin: { left: pageMargin, right: pageMargin },
         didDrawPage: data => { yPos = data.cursor?.y ?? yPos; }
     });
