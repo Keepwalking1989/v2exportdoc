@@ -328,8 +328,8 @@ export function generatePackingListPdf(
             { content: `Signature & Date:\n${format(new Date(), 'dd/MM/yyyy')}\n\nFOR, ${exporter.companyName}\n\n\nAUTHORISED SIGNATURE`, styles: {...classTwoStyles, halign: 'center', minCellHeight: 50} }
         ]],
         columnStyles: { 
-            0: { cellWidth: '40%' }, 
-            1: { cellWidth: '60%' } 
+            0: { cellWidth: 220 }, 
+            1: { cellWidth: 'auto' } 
         },
         margin: { left: pageMargin, right: pageMargin },
         didDrawPage: data => { yPos = data.cursor?.y ?? yPos; }
