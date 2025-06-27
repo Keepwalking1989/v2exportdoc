@@ -1,3 +1,4 @@
+
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -225,16 +226,6 @@ export function ManuBillForm({
                 </FormItem>
             </div>
             
-             <Card>
-              <CardHeader><CardTitle>E-Way Bill & IRN Details</CardTitle></CardHeader>
-              <CardContent className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                 <FormField control={form.control} name="ewayBillNumber" render={({ field }) => (<FormItem><FormLabel>E-Way Bill No.</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)} />
-                 <FormField control={form.control} name="ackNo" render={({ field }) => (<FormItem><FormLabel>Ack No.</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)} />
-                 <FormField control={form.control} name="ackDate" render={({ field }) => (<FormItem className="flex flex-col"><FormLabel>Ack Date</FormLabel><Popover><PopoverTrigger asChild><FormControl><Button variant="outline" className={cn("w-full justify-start", !field.value && "text-muted-foreground")}>{field.value ? format(field.value, "PPP") : <span>Pick date</span>}<CalendarIcon className="ml-auto h-4 w-4"/></Button></FormControl></PopoverTrigger><PopoverContent><Calendar mode="single" selected={field.value} onSelect={field.onChange}/></PopoverContent></Popover><FormMessage /></FormItem>)} />
-                 <FormField control={form.control} name="irnNo" render={({ field }) => (<FormItem><FormLabel>IRN No.</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)} />
-              </CardContent>
-            </Card>
-
              <Card>
               <CardHeader><CardTitle>Invoice & Transport Details</CardTitle></CardHeader>
               <CardContent className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
