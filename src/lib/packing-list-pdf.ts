@@ -328,7 +328,7 @@ export function generatePackingListPdf(
             { content: `Signature & Date:\n${format(new Date(), 'dd/MM/yyyy')}\n\nFOR, ${exporter.companyName}\n\n\nAUTHORISED SIGNATURE`, styles: {...classTwoStyles, halign: 'center', minCellHeight: 50} }
         ]],
         columnStyles: { 
-            0: { cellWidth: 220 }, 
+            0: { cellWidth: 250 }, 
             1: { cellWidth: 'auto' } 
         },
         margin: { left: pageMargin, right: pageMargin },
