@@ -68,6 +68,26 @@ interface ManuBillFormProps {
   allManufacturers: Manufacturer[];
 }
 
+const defaultFormValues: ManuBillFormValues = {
+    exportDocumentId: "",
+    manufacturerId: "",
+    invoiceNumber: "",
+    invoiceDate: new Date(),
+    ackNo: "",
+    ackDate: undefined,
+    items: [{ description: "", quantity: 0, unit: "SQM", rate: 0, discountPercentage: 0 }],
+    remarks: "",
+    centralTaxRate: 9,
+    stateTaxRate: 9,
+    discountAmount: 0,
+    insuranceAmount: 0,
+    freightAmount: 0,
+    roundOff: 0,
+    billDocumentUri: "",
+    ewayBillDocumentUri: "",
+};
+
+
 export function ManuBillForm({
   initialData,
   isEditing,
@@ -78,13 +98,7 @@ export function ManuBillForm({
 }: ManuBillFormProps) {
   const form = useForm<ManuBillFormValues>({
     resolver: zodResolver(formSchema),
-    defaultValues: {
-      items: [{ description: "", quantity: 0, unit: "SQM", rate: 0, discountPercentage: 0 }],
-      invoiceDate: new Date(),
-      ackDate: new Date(),
-      centralTaxRate: 9,
-      stateTaxRate: 9,
-    },
+    defaultValues: defaultFormValues,
   });
 
   const { fields, append, remove } = useFieldArray({
@@ -106,12 +120,13 @@ export function ManuBillForm({
   useEffect(() => {
     if (isEditing && initialData) {
       form.reset({
+        ...defaultFormValues,
         ...initialData,
         invoiceDate: new Date(initialData.invoiceDate),
         ackDate: initialData.ackDate ? new Date(initialData.ackDate) : undefined,
       });
     } else {
-      form.reset();
+      form.reset(defaultFormValues);
     }
   }, [isEditing, initialData, form]);
 
