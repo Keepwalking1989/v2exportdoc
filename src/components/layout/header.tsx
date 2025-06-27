@@ -84,7 +84,9 @@ export function Header() {
           <Receipt className="mr-2 h-4 w-4" /> PURCHASE
         </MenubarTrigger>
         <MenubarContent>
-          <MenubarItem>Manu Bill</MenubarItem>
+           <Link href="/manu-bill" passHref>
+            <MenubarItem>Manu Bill</MenubarItem>
+          </Link>
           <MenubarItem>Trans Bill</MenubarItem>
           <MenubarItem>Pallet Bill</MenubarItem>
         </MenubarContent>
@@ -122,7 +124,7 @@ export function Header() {
         <Receipt className="mr-2 h-5 w-5" /> PURCHASE
       </Button>
       <div className="pl-6">
-        <Button variant="ghost" className="justify-start font-normal w-full" onClick={() => setIsMobileMenuOpen(false)}>Manu Bill</Button>
+        <Button variant="ghost" className="justify-start font-normal w-full" asChild onClick={() => setIsMobileMenuOpen(false)}><Link href="/manu-bill">Manu Bill</Link></Button>
         <Button variant="ghost" className="justify-start font-normal w-full" onClick={() => setIsMobileMenuOpen(false)}>Trans Bill</Button>
         <Button variant="ghost" className="justify-start font-normal w-full" onClick={() => setIsMobileMenuOpen(false)}>Pallet Bill</Button>
       </div>
