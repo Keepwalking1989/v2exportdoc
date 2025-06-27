@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect, useRef } from "react";
@@ -7,14 +8,12 @@ import { ManuBillList } from "@/components/manu-bill-list";
 import type { ManuBill } from "@/types/manu-bill";
 import type { ExportDocument } from "@/types/export-document";
 import type { Manufacturer } from "@/types/manufacturer";
-import type { Transporter } from "@/types/transporter";
 import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 
 const LOCAL_STORAGE_MANU_BILLS_KEY = "bizform_manu_bills";
 const LOCAL_STORAGE_EXPORT_DOCS_KEY_V2 = "bizform_export_documents_v2";
 const LOCAL_STORAGE_MANUFACTURERS_KEY = "bizform_manufacturers";
-const LOCAL_STORAGE_TRANSPORTERS_KEY = "bizform_transporters";
 
 export default function ManuBillPage() {
   const { toast } = useToast();
@@ -27,7 +26,6 @@ export default function ManuBillPage() {
   // Data for dependencies
   const [allExportDocuments, setAllExportDocuments] = useState<ExportDocument[]>([]);
   const [allManufacturers, setAllManufacturers] = useState<Manufacturer[]>([]);
-  const [allTransporters, setAllTransporters] = useState<Transporter[]>([]);
 
   useEffect(() => {
     setIsClient(true);
@@ -38,20 +36,17 @@ export default function ManuBillPage() {
         setManuBills(parsedBills.filter((b: ManuBill) => !b.isDeleted).map((b: any) => ({
           ...b,
           invoiceDate: new Date(b.invoiceDate),
-          ackDate: new Date(b.ackDate),
-          lrDate: new Date(b.lrDate),
+          ackDate: b.ackDate ? new Date(b.ackDate) : undefined,
         })));
         
         setAllExportDocuments(JSON.parse(localStorage.getItem(LOCAL_STORAGE_EXPORT_DOCS_KEY_V2) || "[]"));
         setAllManufacturers(JSON.parse(localStorage.getItem(LOCAL_STORAGE_MANUFACTURERS_KEY) || "[]"));
-        setAllTransporters(JSON.parse(localStorage.getItem(LOCAL_STORAGE_TRANSPORTERS_KEY) || "[]"));
 
       } catch (error) {
         console.error("Failed to parse data from localStorage", error);
         setManuBills([]);
         setAllExportDocuments([]);
         setAllManufacturers([]);
-        setAllTransporters([]);
       }
     }
   }, []);
@@ -70,13 +65,13 @@ export default function ManuBillPage() {
         b.id === billToEdit.id ? { ...billToSave } : b
       );
       localStorage.setItem(LOCAL_STORAGE_MANU_BILLS_KEY, JSON.stringify(updatedBills));
-      setManuBills(updatedBills.filter(b => !b.isDeleted).map((b: any) => ({...b, invoiceDate: new Date(b.invoiceDate), ackDate: new Date(b.ackDate), lrDate: new Date(b.lrDate)})));
+      setManuBills(updatedBills.filter(b => !b.isDeleted).map((b: any) => ({...b, invoiceDate: new Date(b.invoiceDate), ackDate: b.ackDate ? new Date(b.ackDate) : undefined})));
       toast({ title: "Bill Updated", description: `Invoice ${values.invoiceNumber} has been updated.` });
       setBillToEdit(null);
     } else {
       const updatedBills = [...allBills, billToSave];
       localStorage.setItem(LOCAL_STORAGE_MANU_BILLS_KEY, JSON.stringify(updatedBills));
-      setManuBills(updatedBills.filter(b => !b.isDeleted).map((b: any) => ({...b, invoiceDate: new Date(b.invoiceDate), ackDate: new Date(b.ackDate), lrDate: new Date(b.lrDate)})));
+      setManuBills(updatedBills.filter(b => !b.isDeleted).map((b: any) => ({...b, invoiceDate: new Date(b.invoiceDate), ackDate: b.ackDate ? new Date(b.ackDate) : undefined})));
       toast({ title: "Bill Saved", description: `Invoice ${values.invoiceNumber} has been saved.` });
     }
   };
@@ -103,7 +98,7 @@ export default function ManuBillPage() {
     );
     
     localStorage.setItem(LOCAL_STORAGE_MANU_BILLS_KEY, JSON.stringify(updatedBills));
-    setManuBills(updatedBills.filter(b => !b.isDeleted).map((b: any) => ({...b, invoiceDate: new Date(b.invoiceDate), ackDate: new Date(b.ackDate), lrDate: new Date(b.lrDate)})));
+    setManuBills(updatedBills.filter(b => !b.isDeleted).map((b: any) => ({...b, invoiceDate: new Date(b.invoiceDate), ackDate: b.ackDate ? new Date(b.ackDate) : undefined})));
     toast({ title: "Bill Deleted", description: "The manufacturer bill has been marked as deleted." });
   };
 
@@ -118,7 +113,7 @@ export default function ManuBillPage() {
     );
   }
 
-  const canCreate = allExportDocuments.length > 0 && allManufacturers.length > 0 && allTransporters.length > 0;
+  const canCreate = allExportDocuments.length > 0 && allManufacturers.length > 0;
 
   return (
     <div className="flex flex-col min-h-screen bg-background">
@@ -134,7 +129,6 @@ export default function ManuBillPage() {
               onCancelEdit={handleCancelEdit}
               allExportDocuments={allExportDocuments}
               allManufacturers={allManufacturers}
-              allTransporters={allTransporters}
             />
           ) : (
             <Card className="w-full max-w-2xl mx-auto shadow-xl mb-8">
@@ -148,7 +142,6 @@ export default function ManuBillPage() {
                 <ul className="list-disc list-inside mt-2 text-muted-foreground">
                   {allExportDocuments.length === 0 && <li>Export Document (on the Export Document page)</li>}
                   {allManufacturers.length === 0 && <li>Manufacturer (on the Manufacturer page)</li>}
-                  {allTransporters.length === 0 && <li>Transporter (on the Transporter page)</li>}
                 </ul>
               </CardContent>
             </Card>

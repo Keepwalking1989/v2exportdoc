@@ -18,6 +18,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Combobox, type ComboboxOption } from "@/components/ui/combobox";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
@@ -27,13 +28,10 @@ import React, { useEffect, useMemo, useCallback } from "react";
 import type { ManuBill, ManuBillItem } from "@/types/manu-bill";
 import type { ExportDocument } from "@/types/export-document";
 import type { Manufacturer } from "@/types/manufacturer";
-import type { Transporter } from "@/types/transporter";
 
 const manuBillItemSchema = z.object({
   id: z.string().optional(),
   description: z.string().min(1, "Description is required"),
-  grade: z.string().optional(),
-  hsnCode: z.string().optional(),
   quantity: z.coerce.number().positive(),
   unit: z.string().min(1, "Unit is required"),
   rate: z.coerce.number().positive(),
@@ -42,16 +40,11 @@ const manuBillItemSchema = z.object({
 
 const formSchema = z.object({
   exportDocumentId: z.string().min(1, "Please link an Export Document"),
-  manufacturerId: z.string(), // Auto-filled from export doc
-  transporterId: z.string(), // Auto-filled from export doc
+  manufacturerId: z.string().min(1, "Manufacturer is required"),
   invoiceNumber: z.string().min(1, "Invoice number is required"),
   invoiceDate: z.date(),
-  ewayBillNumber: z.string().optional(),
   ackNo: z.string().optional(),
   ackDate: z.date().optional(),
-  irnNo: z.string().optional(),
-  lrDate: z.date().optional(),
-  vehicleNo: z.string().optional(),
   items: z.array(manuBillItemSchema).min(1, "At least one item is required"),
   remarks: z.string().optional(),
   centralTaxRate: z.coerce.number().min(0).default(9),
@@ -73,7 +66,6 @@ interface ManuBillFormProps {
   onCancelEdit: () => void;
   allExportDocuments: ExportDocument[];
   allManufacturers: Manufacturer[];
-  allTransporters: Transporter[];
 }
 
 export function ManuBillForm({
@@ -83,15 +75,13 @@ export function ManuBillForm({
   onCancelEdit,
   allExportDocuments,
   allManufacturers,
-  allTransporters,
 }: ManuBillFormProps) {
   const form = useForm<ManuBillFormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      items: [{ description: "", grade: "PRE", hsnCode: "69072100", quantity: 0, unit: "SQM", rate: 0, discountPercentage: 0 }],
+      items: [{ description: "", quantity: 0, unit: "SQM", rate: 0, discountPercentage: 0 }],
       invoiceDate: new Date(),
       ackDate: new Date(),
-      lrDate: new Date(),
       centralTaxRate: 9,
       stateTaxRate: 9,
     },
@@ -107,12 +97,8 @@ export function ManuBillForm({
   useEffect(() => {
     if (selectedExportDocId) {
       const doc = allExportDocuments.find(d => d.id === selectedExportDocId);
-      if (doc) {
-        form.setValue('manufacturerId', doc.manufacturerId || '');
-        form.setValue('transporterId', doc.transporterId || '');
-        if (doc.containerItems?.[0]?.truckNumber) {
-            form.setValue('vehicleNo', doc.containerItems[0].truckNumber);
-        }
+      if (doc && doc.manufacturerId) {
+        form.setValue('manufacturerId', doc.manufacturerId);
       }
     }
   }, [selectedExportDocId, allExportDocuments, form]);
@@ -123,7 +109,6 @@ export function ManuBillForm({
         ...initialData,
         invoiceDate: new Date(initialData.invoiceDate),
         ackDate: initialData.ackDate ? new Date(initialData.ackDate) : undefined,
-        lrDate: initialData.lrDate ? new Date(initialData.lrDate) : undefined,
       });
     } else {
       form.reset();
@@ -188,8 +173,10 @@ export function ManuBillForm({
     label: `ED-${doc.id.slice(-6)} (${doc.exportInvoiceNumber})`
   }));
   
-  const selectedManufacturer = allManufacturers.find(m => m.id === form.getValues('manufacturerId'));
-  const selectedTransporter = allTransporters.find(t => t.id === form.getValues('transporterId'));
+  const manufacturerOptions: ComboboxOption[] = allManufacturers.map(m => ({
+    value: m.id,
+    label: m.companyName,
+  }));
 
   return (
     <Card className="w-full max-w-4xl mx-auto shadow-xl mb-8">
@@ -203,50 +190,76 @@ export function ManuBillForm({
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
           <CardContent className="space-y-6">
-            <FormField
-              control={form.control}
-              name="exportDocumentId"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="flex items-center gap-2"><LinkIcon className="h-4 w-4 text-muted-foreground" />Link to Export Document *</FormLabel>
-                  <Combobox options={exportDocOptions} {...field} placeholder="Select an Export Document..."/>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <FormItem>
-                  <FormLabel className="flex items-center gap-2"><Factory className="h-4 w-4 text-muted-foreground" />Manufacturer</FormLabel>
-                  <FormControl><Input readOnly value={selectedManufacturer?.companyName || 'Select an Export Doc'} className="bg-muted/50"/></FormControl>
-                </FormItem>
-                <FormItem>
-                  <FormLabel className="flex items-center gap-2"><Truck className="h-4 w-4 text-muted-foreground" />Transporter</FormLabel>
-                  <FormControl><Input readOnly value={selectedTransporter?.companyName || 'Select an Export Doc'} className="bg-muted/50"/></FormControl>
-                </FormItem>
+              <FormField
+                control={form.control}
+                name="exportDocumentId"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="flex items-center gap-2"><LinkIcon className="h-4 w-4 text-muted-foreground" />Link to Export Document *</FormLabel>
+                    <Combobox options={exportDocOptions} {...field} placeholder="Select an Export Document..."/>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+               <FormField
+                  control={form.control}
+                  name="manufacturerId"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="flex items-center gap-2"><Factory className="h-4 w-4 text-muted-foreground" />Manufacturer *</FormLabel>
+                      <Combobox
+                        options={manufacturerOptions}
+                        {...field}
+                        onChange={field.onChange}
+                        placeholder="Select a Manufacturer..."
+                      />
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
             </div>
             
-             <Card>
-              <CardHeader><CardTitle>Invoice & Transport Details</CardTitle></CardHeader>
-              <CardContent className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <Card>
+              <CardHeader><CardTitle>Invoice Details</CardTitle></CardHeader>
+              <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
                  <FormField control={form.control} name="invoiceNumber" render={({ field }) => (<FormItem><FormLabel>Invoice No.</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)} />
                  <FormField control={form.control} name="invoiceDate" render={({ field }) => (<FormItem className="flex flex-col"><FormLabel>Invoice Date</FormLabel><Popover><PopoverTrigger asChild><FormControl><Button variant="outline" className={cn("w-full justify-start", !field.value && "text-muted-foreground")}>{field.value ? format(field.value, "PPP") : <span>Pick date</span>}<CalendarIcon className="ml-auto h-4 w-4"/></Button></FormControl></PopoverTrigger><PopoverContent><Calendar mode="single" selected={field.value} onSelect={field.onChange}/></PopoverContent></Popover><FormMessage /></FormItem>)} />
-                 <FormField control={form.control} name="lrDate" render={({ field }) => (<FormItem className="flex flex-col"><FormLabel>L.R. Date</FormLabel><Popover><PopoverTrigger asChild><FormControl><Button variant="outline" className={cn("w-full justify-start", !field.value && "text-muted-foreground")}>{field.value ? format(field.value, "PPP") : <span>Pick date</span>}<CalendarIcon className="ml-auto h-4 w-4"/></Button></FormControl></PopoverTrigger><PopoverContent><Calendar mode="single" selected={field.value} onSelect={field.onChange}/></PopoverContent></Popover><FormMessage /></FormItem>)} />
-                 <FormField control={form.control} name="vehicleNo" render={({ field }) => (<FormItem><FormLabel>Vehicle No.</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)} />
               </CardContent>
             </Card>
 
             <Card>
-              <CardHeader><CardTitle className="flex justify-between">Items<Button type="button" size="sm" onClick={() => append({ description: "", grade: "PRE", hsnCode: "69072100", quantity: 0, unit: "SQM", rate: 0, discountPercentage: 0 })}><PlusCircle className="mr-2 h-4 w-4"/>Add Item</Button></CardTitle></CardHeader>
+              <CardHeader><CardTitle className="flex justify-between">Items<Button type="button" size="sm" onClick={() => append({ description: "", quantity: 0, unit: "SQM", rate: 0, discountPercentage: 0 })}><PlusCircle className="mr-2 h-4 w-4"/>Add Item</Button></CardTitle></CardHeader>
               <CardContent className="space-y-4">
                 {fields.map((field, index) => (
                   <div key={field.id} className="p-4 border rounded-md space-y-2 relative">
                      <Button type="button" variant="destructive" size="icon" className="absolute top-1 right-1 h-6 w-6" onClick={() => remove(index)}><Trash2 className="h-3 w-3" /></Button>
                      <FormField control={form.control} name={`items.${index}.description`} render={({ field }) => (<FormItem><FormLabel>Description</FormLabel><FormControl><Input {...field} /></FormControl></FormItem>)} />
-                     <div className="grid grid-cols-2 md:grid-cols-5 gap-2">
-                        <FormField control={form.control} name={`items.${index}.grade`} render={({ field }) => (<FormItem><FormLabel>Grade</FormLabel><FormControl><Input {...field} /></FormControl></FormItem>)} />
-                        <FormField control={form.control} name={`items.${index}.hsnCode`} render={({ field }) => (<FormItem><FormLabel>HSN</FormLabel><FormControl><Input {...field} /></FormControl></FormItem>)} />
+                     <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
                         <FormField control={form.control} name={`items.${index}.quantity`} render={({ field }) => (<FormItem><FormLabel>Qty</FormLabel><FormControl><Input type="number" {...field} /></FormControl></FormItem>)} />
-                        <FormField control={form.control} name={`items.${index}.unit`} render={({ field }) => (<FormItem><FormLabel>Unit</FormLabel><FormControl><Input {...field} /></FormControl></FormItem>)} />
+                        <FormField
+                          control={form.control}
+                          name={`items.${index}.unit`}
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Unit</FormLabel>
+                              <Select onValueChange={field.onChange} value={field.value} defaultValue="SQM">
+                                <FormControl>
+                                  <SelectTrigger>
+                                    <SelectValue placeholder="Select unit" />
+                                  </SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                  <SelectItem value="SQM">SQM</SelectItem>
+                                  <SelectItem value="PCS">PCS</SelectItem>
+                                  <SelectItem value="BOX">BOX</SelectItem>
+                                  <SelectItem value="KGS">KGS</SelectItem>
+                                </SelectContent>
+                              </Select>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
                         <FormField control={form.control} name={`items.${index}.rate`} render={({ field }) => (<FormItem><FormLabel>Rate</FormLabel><FormControl><Input type="number" {...field} /></FormControl></FormItem>)} />
                      </div>
                   </div>
