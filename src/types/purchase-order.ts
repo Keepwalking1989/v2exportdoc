@@ -19,5 +19,5 @@ export interface PurchaseOrder {
   numberOfContainers: number; // User input
   items: PurchaseOrderItem[]; // Array of product items for this PO
   termsAndConditions: string; // New field for terms and conditions
+  isDeleted?: boolean;
 }
-

@@ -33,4 +33,5 @@ export interface PerformaInvoice {
   // Calculated overall totals
   subTotal?: number;
   grandTotal?: number;
+  isDeleted?: boolean;
 }

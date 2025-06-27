@@ -80,7 +80,11 @@ export default function ExportDocumentPage() {
     if (typeof window !== "undefined") {
       try {
         const storedDocs = localStorage.getItem(LOCAL_STORAGE_EXPORT_DOCS_KEY_V2);
-        const currentDocs: ExportDocument[] = storedDocs ? JSON.parse(storedDocs).map((doc: any) => ({
+        const allDocs: ExportDocument[] = storedDocs ? JSON.parse(storedDocs) : [];
+
+        const activeDocs = allDocs.filter(doc => !doc.isDeleted);
+        
+        const currentDocs = activeDocs.map((doc: any) => ({
             ...doc,
             exportInvoiceDate: doc.exportInvoiceDate ? new Date(doc.exportInvoiceDate) : new Date(),
             manufacturerInvoiceDate: doc.manufacturerInvoiceDate ? new Date(doc.manufacturerInvoiceDate) : undefined,
@@ -91,7 +95,7 @@ export default function ExportDocumentPage() {
                 productItems: item.productItems || [],
                 sampleItems: item.sampleItems || [],
             })),
-        })) : [];
+        }));
         setExportDocuments(currentDocs);
         setNextExportInvoiceNumber(getNextExportInvoiceNumberInternal(currentDocs, getCurrentIndianFinancialYear()));
 
@@ -158,11 +162,14 @@ export default function ExportDocumentPage() {
   }, [searchParams, isLoading, isClient, exportDocuments, allPOs, router]);
 
   const handleSaveExportDocument = (formData: ExportDocumentFormValues) => {
-    let updatedDocs;
+    const allDocsRaw = localStorage.getItem(LOCAL_STORAGE_EXPORT_DOCS_KEY_V2);
+    const allDocs: ExportDocument[] = allDocsRaw ? JSON.parse(allDocsRaw) : [];
+    
     const finalDocData: ExportDocument = {
         ...formData,
         id: docToEdit ? docToEdit.id : Date.now().toString(),
         purchaseOrderId: docToEdit ? docToEdit.purchaseOrderId : sourcePoIdForNewDoc || undefined,
+        isDeleted: docToEdit ? docToEdit.isDeleted : false,
         containerItems: formData.containerItems?.map(item => ({
             ...item, 
             id: item.id || Math.random().toString(36).substring(2,9),
@@ -171,17 +178,19 @@ export default function ExportDocumentPage() {
         })) || [],
     };
 
+    let updatedDocs;
     if (docToEdit) {
-      updatedDocs = exportDocuments.map(doc =>
+      updatedDocs = allDocs.map(doc =>
         doc.id === finalDocData.id ? finalDocData : doc
       );
     } else {
-      updatedDocs = [...exportDocuments, finalDocData];
+      updatedDocs = [...allDocs, finalDocData];
     }
-    setExportDocuments(updatedDocs);
+    
     if (typeof window !== "undefined") {
       localStorage.setItem(LOCAL_STORAGE_EXPORT_DOCS_KEY_V2, JSON.stringify(updatedDocs));
     }
+    setExportDocuments(updatedDocs.filter(d => !d.isDeleted));
 
     if (!docToEdit) {
         setNextExportInvoiceNumber(getNextExportInvoiceNumberInternal(updatedDocs, getCurrentIndianFinancialYear()));
@@ -200,18 +209,23 @@ export default function ExportDocumentPage() {
   };
 
   const handleDeleteDocument = (docIdToDelete: string) => {
-    const deletedDocIdShort = docIdToDelete.slice(-6);
-    const updatedDocs = exportDocuments.filter(doc => doc.id !== docIdToDelete);
-    setExportDocuments(updatedDocs);
-    if (typeof window !== "undefined") {
-      localStorage.setItem(LOCAL_STORAGE_EXPORT_DOCS_KEY_V2, JSON.stringify(updatedDocs));
-    }
+    const allDocsRaw = localStorage.getItem(LOCAL_STORAGE_EXPORT_DOCS_KEY_V2);
+    const allDocs: ExportDocument[] = allDocsRaw ? JSON.parse(allDocsRaw) : [];
+
+    const updatedDocs = allDocs.map(doc => 
+      doc.id === docIdToDelete ? { ...doc, isDeleted: true } : doc
+    );
+    
+    localStorage.setItem(LOCAL_STORAGE_EXPORT_DOCS_KEY_V2, JSON.stringify(updatedDocs));
+    setExportDocuments(updatedDocs.filter(d => !d.isDeleted));
+    
     if (docToEdit && docToEdit.id === docIdToDelete) {
         setDocToEdit(null); 
         router.replace('/export-document', { scroll: false });
     }
-    setNextExportInvoiceNumber(getNextExportInvoiceNumberInternal(updatedDocs, getCurrentIndianFinancialYear()));
-    toast({ title: "Document Deleted", description: `Export Document ED-${deletedDocIdShort} has been deleted.` });
+    
+    const deletedDocIdShort = docIdToDelete.slice(-6);
+    toast({ title: "Document Deleted", description: `Export Document ED-${deletedDocIdShort} has been marked as deleted.` });
   };
 
   const handleCancelEdit = () => { 

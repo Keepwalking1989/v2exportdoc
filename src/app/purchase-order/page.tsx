@@ -77,11 +77,15 @@ export default function PurchaseOrderPage() {
     if (typeof window !== "undefined") {
       try {
         const storedPOs = localStorage.getItem(LOCAL_STORAGE_PO_KEY);
-        const currentPOs: PurchaseOrder[] = storedPOs ? JSON.parse(storedPOs).map((po: any) => ({
+        const allPOs: PurchaseOrder[] = storedPOs ? JSON.parse(storedPOs) : [];
+        const activePOs = allPOs.filter(po => !po.isDeleted);
+        
+        const currentPOs = activePOs.map((po: any) => ({
           ...po,
           poDate: new Date(po.poDate),
           // termsAndConditions will be spread if it exists, otherwise undefined
-        })) : [];
+        }));
+
         setPurchaseOrders(currentPOs);
         setNextPoNumber(getNextPoNumberInternal(currentPOs, getCurrentIndianFinancialYear()));
 
@@ -151,6 +155,9 @@ export default function PurchaseOrderPage() {
 
 
   const handleSavePurchaseOrder = (poData: PurchaseOrderFormValues) => { // Type is PurchaseOrderFormValues from the form
+    const allPOsRaw = localStorage.getItem(LOCAL_STORAGE_PO_KEY);
+    const allPOs: PurchaseOrder[] = allPOsRaw ? JSON.parse(allPOsRaw) : [];
+    
     let updatedPOs;
     const isEditingMode = !!poToEdit;
 
@@ -158,24 +165,26 @@ export default function PurchaseOrderPage() {
       ...poData, // This spread includes termsAndConditions from the form
       id: isEditingMode && poToEdit ? poToEdit.id : Date.now().toString(),
       poDate: new Date(poData.poDate), // Ensure poDate is a Date object
+      isDeleted: poToEdit ? poToEdit.isDeleted : false,
       sourcePiId: (isEditingMode && poToEdit ? poToEdit.sourcePiId : sourcePiForNewPo?.id) || "",
     };
 
     if (isEditingMode) {
-      updatedPOs = purchaseOrders.map(po =>
+      updatedPOs = allPOs.map(po =>
         po.id === poToEdit!.id ? poToSave : po 
       );
     } else {
-      updatedPOs = [...purchaseOrders, poToSave];
+      updatedPOs = [...allPOs, poToSave];
     }
-    setPurchaseOrders(updatedPOs);
+    
     localStorage.setItem(LOCAL_STORAGE_PO_KEY, JSON.stringify(updatedPOs));
+    setPurchaseOrders(updatedPOs.filter(po => !po.isDeleted));
     
     setPoToEdit(null);
     setSourcePiForNewPo(null);
     router.replace('/purchase-order', { scroll: false });
 
-    setNextPoNumber(getNextPoNumberInternal(updatedPOs, getCurrentIndianFinancialYear()));
+    setNextPoNumber(getNextPoNumberInternal(updatedPOs.filter(po => !po.isDeleted), getCurrentIndianFinancialYear()));
   };
 
   const handleEditPo = (poId: string) => {
@@ -183,10 +192,16 @@ export default function PurchaseOrderPage() {
   };
 
   const handleDeletePo = (poIdToDelete: string) => {
-    const updatedPOs = purchaseOrders.filter(po => po.id !== poIdToDelete);
-    setPurchaseOrders(updatedPOs);
+    const allPOsRaw = localStorage.getItem(LOCAL_STORAGE_PO_KEY);
+    const allPOs: PurchaseOrder[] = allPOsRaw ? JSON.parse(allPOsRaw) : [];
+
+    const updatedPOs = allPOs.map(po => 
+      po.id === poIdToDelete ? { ...po, isDeleted: true } : po
+    );
+    
     localStorage.setItem(LOCAL_STORAGE_PO_KEY, JSON.stringify(updatedPOs));
-    setNextPoNumber(getNextPoNumberInternal(updatedPOs, getCurrentIndianFinancialYear()));
+    setPurchaseOrders(updatedPOs.filter(po => !po.isDeleted));
+
     if (poToEdit && poToEdit.id === poIdToDelete) {
         setPoToEdit(null); 
         router.replace('/purchase-order', { scroll: false });
@@ -327,6 +342,3 @@ export default function PurchaseOrderPage() {
     </div>
   );
 }
-    
-
-    

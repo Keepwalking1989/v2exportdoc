@@ -68,5 +68,6 @@ export interface ExportDocument {
 
   // New field for BRC
   brcDocument?: string; // data URI
-}
 
+  isDeleted?: boolean;
+}

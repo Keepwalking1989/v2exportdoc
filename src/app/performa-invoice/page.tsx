@@ -62,9 +62,10 @@ export default function PerformaInvoicePage() {
     if (typeof window !== "undefined") {
       try {
         const storedInvoices = localStorage.getItem(LOCAL_STORAGE_PERFORMA_INVOICES_KEY);
-        const currentInvoices = storedInvoices ? JSON.parse(storedInvoices) : [];
+        const allInvoices: PerformaInvoice[] = storedInvoices ? JSON.parse(storedInvoices) : [];
+        const activeInvoices = allInvoices.filter(inv => !inv.isDeleted);
         
-        const parsedInvoices: PerformaInvoice[] = currentInvoices.map((inv: any) => {
+        const parsedInvoices: PerformaInvoice[] = activeInvoices.map((inv: any) => {
           const items: PerformaInvoiceItem[] = inv.items.map((item: any) => {
             const parsedItem: PerformaInvoiceItem = {
               id: item.id,
@@ -139,31 +140,42 @@ export default function PerformaInvoicePage() {
   }, [getNextInvoiceNumberInternal]);
 
   const handleSavePerformaInvoice = (invoiceData: PerformaInvoice) => {
+    const allInvoicesRaw = localStorage.getItem(LOCAL_STORAGE_PERFORMA_INVOICES_KEY);
+    const allInvoices: PerformaInvoice[] = allInvoicesRaw ? JSON.parse(allInvoicesRaw) : [];
+    
     let updatedInvoices;
     if (invoiceToEdit) {
-      updatedInvoices = performaInvoices.map(inv =>
+      updatedInvoices = allInvoices.map(inv =>
         inv.id === invoiceToEdit.id ? { ...invoiceData, id: invoiceToEdit.id } : inv
       );
       setInvoiceToEdit(null); 
     } else {
-      updatedInvoices = [...performaInvoices, invoiceData];
+      updatedInvoices = [...allInvoices, invoiceData];
     }
-    setPerformaInvoices(updatedInvoices);
+    
     if (typeof window !== "undefined") {
       localStorage.setItem(LOCAL_STORAGE_PERFORMA_INVOICES_KEY, JSON.stringify(updatedInvoices));
     }
+    setPerformaInvoices(updatedInvoices.filter(inv => !inv.isDeleted));
+
     if (!invoiceToEdit) {
-      setNextInvoiceNumber(getNextInvoiceNumberInternal(updatedInvoices));
+      setNextInvoiceNumber(getNextInvoiceNumberInternal(updatedInvoices.filter(inv => !inv.isDeleted)));
     }
   };
 
   const handleDeleteInvoice = (invoiceIdToDelete: string) => {
-    const updatedInvoices = performaInvoices.filter(inv => inv.id !== invoiceIdToDelete);
-    setPerformaInvoices(updatedInvoices);
+    const allInvoicesRaw = localStorage.getItem(LOCAL_STORAGE_PERFORMA_INVOICES_KEY);
+    const allInvoices: PerformaInvoice[] = allInvoicesRaw ? JSON.parse(allInvoicesRaw) : [];
+    
+    const updatedInvoices = allInvoices.map(inv => 
+      inv.id === invoiceIdToDelete ? { ...inv, isDeleted: true } : inv
+    );
+
     if (typeof window !== "undefined") {
       localStorage.setItem(LOCAL_STORAGE_PERFORMA_INVOICES_KEY, JSON.stringify(updatedInvoices));
     }
-    setNextInvoiceNumber(getNextInvoiceNumberInternal(updatedInvoices));
+    setPerformaInvoices(updatedInvoices.filter(inv => !inv.isDeleted));
+
     if (invoiceToEdit && invoiceToEdit.id === invoiceIdToDelete) {
         setInvoiceToEdit(null); 
     }
@@ -278,5 +290,3 @@ export default function PerformaInvoicePage() {
     </div>
   );
 }
-
-    
