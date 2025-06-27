@@ -324,11 +324,11 @@ export function generatePackingListPdf(
         startY: yPos,
         theme: 'grid',
         body: [[
-            { content: `Declaration:\n${declarationText}`, styles: {...classTwoStyles, ...classThreeStyles, halign: 'left', minCellHeight: 50, valign: 'top'} },
+            { content: `Declaration:\n${declarationText}`, styles: {...classTwoStyles, ...classThreeStyles, halign: 'left', valign: 'top'} },
             { content: `Signature & Date:\n${format(new Date(), 'dd/MM/yyyy')}\n\nFOR, ${exporter.companyName}\n\n\nAUTHORISED SIGNATURE`, styles: {...classTwoStyles, halign: 'center', minCellHeight: 50} }
         ]],
         columnStyles: { 
-            0: { cellWidth: 300 },
+            0: { cellWidth: 350 },
             1: { cellWidth: 'auto' } 
         },
         margin: { left: pageMargin, right: pageMargin },
