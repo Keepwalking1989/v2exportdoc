@@ -309,7 +309,7 @@ export function generatePackingListPdf(
         startY: yPos,
         theme: 'grid',
         body: [[
-            { content: `Export Under Duty Drawback Scheme, We shall claim the benefit as admissible under "MEIS" Scheme , RoDTEP , DBK\nLUT Application Reference Number (ARN) AD240324138081L`, styles: {...classTwoStyles, ...classThreeStyles, halign: 'left'} },
+            { content: `Export Under Duty Drawback Scheme, We shall claim the benefit as admissible under "MEIS" Scheme , RoDTEP , DBK ,LUT Application Reference Number (ARN) AD240324138081L`, styles: {...classTwoStyles, ...classThreeStyles, halign: 'left'} },
             { content: 'Certified That Goods Are Of Indian Origin', styles: {...classTwoStyles, ...classThreeStyles, halign: 'center'} }
         ]],
         margin: { left: pageMargin, right: pageMargin },
@@ -322,10 +322,10 @@ export function generatePackingListPdf(
         startY: yPos,
         theme: 'grid',
         body: [[
-            { content: `Declaration:\nWe declare that this Invoice shows the actual price of the goods described and that all particulars are true and correct.`, styles: {...classTwoStyles, ...classThreeStyles, halign: 'left', minCellHeight: 50} },
+            { content: `Declaration:\nWe declare that this Invoice shows the actual price of the goods described and that all particulars are true and correct.`, styles: {...classTwoStyles, ...classThreeStyles, halign: 'left', minCellHeight: 50, valign: 'top'} },
             { content: `Signature & Date:\n${format(new Date(), 'dd/MM/yyyy')}\n\nFOR, ${exporter.companyName}\n\n\nAUTHORISED SIGNATURE`, styles: {...classTwoStyles, halign: 'center', minCellHeight: 50} }
         ]],
-        columnStyles: { 0: { cellWidth: '50%' }, 1: { cellWidth: '50%' } },
+        columnStyles: { 0: { cellWidth: '40%' }, 1: { cellWidth: '60%' } },
         margin: { left: pageMargin, right: pageMargin },
         didDrawPage: data => { yPos = data.cursor?.y ?? yPos; }
     });
