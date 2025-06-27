@@ -64,8 +64,7 @@ export default function ProductPage() {
     } else {
       const newProduct: Product = { 
         id: `${Date.now()}-${values.designName.replace(/\s+/g, '-')}`, 
-        sizeId: values.sizeId,
-        designName: values.designName
+        ...values
       };
       const updatedProducts = [...allProducts, newProduct];
       localStorage.setItem(LOCAL_STORAGE_PRODUCTS_KEY, JSON.stringify(updatedProducts));

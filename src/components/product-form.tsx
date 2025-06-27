@@ -19,11 +19,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import type { Product } from "@/types/product";
 import type { Size } from "@/types/size";
 import { PackagePlus, Ruler, Box, Weight, DollarSign, Barcode, Palette, Save, XCircle } from "lucide-react";
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 
 const formSchema = z.object({
   sizeId: z.string().min(1, { message: "Please select a size." }),
   designName: z.string().min(1, { message: "Design name is required." }),
+  salesPrice: z.coerce.number().min(0, { message: "Sales Price cannot be negative." }),
+  boxWeight: z.coerce.number().positive({ message: "Box Weight must be a positive number." }),
 });
 
 export type ProductFormValues = z.infer<typeof formSchema>;
@@ -31,6 +33,8 @@ export type ProductFormValues = z.infer<typeof formSchema>;
 const defaultValues = {
   sizeId: "",
   designName: "",
+  salesPrice: 0,
+  boxWeight: 0,
 };
 
 interface ProductFormProps {
@@ -48,16 +52,32 @@ export function ProductForm({ sizes, onSave, initialData, isEditing, onCancelEdi
   });
 
   const selectedSizeId = form.watch("sizeId");
+  const prevSizeIdRef = useRef(selectedSizeId);
   
   const selectedSizeDetails = selectedSizeId ? sizes.find(s => s.id === selectedSizeId) : null;
 
   useEffect(() => {
     if (isEditing && initialData) {
-      form.reset(initialData);
+      form.reset({
+        ...defaultValues,
+        ...initialData,
+      });
     } else {
       form.reset(defaultValues);
     }
   }, [isEditing, initialData, form]);
+
+  useEffect(() => {
+    if (prevSizeIdRef.current !== selectedSizeId || (!isEditing && selectedSizeId)) {
+        const selectedSize = sizes.find(s => s.id === selectedSizeId);
+        if (selectedSize) {
+            form.setValue("salesPrice", selectedSize.salesPrice);
+            form.setValue("boxWeight", selectedSize.boxWeight);
+        }
+    }
+    prevSizeIdRef.current = selectedSizeId;
+  }, [selectedSizeId, sizes, form, isEditing]);
+
 
   function onSubmit(values: ProductFormValues) {
     onSave(values);
@@ -118,19 +138,43 @@ export function ProductForm({ sizes, onSave, initialData, isEditing, onCancelEdi
                 </FormItem>
               )}
             />
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <FormField
+                control={form.control}
+                name="salesPrice"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="flex items-center gap-2"><DollarSign className="h-4 w-4 text-muted-foreground" />Sales Price</FormLabel>
+                    <FormControl>
+                      <Input type="text" inputMode="decimal" placeholder="e.g. 150.00" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="boxWeight"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="flex items-center gap-2"><Weight className="h-4 w-4 text-muted-foreground" />Box Weight (kg)</FormLabel>
+                    <FormControl>
+                      <Input type="text" inputMode="decimal" placeholder="e.g. 25.5" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+
 
             {selectedSizeDetails && (
               <div className="space-y-4 pt-4 border-t">
                  <FormItem>
-                    <FormLabel className="flex items-center gap-2"><Box className="h-4 w-4 text-muted-foreground" />SQM per Box</FormLabel>
+                    <FormLabel className="flex items-center gap-2"><Box className="h-4 w-4 text-muted-foreground" />SQM per Box (from Size)</FormLabel>
                     <FormControl>
                         <Input value={selectedSizeDetails.sqmPerBox} readOnly className="bg-muted/50" />
-                    </FormControl>
-                 </FormItem>
-                 <FormItem>
-                    <FormLabel className="flex items-center gap-2"><Weight className="h-4 w-4 text-muted-foreground" />Box Weight (kg)</FormLabel>
-                    <FormControl>
-                        <Input value={selectedSizeDetails.boxWeight} readOnly className="bg-muted/50" />
                     </FormControl>
                  </FormItem>
               </div>
