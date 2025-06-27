@@ -8,7 +8,6 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Button } from '@/components/ui/button';
 import { ArrowLeft, ArrowDownCircle, ArrowUpCircle } from 'lucide-react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 
@@ -69,15 +68,20 @@ export default function PartyTransactionPage() {
         }
     }, [partyType, partyId]);
 
-    const { totalCredit, totalDebit, balance } = useMemo(() => {
-        let credit = 0;
-        let debit = 0;
-        transactions.forEach(t => {
-            // Assuming all transactions for these parties are in INR as per previous logic.
-            if (t.type === 'credit') credit += t.amount;
-            if (t.type === 'debit') debit += t.amount;
-        });
-        return { totalCredit: credit, totalDebit: debit, balance: credit - debit };
+    const { creditTransactions, debitTransactions, totalCredit, totalDebit, balance } = useMemo(() => {
+        const credits = transactions.filter(t => t.type === 'credit');
+        const debits = transactions.filter(t => t.type === 'debit');
+
+        const creditTotal = credits.reduce((acc, t) => acc + t.amount, 0);
+        const debitTotal = debits.reduce((acc, t) => acc + t.amount, 0);
+
+        return {
+            creditTransactions: credits,
+            debitTransactions: debits,
+            totalCredit: creditTotal,
+            totalDebit: debitTotal,
+            balance: creditTotal - debitTotal,
+        };
     }, [transactions]);
     
     const partyTypeName = partyType.charAt(0).toUpperCase() + partyType.slice(1);
@@ -151,47 +155,77 @@ export default function PartyTransactionPage() {
                     </CardContent>
                 </Card>
 
-                <Card>
-                    <CardHeader>
-                        <CardTitle>Transactions</CardTitle>
-                        <CardDescription>A list of all financial transactions with this company.</CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                         <div className="rounded-md border">
+                <div className="grid gap-8 lg:grid-cols-2">
+                    <Card>
+                        <CardHeader>
+                            <CardTitle className="flex items-center gap-2"><ArrowDownCircle className="text-destructive"/> Debits (Payments Made)</CardTitle>
+                            <CardDescription>A list of all payments made to this company.</CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                        <div className="rounded-md border h-96 overflow-auto">
                             <Table>
-                                <TableHeader>
+                                <TableHeader className="sticky top-0 bg-background">
                                     <TableRow>
-                                        <TableHead>Type</TableHead>
                                         <TableHead>Date</TableHead>
                                         <TableHead>Description</TableHead>
                                         <TableHead className="text-right">Amount (INR)</TableHead>
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
-                                    {transactions.length > 0 ? transactions.map(t => (
-                                         <TableRow key={t.id}>
-                                            <TableCell>
-                                                <Badge variant={t.type === 'credit' ? 'default' : 'secondary'} className={cn(t.type === 'credit' ? 'bg-green-600 hover:bg-green-700' : 'bg-red-600 hover:bg-red-700')}>
-                                                    {t.type === 'credit' ? <ArrowUpCircle className="mr-1"/> : <ArrowDownCircle className="mr-1"/>}
-                                                    {t.type.charAt(0).toUpperCase() + t.type.slice(1)}
-                                                </Badge>
-                                            </TableCell>
+                                    {debitTransactions.length > 0 ? debitTransactions.map(t => (
+                                        <TableRow key={t.id}>
                                             <TableCell>{format(t.date, "dd/MM/yyyy")}</TableCell>
                                             <TableCell>{t.description || 'N/A'}</TableCell>
-                                            <TableCell className={cn("text-right font-mono", t.type === 'credit' ? 'text-green-600' : 'text-red-600')}>
+                                            <TableCell className="text-right font-mono text-destructive">
                                                 ₹{t.amount.toFixed(2)}
                                             </TableCell>
                                         </TableRow>
                                     )) : (
                                         <TableRow>
-                                            <TableCell colSpan={4} className="text-center text-muted-foreground">No transactions found for this company.</TableCell>
+                                            <TableCell colSpan={3} className="text-center text-muted-foreground">No debit transactions found.</TableCell>
                                         </TableRow>
                                     )}
                                 </TableBody>
                             </Table>
                         </div>
-                    </CardContent>
-                </Card>
+                        </CardContent>
+                    </Card>
+
+                    <Card>
+                        <CardHeader>
+                            <CardTitle className="flex items-center gap-2"><ArrowUpCircle className="text-green-600"/> Credits (Receipts/Returns)</CardTitle>
+                            <CardDescription>A list of all payments or credits received from this company.</CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                            <div className="rounded-md border h-96 overflow-auto">
+                                <Table>
+                                    <TableHeader className="sticky top-0 bg-background">
+                                        <TableRow>
+                                            <TableHead>Date</TableHead>
+                                            <TableHead>Description</TableHead>
+                                            <TableHead className="text-right">Amount (INR)</TableHead>
+                                        </TableRow>
+                                    </TableHeader>
+                                    <TableBody>
+                                        {creditTransactions.length > 0 ? creditTransactions.map(t => (
+                                            <TableRow key={t.id}>
+                                                <TableCell>{format(t.date, "dd/MM/yyyy")}</TableCell>
+                                                <TableCell>{t.description || 'N/A'}</TableCell>
+                                                <TableCell className="text-right font-mono text-green-600">
+                                                    ₹{t.amount.toFixed(2)}
+                                                </TableCell>
+                                            </TableRow>
+                                        )) : (
+                                            <TableRow>
+                                                <TableCell colSpan={3} className="text-center text-muted-foreground">No credit transactions found.</TableCell>
+                                            </TableRow>
+                                        )}
+                                    </TableBody>
+                                </Table>
+                            </div>
+                        </CardContent>
+                    </Card>
+                </div>
             </main>
              <footer className="py-6 text-center text-sm text-muted-foreground border-t">
                 © {new Date().getFullYear()} HEMITH ERP. All rights reserved.
