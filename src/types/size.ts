@@ -8,4 +8,5 @@ export interface Size {
   salesPrice: number;
   hsnCode: string;
   palletDetails: string;
+  isDeleted?: boolean;
 }

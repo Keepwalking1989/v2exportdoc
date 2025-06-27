@@ -17,8 +17,9 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import type { Client } from "@/types/client";
-import { Building2, User, Phone, MapPin, Globe, LocateFixed, Briefcase } from "lucide-react";
+import { Building2, User, Phone, MapPin, Globe, LocateFixed, Briefcase, Save, XCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { useEffect } from "react";
 
 const phoneRegex = new RegExp(
   /^([+]?[\s0-9]+)?(\d{3}|[(]?[0-9]+[)])?([-]?[\s]?[0-9])+$/
@@ -46,38 +47,45 @@ const formSchema = z.object({
   }),
 });
 
-type ClientFormValues = z.infer<typeof formSchema>;
+export type ClientFormValues = z.infer<typeof formSchema>;
+
+const defaultValues = {
+  companyName: "",
+  person: "",
+  contactNumber: "",
+  address: "",
+  city: "",
+  country: "",
+  pinCode: "",
+};
 
 interface ClientFormProps {
-  onSave: (client: Client) => void;
+  onSave: (client: ClientFormValues) => void;
+  initialData?: Client | null;
+  isEditing: boolean;
+  onCancelEdit: () => void;
 }
 
-export function ClientForm({ onSave }: ClientFormProps) {
+export function ClientForm({ onSave, initialData, isEditing, onCancelEdit }: ClientFormProps) {
   const { toast } = useToast();
   const form = useForm<ClientFormValues>({
     resolver: zodResolver(formSchema),
-    defaultValues: {
-      companyName: "",
-      person: "",
-      contactNumber: "",
-      address: "",
-      city: "",
-      country: "",
-      pinCode: "",
-    },
+    defaultValues,
   });
 
+  useEffect(() => {
+    if (isEditing && initialData) {
+      form.reset(initialData);
+    } else {
+      form.reset(defaultValues);
+    }
+  }, [isEditing, initialData, form]);
+
   function onSubmit(values: ClientFormValues) {
-    const newClient: Client = {
-      id: Date.now().toString(),
-      ...values,
-    };
-    onSave(newClient);
-    toast({
-      title: "Client Saved",
-      description: `${values.companyName} has been successfully saved.`,
-    });
-    form.reset();
+    onSave(values);
+    if (!isEditing) {
+      form.reset();
+    }
   }
 
   return (
@@ -85,9 +93,11 @@ export function ClientForm({ onSave }: ClientFormProps) {
       <CardHeader>
         <CardTitle className="font-headline text-2xl flex items-center gap-2">
           <Briefcase className="h-6 w-6 text-primary" />
-          Add New Client
+          {isEditing ? "Edit Client" : "Add New Client"}
         </CardTitle>
-        <CardDescription>Fill in the details below to add a new client.</CardDescription>
+        <CardDescription>
+          {isEditing ? "Modify the details of the existing client." : "Fill in the details below to add a new client."}
+        </CardDescription>
       </CardHeader>
       <CardContent>
         <Form {...form}>
@@ -185,9 +195,16 @@ export function ClientForm({ onSave }: ClientFormProps) {
                 </FormItem>
               )}
             />
-            <Button type="submit" className="w-full bg-accent hover:bg-accent/90 text-accent-foreground font-headline">
-              Save Client
-            </Button>
+            <div className="flex justify-end space-x-4">
+              {isEditing && (
+                <Button type="button" variant="ghost" onClick={onCancelEdit}>
+                  <XCircle className="mr-2 h-4 w-4" /> Cancel
+                </Button>
+              )}
+              <Button type="submit" className="bg-accent hover:bg-accent/90 text-accent-foreground font-headline">
+                 <Save className="mr-2 h-4 w-4" /> {isEditing ? "Save Changes" : "Save Client"}
+              </Button>
+            </div>
           </form>
         </Form>
       </CardContent>

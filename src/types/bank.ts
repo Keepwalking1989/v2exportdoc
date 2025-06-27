@@ -6,4 +6,5 @@ export interface Bank {
   accountNumber: string;
   swiftCode: string;
   ifscCode: string;
+  isDeleted?: boolean;
 }

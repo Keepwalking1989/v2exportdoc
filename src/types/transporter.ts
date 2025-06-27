@@ -5,4 +5,5 @@ export interface Transporter {
   gstNumber: string;
   contactPerson: string;
   contactNumber: string;
+  isDeleted?: boolean;
 }

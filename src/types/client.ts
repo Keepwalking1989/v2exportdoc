@@ -8,4 +8,5 @@ export interface Client {
   city: string;
   country: string;
   pinCode: string;
+  isDeleted?: boolean;
 }

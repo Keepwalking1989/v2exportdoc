@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useMemo, useEffect } from "react";
@@ -13,23 +14,28 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Search, ChevronLeft, ChevronRight, ListChecks } from "lucide-react";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
+import { Search, ChevronLeft, ChevronRight, ListChecks, Edit, Trash2 } from "lucide-react";
 
 interface CompanyListProps {
   companies: Company[];
+  onEditCompany: (id: string) => void;
+  onDeleteCompany: (id: string) => void;
 }
 
 const ITEMS_PER_PAGE = 5;
 
-export function CompanyList({ companies: initialCompanies }: CompanyListProps) {
+export function CompanyList({ companies: initialCompanies, onEditCompany, onDeleteCompany }: CompanyListProps) {
   const [companies, setCompanies] = useState<Company[]>(initialCompanies);
   const [searchTerm, setSearchTerm] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
 
   useEffect(() => {
     setCompanies(initialCompanies);
-    setCurrentPage(1); // Reset to first page when companies data changes
-  }, [initialCompanies]);
+    if (initialCompanies.length <= (currentPage - 1) * ITEMS_PER_PAGE && currentPage > 1) {
+      setCurrentPage(prev => prev - 1);
+    }
+  }, [initialCompanies, currentPage]);
 
   const filteredCompanies = useMemo(() => {
     if (!searchTerm) return companies;
@@ -78,22 +84,45 @@ export function CompanyList({ companies: initialCompanies }: CompanyListProps) {
               <TableHeader>
                 <TableRow>
                   <TableHead className="font-headline">Company Name</TableHead>
-                  <TableHead className="font-headline">Contact Person</TableHead>
-                  <TableHead className="font-headline hidden md:table-cell">Address</TableHead>
-                  <TableHead className="font-headline hidden sm:table-cell">Phone</TableHead>
-                  <TableHead className="font-headline">IEC Number</TableHead>
-                  <TableHead className="font-headline">GST Number</TableHead>
+                  <TableHead className="font-headline hidden md:table-cell">Contact Person</TableHead>
+                  <TableHead className="font-headline">IEC</TableHead>
+                  <TableHead className="font-headline">GST</TableHead>
+                  <TableHead className="font-headline text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {paginatedCompanies.map((company) => (
                   <TableRow key={company.id}>
                     <TableCell className="font-medium">{company.companyName}</TableCell>
-                    <TableCell>{company.contactPerson}</TableCell>
-                    <TableCell className="hidden md:table-cell">{company.address}</TableCell>
-                    <TableCell className="hidden sm:table-cell">{company.phoneNumber}</TableCell>
+                    <TableCell className="hidden md:table-cell">{company.contactPerson}</TableCell>
                     <TableCell>{company.iecNumber}</TableCell>
                     <TableCell>{company.gstNumber}</TableCell>
+                    <TableCell className="text-right space-x-1">
+                      <Button variant="ghost" size="icon" onClick={() => onEditCompany(company.id)} className="hover:text-primary">
+                        <Edit className="h-4 w-4" />
+                      </Button>
+                      <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                              <Button variant="ghost" size="icon" className="hover:text-destructive">
+                                  <Trash2 className="h-4 w-4" />
+                              </Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                              <AlertDialogHeader>
+                                  <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                                  <AlertDialogDescription>
+                                      This action will mark the company "{company.companyName}" as deleted. It won't be permanently removed but will be hidden from lists.
+                                  </AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter>
+                                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                  <AlertDialogAction onClick={() => onDeleteCompany(company.id)}>
+                                      Delete
+                                  </AlertDialogAction>
+                              </AlertDialogFooter>
+                          </AlertDialogContent>
+                      </AlertDialog>
+                    </TableCell>
                   </TableRow>
                 ))}
               </TableBody>

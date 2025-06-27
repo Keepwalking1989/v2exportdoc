@@ -6,4 +6,5 @@ export interface Company {
   phoneNumber: string;
   iecNumber: string;
   gstNumber: string;
+  isDeleted?: boolean;
 }

@@ -1,3 +1,4 @@
+
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -15,8 +16,10 @@ import {
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import type { Company } from "@/types/company";
-import { Building2, User, MapPin, Phone, Barcode, BadgePercent } from "lucide-react";
+import { Building2, User, MapPin, Phone, Barcode, BadgePercent, Save, XCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { useEffect } from "react";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
 const phoneRegex = new RegExp(
   /^([+]?[\s0-9]+)?(\d{3}|[(]?[0-9]+[)])?([-]?[\s]?[0-9])+$/
@@ -39,37 +42,44 @@ const formSchema = z.object({
   gstNumber: z.string().length(15, { message: "GST Number must be 15 characters." }),
 });
 
-type CompanyFormValues = z.infer<typeof formSchema>;
+export type CompanyFormValues = z.infer<typeof formSchema>;
+
+const defaultValues = {
+  companyName: "",
+  contactPerson: "",
+  address: "",
+  phoneNumber: "",
+  iecNumber: "",
+  gstNumber: "",
+};
 
 interface CompanyFormProps {
-  onSave: (company: Company) => void;
+  onSave: (company: CompanyFormValues) => void;
+  initialData?: Company | null;
+  isEditing: boolean;
+  onCancelEdit: () => void;
 }
 
-export function CompanyForm({ onSave }: CompanyFormProps) {
+export function CompanyForm({ onSave, initialData, isEditing, onCancelEdit }: CompanyFormProps) {
   const { toast } = useToast();
   const form = useForm<CompanyFormValues>({
     resolver: zodResolver(formSchema),
-    defaultValues: {
-      companyName: "",
-      contactPerson: "",
-      address: "",
-      phoneNumber: "",
-      iecNumber: "",
-      gstNumber: "",
-    },
+    defaultValues,
   });
 
+  useEffect(() => {
+    if (isEditing && initialData) {
+      form.reset(initialData);
+    } else {
+      form.reset(defaultValues);
+    }
+  }, [isEditing, initialData, form]);
+
   function onSubmit(values: CompanyFormValues) {
-    const newCompany: Company = {
-      id: Date.now().toString(),
-      ...values,
-    };
-    onSave(newCompany);
-    toast({
-      title: "Company Saved",
-      description: `${values.companyName} has been successfully saved.`,
-    });
-    form.reset();
+    onSave(values);
+    if (!isEditing) {
+      form.reset();
+    }
   }
 
   return (
@@ -77,9 +87,11 @@ export function CompanyForm({ onSave }: CompanyFormProps) {
       <CardHeader>
         <CardTitle className="font-headline text-2xl flex items-center gap-2">
           <Building2 className="h-6 w-6 text-primary" />
-          Add New Company
+          {isEditing ? "Edit Company" : "Add New Company"}
         </CardTitle>
-        <CardDescription>Fill in the details below to add a new company.</CardDescription>
+        <CardDescription>
+          {isEditing ? "Modify the details of the existing company." : "Fill in the details below to add a new company."}
+        </CardDescription>
       </CardHeader>
       <CardContent>
         <Form {...form}>
@@ -162,15 +174,19 @@ export function CompanyForm({ onSave }: CompanyFormProps) {
                 </FormItem>
               )}
             />
-            <Button type="submit" className="w-full bg-accent hover:bg-accent/90 text-accent-foreground font-headline">
-              Save Company
-            </Button>
+            <div className="flex justify-end space-x-4">
+              {isEditing && (
+                <Button type="button" variant="ghost" onClick={onCancelEdit}>
+                  <XCircle className="mr-2 h-4 w-4" /> Cancel
+                </Button>
+              )}
+              <Button type="submit" className="bg-accent hover:bg-accent/90 text-accent-foreground font-headline">
+                <Save className="mr-2 h-4 w-4" /> {isEditing ? "Save Changes" : "Save Company"}
+              </Button>
+            </div>
           </form>
         </Form>
       </CardContent>
     </Card>
   );
 }
-
-// Need to add Card components, assuming they are standard ShadCN
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";

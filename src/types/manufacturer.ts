@@ -7,4 +7,5 @@ export interface Manufacturer {
   stuffingPermissionNumber: string;
   stuffingPermissionDate: Date;
   pinCode: string;
+  isDeleted?: boolean;
 }

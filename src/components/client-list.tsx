@@ -14,23 +14,28 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Search, ChevronLeft, ChevronRight, ListChecks, Briefcase } from "lucide-react";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
+import { Search, ChevronLeft, ChevronRight, ListChecks, Edit, Trash2 } from "lucide-react";
 
 interface ClientListProps {
   clients: Client[];
+  onEditClient: (id: string) => void;
+  onDeleteClient: (id: string) => void;
 }
 
 const ITEMS_PER_PAGE = 5;
 
-export function ClientList({ clients: initialClients }: ClientListProps) {
+export function ClientList({ clients: initialClients, onEditClient, onDeleteClient }: ClientListProps) {
   const [clients, setClients] = useState<Client[]>(initialClients);
   const [searchTerm, setSearchTerm] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
 
   useEffect(() => {
     setClients(initialClients);
-    setCurrentPage(1);
-  }, [initialClients]);
+    if (initialClients.length <= (currentPage - 1) * ITEMS_PER_PAGE && currentPage > 1) {
+      setCurrentPage(prev => prev - 1);
+    }
+  }, [initialClients, currentPage]);
 
   const filteredClients = useMemo(() => {
     if (!searchTerm) return clients;
@@ -80,12 +85,10 @@ export function ClientList({ clients: initialClients }: ClientListProps) {
               <TableHeader>
                 <TableRow>
                   <TableHead className="font-headline">Company Name</TableHead>
-                  <TableHead className="font-headline hidden sm:table-cell">Contact Person</TableHead>
-                  <TableHead className="font-headline hidden md:table-cell">Contact No.</TableHead>
-                  <TableHead className="font-headline hidden lg:table-cell">Address</TableHead>
+                  <TableHead className="font-headline hidden sm:table-cell">Contact</TableHead>
                   <TableHead className="font-headline">City</TableHead>
                   <TableHead className="font-headline hidden sm:table-cell">Country</TableHead>
-                  <TableHead className="font-headline hidden md:table-cell">PIN</TableHead>
+                  <TableHead className="font-headline text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -93,11 +96,34 @@ export function ClientList({ clients: initialClients }: ClientListProps) {
                   <TableRow key={client.id}>
                     <TableCell className="font-medium">{client.companyName}</TableCell>
                     <TableCell className="hidden sm:table-cell">{client.person}</TableCell>
-                    <TableCell className="hidden md:table-cell">{client.contactNumber}</TableCell>
-                    <TableCell className="hidden lg:table-cell">{client.address}</TableCell>
                     <TableCell>{client.city}</TableCell>
                     <TableCell className="hidden sm:table-cell">{client.country}</TableCell>
-                    <TableCell className="hidden md:table-cell">{client.pinCode}</TableCell>
+                    <TableCell className="text-right space-x-1">
+                       <Button variant="ghost" size="icon" onClick={() => onEditClient(client.id)} className="hover:text-primary">
+                        <Edit className="h-4 w-4" />
+                      </Button>
+                      <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                              <Button variant="ghost" size="icon" className="hover:text-destructive">
+                                  <Trash2 className="h-4 w-4" />
+                              </Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                              <AlertDialogHeader>
+                                  <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                                  <AlertDialogDescription>
+                                    This action will mark the client "{client.companyName}" as deleted. It won't be permanently removed but will be hidden from lists.
+                                  </AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter>
+                                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                  <AlertDialogAction onClick={() => onDeleteClient(client.id)}>
+                                      Delete
+                                  </AlertDialogAction>
+                              </AlertDialogFooter>
+                          </AlertDialogContent>
+                      </AlertDialog>
+                    </TableCell>
                   </TableRow>
                 ))}
               </TableBody>
