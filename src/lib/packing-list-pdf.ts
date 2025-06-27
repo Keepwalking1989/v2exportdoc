@@ -322,17 +322,51 @@ export function generatePackingListPdf(
     const declarationText = 'We declare that this Invoice shows the actual price of the goods described and that all particulars are true and correct.';
     autoTable(doc, {
         startY: yPos,
-        theme: 'grid',
-        body: [[
-            { content: `Declaration:\n${declarationText}`, styles: {...classTwoStyles, ...classThreeStyles, halign: 'left', valign: 'top'} },
-            { content: `Signature & Date:\n${format(new Date(), 'dd/MM/yyyy')}\n\nFOR, ${exporter.companyName}\n\n\nAUTHORISED SIGNATURE`, styles: {...classTwoStyles, halign: 'center', minCellHeight: 50} }
-        ]],
-        columnStyles: { 
+        theme: 'plain',
+        body: [
+            [ // Row 1 of the whole block
+                {
+                    content: `Declaration:\n${declarationText}`,
+                    rowSpan: 4, // Span all 4 conceptual rows of the signature block
+                    styles: {lineWidth: 0.5, lineColor: [0,0,0], valign: 'top', halign: 'left', ...classTwoStyles, ...classThreeStyles}
+                },
+                {
+                    content: 'Signature & Date:',
+                    styles: {lineWidth: 0.5, lineColor: [0,0,0], ...classTwoStyles, fontStyle: 'bold', halign: 'left'}
+                },
+                {
+                    content: format(new Date(), 'dd/MM/yyyy'),
+                    styles: {lineWidth: 0.5, lineColor: [0,0,0], ...classTwoStyles, halign: 'center'}
+                }
+            ],
+            [ // Row 2 of the signature block (declaration cell is spanned)
+                {
+                    content: `FOR, ${exporter.companyName.toUpperCase()}`,
+                    colSpan: 2,
+                    styles: {lineWidth: 0.5, lineColor: [0,0,0], ...classOneStyles}
+                }
+            ],
+            [ // Row 3 (empty for signature)
+                 {
+                    content: '',
+                    colSpan: 2,
+                    styles: {lineWidth: 0.5, lineColor: [0,0,0], minCellHeight: 40}
+                }
+            ],
+            [ // Row 4
+                {
+                    content: 'AUTHORISED SIGNATURE',
+                    colSpan: 2,
+                    styles: {lineWidth: 0.5, lineColor: [0,0,0], ...classTwoStyles, fontStyle: 'bold', halign: 'center'}
+                }
+            ]
+        ],
+        columnStyles: {
             0: { cellWidth: 350 },
-            1: { cellWidth: 'auto' } 
+            1: { cellWidth: 'auto' },
+            2: { cellWidth: 'auto' },
         },
         margin: { left: pageMargin, right: pageMargin },
-        didDrawPage: data => { yPos = data.cursor?.y ?? yPos; }
     });
 
     // --- Save the PDF ---
