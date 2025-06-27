@@ -13,7 +13,7 @@ import {
 } from "@/components/ui/menubar";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
-import { Menu as MenuIcon, X as XIcon, Building, PlusCircle, ShoppingCart, Receipt, Palette, Package, Landmark, Briefcase, FileText } from "lucide-react"; // Added FileText
+import { Menu as MenuIcon, X as XIcon, Building, PlusCircle, ShoppingCart, Receipt, Palette, Package, Landmark, Briefcase, FileText, ArrowLeftRight } from "lucide-react";
 
 export function Header() {
   const [isMobile, setIsMobile] = useState(false);
@@ -95,6 +95,16 @@ export function Header() {
           </Link>
         </MenubarContent>
       </MenubarMenu>
+      <MenubarMenu>
+        <MenubarTrigger className="font-headline">
+          <ArrowLeftRight className="mr-2 h-4 w-4" /> TRANSACTION
+        </MenubarTrigger>
+        <MenubarContent>
+           <Link href="/transaction" passHref>
+            <MenubarItem>Transactions</MenubarItem>
+          </Link>
+        </MenubarContent>
+      </MenubarMenu>
     </>
   );
 
@@ -132,6 +142,14 @@ export function Header() {
         <Button variant="ghost" className="justify-start font-normal w-full" asChild onClick={() => setIsMobileMenuOpen(false)}><Link href="/trans-bill">Trans Bill</Link></Button>
         <Button variant="ghost" className="justify-start font-normal w-full" asChild onClick={() => setIsMobileMenuOpen(false)}><Link href="/supply-bill">Supply Bill</Link></Button>
       </div>
+
+      <Button variant="ghost" className="justify-start font-headline text-lg mt-2" onClick={() => { /* Consider sub-menu expansion for mobile */ }}>
+        <ArrowLeftRight className="mr-2 h-5 w-5" /> TRANSACTION
+      </Button>
+      <div className="pl-6">
+        <Button variant="ghost" className="justify-start font-normal w-full" asChild onClick={() => setIsMobileMenuOpen(false)}><Link href="/transaction">Transactions</Link></Button>
+      </div>
+
     </nav>
   );
 
