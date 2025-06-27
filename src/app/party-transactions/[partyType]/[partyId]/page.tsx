@@ -17,6 +17,9 @@ import type { Manufacturer } from '@/types/manufacturer';
 import type { Transporter } from '@/types/transporter';
 import type { Supplier } from '@/types/supplier';
 import type { Pallet } from '@/types/pallet';
+import type { ManuBill } from '@/types/manu-bill';
+import type { TransBill } from '@/types/trans-bill';
+import type { SupplyBill } from '@/types/supply-bill';
 
 // Local Storage Keys
 const LOCAL_STORAGE_TRANSACTIONS_KEY = "bizform_transactions";
@@ -24,8 +27,18 @@ const LOCAL_STORAGE_MANUFACTURERS_KEY = "bizform_manufacturers";
 const LOCAL_STORAGE_TRANSPORTERS_KEY = "bizform_transporters";
 const LOCAL_STORAGE_SUPPLIERS_KEY = "bizform_suppliers";
 const LOCAL_STORAGE_PALLETS_KEY = "bizform_pallets";
+const LOCAL_STORAGE_MANU_BILLS_KEY = "bizform_manu_bills";
+const LOCAL_STORAGE_TRANS_BILLS_KEY = "bizform_trans_bills";
+const LOCAL_STORAGE_SUPPLY_BILLS_KEY = "bizform_supply_bills";
 
 type Party = Manufacturer | Transporter | Supplier | Pallet;
+type LedgerItem = {
+    id: string;
+    date: Date;
+    description: string;
+    amount: number;
+    currency: string;
+}
 
 const ITEMS_PER_PAGE = 5;
 
@@ -34,7 +47,8 @@ export default function PartyTransactionPage() {
     const params = useParams();
     const { partyType, partyId } = params as { partyType: string; partyId: string };
 
-    const [transactions, setTransactions] = useState<Transaction[]>([]);
+    const [debitItems, setDebitItems] = useState<LedgerItem[]>([]);
+    const [creditItems, setCreditItems] = useState<LedgerItem[]>([]);
     const [party, setParty] = useState<Party | null>(null);
     const [isLoading, setIsLoading] = useState(true);
 
@@ -48,13 +62,48 @@ export default function PartyTransactionPage() {
         if (!partyType || !partyId) return;
 
         try {
-            // Load transactions
+            // --- Load Payments (Credits) ---
             const storedTransactions = localStorage.getItem(LOCAL_STORAGE_TRANSACTIONS_KEY);
             const allTransactions: Transaction[] = storedTransactions ? JSON.parse(storedTransactions) : [];
-            const partyTransactions = allTransactions.filter(
-                t => t.partyType === partyType && t.partyId === partyId && !t.isDeleted
-            ).map(t => ({...t, date: new Date(t.date)})).sort((a,b) => b.date.getTime() - a.date.getTime());
-            setTransactions(partyTransactions);
+            const partyCreditTransactions = allTransactions
+                .filter(t => t.partyType === partyType && t.partyId === partyId && t.type === 'credit' && !t.isDeleted)
+                .map(t => ({
+                    id: t.id,
+                    date: new Date(t.date),
+                    description: t.description || 'Payment',
+                    amount: t.amount,
+                    currency: t.currency
+                }))
+                .sort((a,b) => b.date.getTime() - a.date.getTime());
+            setCreditItems(partyCreditTransactions);
+
+            // --- Load Bills (Debits) ---
+            const newDebitItems: LedgerItem[] = [];
+            if (partyType === 'manufacturer') {
+                const manuBills: ManuBill[] = JSON.parse(localStorage.getItem(LOCAL_STORAGE_MANU_BILLS_KEY) || '[]');
+                const partyManuBills = manuBills.filter(b => b.manufacturerId === partyId && !b.isDeleted)
+                    .map(b => ({
+                        id: `bill_m_${b.id}`, date: new Date(b.invoiceDate), description: `Bill - ${b.invoiceNumber}`, amount: b.grandTotal, currency: 'INR'
+                    }));
+                newDebitItems.push(...partyManuBills);
+            } else if (partyType === 'transporter') {
+                const transBills: TransBill[] = JSON.parse(localStorage.getItem(LOCAL_STORAGE_TRANS_BILLS_KEY) || '[]');
+                const partyTransBills = transBills.filter(b => b.transporterId === partyId && !b.isDeleted)
+                     .map(b => ({
+                        id: `bill_t_${b.id}`, date: new Date(b.invoiceDate), description: `Bill - ${b.invoiceNumber}`, amount: b.totalPayable, currency: 'INR'
+                    }));
+                newDebitItems.push(...partyTransBills);
+            } else if (partyType === 'supplier' || partyType === 'pallet') {
+                const supplyBills: SupplyBill[] = JSON.parse(localStorage.getItem(LOCAL_STORAGE_SUPPLY_BILLS_KEY) || '[]');
+                const partySupplyBills = supplyBills.filter(b => b.supplierId === partyId && !b.isDeleted)
+                    .map(b => ({
+                        id: `bill_s_${b.id}`, date: new Date(b.invoiceDate), description: `Bill - ${b.invoiceNumber}`, amount: b.grandTotal, currency: 'INR'
+                    }));
+                newDebitItems.push(...partySupplyBills);
+            }
+            newDebitItems.sort((a,b) => b.date.getTime() - a.date.getTime());
+            setDebitItems(newDebitItems);
+
 
             // Load party details
             let partyData: Party | null = null;
@@ -78,21 +127,20 @@ export default function PartyTransactionPage() {
     }, [partyType, partyId]);
 
     const { totalCredit, totalDebit, balance } = useMemo(() => {
-        const debitTotal = transactions.filter(t => t.type === 'debit').reduce((acc, t) => acc + t.amount, 0);
-        const creditTotal = transactions.filter(t => t.type === 'credit').reduce((acc, t) => acc + t.amount, 0);
+        const debitTotal = debitItems.reduce((acc, t) => acc + t.amount, 0);
+        const creditTotal = creditItems.reduce((acc, t) => acc + t.amount, 0);
         return {
             totalDebit: debitTotal,
             totalCredit: creditTotal,
             balance: debitTotal - creditTotal, // Debits (Bills) - Credits (Payments) = Balance Owed
         };
-    }, [transactions]);
+    }, [debitItems, creditItems]);
 
     // Debit filtering and pagination
     const filteredDebits = useMemo(() => {
-        const debits = transactions.filter(t => t.type === 'debit');
-        if (!debitSearchTerm) return debits;
-        return debits.filter(t => t.description?.toLowerCase().includes(debitSearchTerm.toLowerCase()));
-    }, [transactions, debitSearchTerm]);
+        if (!debitSearchTerm) return debitItems;
+        return debitItems.filter(t => t.description?.toLowerCase().includes(debitSearchTerm.toLowerCase()));
+    }, [debitItems, debitSearchTerm]);
 
     const paginatedDebits = useMemo(() => {
         const startIndex = (debitCurrentPage - 1) * ITEMS_PER_PAGE;
@@ -103,10 +151,9 @@ export default function PartyTransactionPage() {
 
     // Credit filtering and pagination
     const filteredCredits = useMemo(() => {
-        const credits = transactions.filter(t => t.type === 'credit');
-        if (!creditSearchTerm) return credits;
-        return credits.filter(t => t.description?.toLowerCase().includes(creditSearchTerm.toLowerCase()));
-    }, [transactions, creditSearchTerm]);
+        if (!creditSearchTerm) return creditItems;
+        return creditItems.filter(t => t.description?.toLowerCase().includes(creditSearchTerm.toLowerCase()));
+    }, [creditItems, creditSearchTerm]);
 
     const paginatedCredits = useMemo(() => {
         const startIndex = (creditCurrentPage - 1) * ITEMS_PER_PAGE;
@@ -189,8 +236,8 @@ export default function PartyTransactionPage() {
                 <div className="grid gap-8 lg:grid-cols-2">
                     <Card>
                         <CardHeader>
-                            <CardTitle className="flex items-center gap-2"><FileText className="text-destructive"/> Bills Received (Debit)</CardTitle>
-                            <CardDescription>A list of all bills from this company, increasing the amount you owe.</CardDescription>
+                            <CardTitle className="flex items-center gap-2"><FileText className="text-destructive"/> Bill Entry</CardTitle>
+                            <CardDescription>A list of all bills received from this company, increasing the amount you owe.</CardDescription>
                         </CardHeader>
                         <CardContent>
                             <div className="mb-4">
@@ -338,3 +385,4 @@ export default function PartyTransactionPage() {
         </div>
     );
 }
+
