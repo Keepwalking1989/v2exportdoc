@@ -15,7 +15,8 @@ import {
 } from "@/components/ui/table";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
-import { Search, ChevronLeft, ChevronRight, ListChecks, Edit, Trash2 } from "lucide-react";
+import { Search, ChevronLeft, ChevronRight, ListChecks, Edit, Trash2, ArrowLeftRight } from "lucide-react";
+import Link from "next/link";
 
 interface TransporterListProps {
   transporters: Transporter[];
@@ -95,6 +96,11 @@ export function TransporterList({ transporters: initialTransporters, onEditTrans
                     <TableCell>{transporter.gstNumber}</TableCell>
                     <TableCell className="hidden md:table-cell">{transporter.contactPerson}</TableCell>
                     <TableCell className="text-right space-x-1">
+                      <Button asChild variant="ghost" size="icon" className="hover:text-purple-600">
+                          <Link href={`/party-transactions/transporter/${transporter.id}`}>
+                              <ArrowLeftRight className="h-4 w-4" />
+                          </Link>
+                      </Button>
                       <Button variant="ghost" size="icon" onClick={() => onEditTransporter(transporter.id)} className="hover:text-primary">
                         <Edit className="h-4 w-4" />
                       </Button>
