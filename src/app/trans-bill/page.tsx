@@ -8,12 +8,15 @@ import { TransBillList } from "@/components/trans-bill-list";
 import type { TransBill } from "@/types/trans-bill";
 import type { ExportDocument } from "@/types/export-document";
 import type { Transporter } from "@/types/transporter";
+import type { Transaction } from "@/types/transaction";
 import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 
 const LOCAL_STORAGE_TRANS_BILLS_KEY = "bizform_trans_bills";
 const LOCAL_STORAGE_EXPORT_DOCS_KEY_V2 = "bizform_export_documents_v2";
 const LOCAL_STORAGE_TRANSPORTERS_KEY = "bizform_transporters";
+const LOCAL_STORAGE_TRANSACTIONS_KEY = "bizform_transactions";
+
 
 export default function TransBillPage() {
   const { toast } = useToast();
@@ -50,6 +53,31 @@ export default function TransBillPage() {
       }
     }
   }, []);
+  
+  const createOrUpdateBillTransaction = (bill: TransBill, allTransactions: Transaction[]) => {
+    const transaction: Transaction = {
+      id: `trans_bill_${bill.id}`,
+      date: bill.invoiceDate,
+      type: 'credit', // A bill received is a credit to the payable account (money owed)
+      partyType: 'transporter',
+      partyId: bill.transporterId,
+      sourceBillId: bill.id,
+      sourceBillType: 'trans',
+      currency: 'INR',
+      amount: bill.totalPayable,
+      description: `Bill - ${bill.invoiceNumber}`,
+      isDeleted: bill.isDeleted,
+    };
+
+    const existingIndex = allTransactions.findIndex(t => t.id === transaction.id);
+    if (existingIndex > -1) {
+      allTransactions[existingIndex] = transaction;
+    } else {
+      allTransactions.push(transaction);
+    }
+    localStorage.setItem(LOCAL_STORAGE_TRANSACTIONS_KEY, JSON.stringify(allTransactions));
+  };
+
 
   const handleSaveBill = (values: TransBill) => {
     const allBillsRaw = localStorage.getItem(LOCAL_STORAGE_TRANS_BILLS_KEY);
@@ -74,6 +102,9 @@ export default function TransBillPage() {
       setTransBills(updatedBills.filter(b => !b.isDeleted).map((b: any) => ({...b, invoiceDate: new Date(b.invoiceDate), jobDate: b.jobDate ? new Date(b.jobDate) : undefined})));
       toast({ title: "Bill Saved", description: `Invoice ${values.invoiceNumber} has been saved.` });
     }
+
+    const allTransactions: Transaction[] = JSON.parse(localStorage.getItem(LOCAL_STORAGE_TRANSACTIONS_KEY) || '[]');
+    createOrUpdateBillTransaction(billToSave, allTransactions);
   };
 
   const handleEditBill = (id: string) => {
@@ -89,16 +120,21 @@ export default function TransBillPage() {
   };
 
   const handleDeleteBill = (id: string) => {
-    const allBillsRaw = localStorage.getItem(LOCAL_STORAGE_TRANS_BILLS_KEY);
+     const allBillsRaw = localStorage.getItem(LOCAL_STORAGE_TRANS_BILLS_KEY);
     const allBills: TransBill[] = allBillsRaw ? JSON.parse(allBillsRaw) : [];
-    
-    const updatedBills = allBills.map(b => 
-      b.id === id ? { ...b, isDeleted: true } : b
-    );
-    
-    localStorage.setItem(LOCAL_STORAGE_TRANS_BILLS_KEY, JSON.stringify(updatedBills));
-    setTransBills(updatedBills.filter(b => !b.isDeleted).map((b: any) => ({...b, invoiceDate: new Date(b.invoiceDate), jobDate: b.jobDate ? new Date(b.jobDate) : undefined})));
-    toast({ title: "Bill Deleted", description: "The transport bill has been marked as deleted." });
+    const billToDelete = allBills.find(b => b.id === id);
+
+    if (billToDelete) {
+        billToDelete.isDeleted = true;
+        const updatedBills = allBills.map(b => b.id === id ? billToDelete : b);
+        localStorage.setItem(LOCAL_STORAGE_TRANS_BILLS_KEY, JSON.stringify(updatedBills));
+        setTransBills(updatedBills.filter(b => !b.isDeleted).map((b: any) => ({...b, invoiceDate: new Date(b.invoiceDate), jobDate: b.jobDate ? new Date(b.jobDate) : undefined})));
+
+        const allTransactions: Transaction[] = JSON.parse(localStorage.getItem(LOCAL_STORAGE_TRANSACTIONS_KEY) || '[]');
+        createOrUpdateBillTransaction(billToDelete, allTransactions);
+
+        toast({ title: "Bill Deleted", description: "The transport bill has been marked as deleted." });
+    }
   };
 
   if (!isClient) {

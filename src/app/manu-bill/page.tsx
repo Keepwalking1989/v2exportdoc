@@ -8,12 +8,14 @@ import { ManuBillList } from "@/components/manu-bill-list";
 import type { ManuBill } from "@/types/manu-bill";
 import type { ExportDocument } from "@/types/export-document";
 import type { Manufacturer } from "@/types/manufacturer";
+import type { Transaction } from "@/types/transaction";
 import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 
 const LOCAL_STORAGE_MANU_BILLS_KEY = "bizform_manu_bills";
 const LOCAL_STORAGE_EXPORT_DOCS_KEY_V2 = "bizform_export_documents_v2";
 const LOCAL_STORAGE_MANUFACTURERS_KEY = "bizform_manufacturers";
+const LOCAL_STORAGE_TRANSACTIONS_KEY = "bizform_transactions";
 
 export default function ManuBillPage() {
   const { toast } = useToast();
@@ -50,6 +52,30 @@ export default function ManuBillPage() {
       }
     }
   }, []);
+  
+  const createOrUpdateBillTransaction = (bill: ManuBill, allTransactions: Transaction[]) => {
+    const transaction: Transaction = {
+      id: `manu_bill_${bill.id}`,
+      date: bill.invoiceDate,
+      type: 'credit', // A bill received is a credit to the payable account (money owed)
+      partyType: 'manufacturer',
+      partyId: bill.manufacturerId,
+      sourceBillId: bill.id,
+      sourceBillType: 'manu',
+      currency: 'INR',
+      amount: bill.grandTotal,
+      description: `Bill - ${bill.invoiceNumber}`,
+      isDeleted: bill.isDeleted,
+    };
+
+    const existingIndex = allTransactions.findIndex(t => t.id === transaction.id);
+    if (existingIndex > -1) {
+      allTransactions[existingIndex] = transaction;
+    } else {
+      allTransactions.push(transaction);
+    }
+    localStorage.setItem(LOCAL_STORAGE_TRANSACTIONS_KEY, JSON.stringify(allTransactions));
+  };
 
   const handleSaveBill = (values: ManuBillFormValues) => {
     const allBillsRaw = localStorage.getItem(LOCAL_STORAGE_MANU_BILLS_KEY);
@@ -74,6 +100,9 @@ export default function ManuBillPage() {
       setManuBills(updatedBills.filter(b => !b.isDeleted).map((b: any) => ({...b, invoiceDate: new Date(b.invoiceDate), ackDate: b.ackDate ? new Date(b.ackDate) : undefined})));
       toast({ title: "Bill Saved", description: `Invoice ${values.invoiceNumber} has been saved.` });
     }
+    
+    const allTransactions: Transaction[] = JSON.parse(localStorage.getItem(LOCAL_STORAGE_TRANSACTIONS_KEY) || '[]');
+    createOrUpdateBillTransaction(billToSave, allTransactions);
   };
 
   const handleEditBill = (id: string) => {
@@ -89,17 +118,21 @@ export default function ManuBillPage() {
   };
 
   const handleDeleteBill = (id: string) => {
-    // No dependency checks needed for ManuBill as it's a record, not a dependency itself.
     const allBillsRaw = localStorage.getItem(LOCAL_STORAGE_MANU_BILLS_KEY);
     const allBills: ManuBill[] = allBillsRaw ? JSON.parse(allBillsRaw) : [];
-    
-    const updatedBills = allBills.map(b => 
-      b.id === id ? { ...b, isDeleted: true } : b
-    );
-    
-    localStorage.setItem(LOCAL_STORAGE_MANU_BILLS_KEY, JSON.stringify(updatedBills));
-    setManuBills(updatedBills.filter(b => !b.isDeleted).map((b: any) => ({...b, invoiceDate: new Date(b.invoiceDate), ackDate: b.ackDate ? new Date(b.ackDate) : undefined})));
-    toast({ title: "Bill Deleted", description: "The manufacturer bill has been marked as deleted." });
+    const billToDelete = allBills.find(b => b.id === id);
+
+    if (billToDelete) {
+        billToDelete.isDeleted = true;
+        const updatedBills = allBills.map(b => b.id === id ? billToDelete : b);
+        localStorage.setItem(LOCAL_STORAGE_MANU_BILLS_KEY, JSON.stringify(updatedBills));
+        setManuBills(updatedBills.filter(b => !b.isDeleted).map((b: any) => ({...b, invoiceDate: new Date(b.invoiceDate), ackDate: b.ackDate ? new Date(b.ackDate) : undefined})));
+
+        const allTransactions: Transaction[] = JSON.parse(localStorage.getItem(LOCAL_STORAGE_TRANSACTIONS_KEY) || '[]');
+        createOrUpdateBillTransaction(billToDelete, allTransactions);
+        
+        toast({ title: "Bill Deleted", description: "The manufacturer bill has been marked as deleted." });
+    }
   };
 
   if (!isClient) {

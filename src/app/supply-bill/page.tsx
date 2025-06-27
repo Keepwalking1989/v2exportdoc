@@ -9,6 +9,7 @@ import type { SupplyBill } from "@/types/supply-bill";
 import type { ExportDocument } from "@/types/export-document";
 import type { Supplier } from "@/types/supplier";
 import type { Pallet } from "@/types/pallet";
+import type { Transaction } from "@/types/transaction";
 import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 
@@ -16,6 +17,7 @@ const LOCAL_STORAGE_SUPPLY_BILLS_KEY = "bizform_supply_bills";
 const LOCAL_STORAGE_EXPORT_DOCS_KEY_V2 = "bizform_export_documents_v2";
 const LOCAL_STORAGE_SUPPLIERS_KEY = "bizform_suppliers";
 const LOCAL_STORAGE_PALLETS_KEY = "bizform_pallets";
+const LOCAL_STORAGE_TRANSACTIONS_KEY = "bizform_transactions";
 
 
 export default function SupplyBillPage() {
@@ -57,6 +59,34 @@ export default function SupplyBillPage() {
     }
   }, []);
 
+  const createOrUpdateBillTransaction = (bill: SupplyBill, allTransactions: Transaction[]) => {
+    const isSupplier = allSuppliers.some(s => s.id === bill.supplierId);
+    const partyType = isSupplier ? 'supplier' : 'pallet';
+
+    const transaction: Transaction = {
+      id: `supply_bill_${bill.id}`,
+      date: bill.invoiceDate,
+      type: 'credit', // A bill received is a credit to the payable account (money owed)
+      partyType: partyType,
+      partyId: bill.supplierId,
+      sourceBillId: bill.id,
+      sourceBillType: 'supply',
+      currency: 'INR',
+      amount: bill.grandTotal,
+      description: `Bill - ${bill.invoiceNumber}`,
+      isDeleted: bill.isDeleted,
+    };
+
+    const existingIndex = allTransactions.findIndex(t => t.id === transaction.id);
+    if (existingIndex > -1) {
+      allTransactions[existingIndex] = transaction;
+    } else {
+      allTransactions.push(transaction);
+    }
+    localStorage.setItem(LOCAL_STORAGE_TRANSACTIONS_KEY, JSON.stringify(allTransactions));
+  };
+
+
   const handleSaveBill = (values: SupplyBill) => {
     const allBillsRaw = localStorage.getItem(LOCAL_STORAGE_SUPPLY_BILLS_KEY);
     const allBills: SupplyBill[] = allBillsRaw ? JSON.parse(allBillsRaw) : [];
@@ -80,6 +110,9 @@ export default function SupplyBillPage() {
       setSupplyBills(updatedBills.filter(b => !b.isDeleted).map((b: any) => ({...b, invoiceDate: new Date(b.invoiceDate), ackDate: b.ackDate ? new Date(b.ackDate) : undefined})));
       toast({ title: "Bill Saved", description: `Invoice ${values.invoiceNumber} has been saved.` });
     }
+
+    const allTransactions: Transaction[] = JSON.parse(localStorage.getItem(LOCAL_STORAGE_TRANSACTIONS_KEY) || '[]');
+    createOrUpdateBillTransaction(billToSave, allTransactions);
   };
 
   const handleEditBill = (id: string) => {
@@ -97,14 +130,19 @@ export default function SupplyBillPage() {
   const handleDeleteBill = (id: string) => {
     const allBillsRaw = localStorage.getItem(LOCAL_STORAGE_SUPPLY_BILLS_KEY);
     const allBills: SupplyBill[] = allBillsRaw ? JSON.parse(allBillsRaw) : [];
+    const billToDelete = allBills.find(b => b.id === id);
     
-    const updatedBills = allBills.map(b => 
-      b.id === id ? { ...b, isDeleted: true } : b
-    );
-    
-    localStorage.setItem(LOCAL_STORAGE_SUPPLY_BILLS_KEY, JSON.stringify(updatedBills));
-    setSupplyBills(updatedBills.filter(b => !b.isDeleted).map((b: any) => ({...b, invoiceDate: new Date(b.invoiceDate), ackDate: b.ackDate ? new Date(b.ackDate) : undefined})));
-    toast({ title: "Bill Deleted", description: "The supply bill has been marked as deleted." });
+    if (billToDelete) {
+        billToDelete.isDeleted = true;
+        const updatedBills = allBills.map(b => b.id === id ? billToDelete : b);
+        localStorage.setItem(LOCAL_STORAGE_SUPPLY_BILLS_KEY, JSON.stringify(updatedBills));
+        setSupplyBills(updatedBills.filter(b => !b.isDeleted).map((b: any) => ({...b, invoiceDate: new Date(b.invoiceDate), ackDate: b.ackDate ? new Date(b.ackDate) : undefined})));
+        
+        const allTransactions: Transaction[] = JSON.parse(localStorage.getItem(LOCAL_STORAGE_TRANSACTIONS_KEY) || '[]');
+        createOrUpdateBillTransaction(billToDelete, allTransactions);
+
+        toast({ title: "Bill Deleted", description: "The supply bill has been marked as deleted." });
+    }
   };
 
   if (!isClient) {

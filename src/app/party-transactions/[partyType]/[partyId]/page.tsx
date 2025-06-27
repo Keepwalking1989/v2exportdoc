@@ -6,7 +6,7 @@ import { useParams, useRouter } from 'next/navigation';
 import { Header } from '@/components/layout/header';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, ArrowDownCircle, ArrowUpCircle, Search, ChevronLeft, ChevronRight } from 'lucide-react';
+import { ArrowLeft, Banknote, Search, ChevronLeft, ChevronRight, FileText } from 'lucide-react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
@@ -83,7 +83,7 @@ export default function PartyTransactionPage() {
         return {
             totalCredit: creditTotal,
             totalDebit: debitTotal,
-            balance: creditTotal - debitTotal,
+            balance: creditTotal - debitTotal, // Credits (Bills) - Debits (Payments)
         };
     }, [transactions]);
 
@@ -169,19 +169,19 @@ export default function PartyTransactionPage() {
                     </CardHeader>
                     <CardContent className="grid gap-4 md:grid-cols-3">
                         <div className="p-4 rounded-lg border bg-card">
-                            <h3 className="text-sm font-medium text-muted-foreground">Total Paid to Them (Debit)</h3>
-                            <p className="text-2xl font-bold text-destructive">₹{totalDebit.toFixed(2)}</p>
+                            <h3 className="text-sm font-medium text-muted-foreground">Total Bills Received (Credit)</h3>
+                            <p className="text-2xl font-bold text-blue-600">₹{totalCredit.toFixed(2)}</p>
                         </div>
                         <div className="p-4 rounded-lg border bg-card">
-                            <h3 className="text-sm font-medium text-muted-foreground">Total Received from Them (Credit)</h3>
-                            <p className="text-2xl font-bold text-green-600">₹{totalCredit.toFixed(2)}</p>
+                            <h3 className="text-sm font-medium text-muted-foreground">Total Payments Made (Debit)</h3>
+                            <p className="text-2xl font-bold text-green-600">₹{totalDebit.toFixed(2)}</p>
                         </div>
                         <div className="p-4 rounded-lg border bg-card">
                             <h3 className="text-sm font-medium text-muted-foreground">Net Balance</h3>
-                            <p className={cn("text-2xl font-bold", balance >= 0 ? 'text-green-600' : 'text-destructive')}>
+                            <p className={cn("text-2xl font-bold", balance >= 0 ? 'text-destructive' : 'text-green-600')}>
                                 ₹{balance.toFixed(2)}
                             </p>
-                            <p className="text-xs text-muted-foreground">{balance >= 0 ? 'You have a credit' : 'You have a debit'}</p>
+                            <p className="text-xs text-muted-foreground">{balance >= 0 ? 'You owe them' : 'They owe you / Overpaid'}</p>
                         </div>
                     </CardContent>
                 </Card>
@@ -189,7 +189,79 @@ export default function PartyTransactionPage() {
                 <div className="grid gap-8 lg:grid-cols-2">
                     <Card>
                         <CardHeader>
-                            <CardTitle className="flex items-center gap-2"><ArrowDownCircle className="text-destructive"/> Debits (Payments Made)</CardTitle>
+                            <CardTitle className="flex items-center gap-2"><FileText className="text-blue-600"/> Bills Received / Owed (Credit)</CardTitle>
+                            <CardDescription>A list of all bills received from this company.</CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                            <div className="mb-4">
+                                <div className="relative">
+                                    <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                                    <Input
+                                        type="search"
+                                        placeholder="Search by description..."
+                                        value={creditSearchTerm}
+                                        onChange={(e) => setCreditSearchTerm(e.target.value)}
+                                        className="pl-8 w-full"
+                                    />
+                                </div>
+                            </div>
+                            <div className="rounded-md border h-96 overflow-auto">
+                                <Table>
+                                    <TableHeader className="sticky top-0 bg-background">
+                                        <TableRow>
+                                            <TableHead>Date</TableHead>
+                                            <TableHead>Description</TableHead>
+                                            <TableHead className="text-right">Amount (INR)</TableHead>
+                                        </TableRow>
+                                    </TableHeader>
+                                    <TableBody>
+                                        {paginatedCredits.length > 0 ? paginatedCredits.map(t => (
+                                            <TableRow key={t.id}>
+                                                <TableCell>{format(t.date, "dd/MM/yyyy")}</TableCell>
+                                                <TableCell>{t.description || 'N/A'}</TableCell>
+                                                <TableCell className="text-right font-mono text-blue-600">
+                                                    ₹{t.amount.toFixed(2)}
+                                                </TableCell>
+                                            </TableRow>
+                                        )) : (
+                                            <TableRow>
+                                                <TableCell colSpan={3} className="text-center text-muted-foreground">No bills found.</TableCell>
+                                            </TableRow>
+                                        )}
+                                    </TableBody>
+                                </Table>
+                            </div>
+                             {totalCreditPages > 1 && (
+                                <div className="flex items-center justify-between mt-4">
+                                    <Button
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={() => setCreditCurrentPage((p) => Math.max(1, p - 1))}
+                                        disabled={creditCurrentPage === 1}
+                                    >
+                                        <ChevronLeft className="h-4 w-4 mr-1" />
+                                        Previous
+                                    </Button>
+                                    <span className="text-sm text-muted-foreground">
+                                        Page {creditCurrentPage} of {totalCreditPages}
+                                    </span>
+                                    <Button
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={() => setCreditCurrentPage((p) => Math.min(totalCreditPages, p + 1))}
+                                        disabled={creditCurrentPage === totalCreditPages}
+                                    >
+                                        Next
+                                        <ChevronRight className="h-4 w-4 ml-1" />
+                                    </Button>
+                                </div>
+                            )}
+                        </CardContent>
+                    </Card>
+
+                    <Card>
+                        <CardHeader>
+                            <CardTitle className="flex items-center gap-2"><Banknote className="text-green-600"/> Payments Made (Debit)</CardTitle>
                             <CardDescription>A list of all payments made to this company.</CardDescription>
                         </CardHeader>
                         <CardContent>
@@ -219,13 +291,13 @@ export default function PartyTransactionPage() {
                                             <TableRow key={t.id}>
                                                 <TableCell>{format(t.date, "dd/MM/yyyy")}</TableCell>
                                                 <TableCell>{t.description || 'N/A'}</TableCell>
-                                                <TableCell className="text-right font-mono text-destructive">
+                                                <TableCell className="text-right font-mono text-green-600">
                                                     ₹{t.amount.toFixed(2)}
                                                 </TableCell>
                                             </TableRow>
                                         )) : (
                                             <TableRow>
-                                                <TableCell colSpan={3} className="text-center text-muted-foreground">No debit transactions found.</TableCell>
+                                                <TableCell colSpan={3} className="text-center text-muted-foreground">No payments found.</TableCell>
                                             </TableRow>
                                         )}
                                     </TableBody>
@@ -250,78 +322,6 @@ export default function PartyTransactionPage() {
                                         size="sm"
                                         onClick={() => setDebitCurrentPage((p) => Math.min(totalDebitPages, p + 1))}
                                         disabled={debitCurrentPage === totalDebitPages}
-                                    >
-                                        Next
-                                        <ChevronRight className="h-4 w-4 ml-1" />
-                                    </Button>
-                                </div>
-                            )}
-                        </CardContent>
-                    </Card>
-
-                    <Card>
-                        <CardHeader>
-                            <CardTitle className="flex items-center gap-2"><ArrowUpCircle className="text-green-600"/> Credits (Receipts/Returns)</CardTitle>
-                            <CardDescription>A list of all payments or credits received from this company.</CardDescription>
-                        </CardHeader>
-                        <CardContent>
-                            <div className="mb-4">
-                                <div className="relative">
-                                    <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                                    <Input
-                                        type="search"
-                                        placeholder="Search by description..."
-                                        value={creditSearchTerm}
-                                        onChange={(e) => setCreditSearchTerm(e.target.value)}
-                                        className="pl-8 w-full"
-                                    />
-                                </div>
-                            </div>
-                            <div className="rounded-md border h-96 overflow-auto">
-                                <Table>
-                                    <TableHeader className="sticky top-0 bg-background">
-                                        <TableRow>
-                                            <TableHead>Date</TableHead>
-                                            <TableHead>Description</TableHead>
-                                            <TableHead className="text-right">Amount (INR)</TableHead>
-                                        </TableRow>
-                                    </TableHeader>
-                                    <TableBody>
-                                        {paginatedCredits.length > 0 ? paginatedCredits.map(t => (
-                                            <TableRow key={t.id}>
-                                                <TableCell>{format(t.date, "dd/MM/yyyy")}</TableCell>
-                                                <TableCell>{t.description || 'N/A'}</TableCell>
-                                                <TableCell className="text-right font-mono text-green-600">
-                                                    ₹{t.amount.toFixed(2)}
-                                                </TableCell>
-                                            </TableRow>
-                                        )) : (
-                                            <TableRow>
-                                                <TableCell colSpan={3} className="text-center text-muted-foreground">No credit transactions found.</TableCell>
-                                            </TableRow>
-                                        )}
-                                    </TableBody>
-                                </Table>
-                            </div>
-                             {totalCreditPages > 1 && (
-                                <div className="flex items-center justify-between mt-4">
-                                    <Button
-                                        variant="outline"
-                                        size="sm"
-                                        onClick={() => setCreditCurrentPage((p) => Math.max(1, p - 1))}
-                                        disabled={creditCurrentPage === 1}
-                                    >
-                                        <ChevronLeft className="h-4 w-4 mr-1" />
-                                        Previous
-                                    </Button>
-                                    <span className="text-sm text-muted-foreground">
-                                        Page {creditCurrentPage} of {totalCreditPages}
-                                    </span>
-                                    <Button
-                                        variant="outline"
-                                        size="sm"
-                                        onClick={() => setCreditCurrentPage((p) => Math.min(totalCreditPages, p + 1))}
-                                        disabled={creditCurrentPage === totalCreditPages}
                                     >
                                         Next
                                         <ChevronRight className="h-4 w-4 ml-1" />
