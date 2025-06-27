@@ -49,7 +49,9 @@ export function Header() {
           <Link href="/transporter" passHref>
             <MenubarItem>Transporter</MenubarItem>
           </Link>
-          <MenubarItem>Suppliers</MenubarItem>
+          <Link href="/suppliers" passHref>
+            <MenubarItem>Suppliers</MenubarItem>
+          </Link>
           <Link href="/size" passHref>
             <MenubarItem>Size</MenubarItem>
           </Link>
@@ -101,7 +103,7 @@ export function Header() {
         <Button variant="ghost" className="justify-start font-normal w-full" asChild onClick={() => setIsMobileMenuOpen(false)}><Link href="/manufacturer">Manufacturer</Link></Button>
         <Button variant="ghost" className="justify-start font-normal w-full" asChild onClick={() => setIsMobileMenuOpen(false)}><Link href="/pallet">Pallet</Link></Button>
         <Button variant="ghost" className="justify-start font-normal w-full" asChild onClick={() => setIsMobileMenuOpen(false)}><Link href="/transporter">Transporter</Link></Button>
-        <Button variant="ghost" className="justify-start font-normal w-full" onClick={() => setIsMobileMenuOpen(false)}>Suppliers</Button>
+        <Button variant="ghost" className="justify-start font-normal w-full" asChild onClick={() => setIsMobileMenuOpen(false)}><Link href="/suppliers">Suppliers</Link></Button>
         <Button variant="ghost" className="justify-start font-normal w-full" asChild onClick={() => setIsMobileMenuOpen(false)}><Link href="/size">Size</Link></Button>
         <Button variant="ghost" className="justify-start font-normal w-full" asChild onClick={() => setIsMobileMenuOpen(false)}><Link href="/product">Product</Link></Button>
         <Button variant="ghost" className="justify-start font-normal w-full" asChild onClick={() => setIsMobileMenuOpen(false)}><Link href="/bank">Bank</Link></Button>
