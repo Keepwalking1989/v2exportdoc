@@ -360,7 +360,7 @@ export function TransactionForm({
                 <Card>
                     <CardHeader>
                         <CardTitle>Select Invoices to Pay</CardTitle>
-                        <CardDescription>Select one or more invoices. The total amount will be calculated automatically.</CardDescription>
+                        <CardDescription>Select one or more invoices. The total amount will be suggested automatically.</CardDescription>
                     </CardHeader>
                     <CardContent>
                         <FormField
@@ -413,7 +413,7 @@ export function TransactionForm({
 
              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <FormField control={form.control} name="date" render={({ field }) => (<FormItem className="flex flex-col"><FormLabel>Date *</FormLabel><Popover><PopoverTrigger asChild><FormControl><Button variant="outline" className={cn("w-full justify-start text-left font-normal", !field.value && "text-muted-foreground")}>{field.value ? format(field.value, "PPP") : <span>Pick date</span>}<CalendarIcon className="ml-auto h-4 w-4 opacity-50"/></Button></FormControl></PopoverTrigger><PopoverContent className="w-auto p-0"><Calendar mode="single" selected={field.value} onSelect={field.onChange} initialFocus/></PopoverContent></Popover><FormMessage /></FormItem>)} />
-                <FormField control={form.control} name="amount" render={({ field }) => (<FormItem><FormLabel>Amount *</FormLabel><FormControl><Input type="number" {...field} readOnly={isDebitToCompany && (selectedInvoices?.length || 0) > 0} /></FormControl><FormMessage /></FormItem>)} />
+                <FormField control={form.control} name="amount" render={({ field }) => (<FormItem><FormLabel>Amount *</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormMessage /></FormItem>)} />
                 <FormField
                   control={form.control}
                   name="currency"
