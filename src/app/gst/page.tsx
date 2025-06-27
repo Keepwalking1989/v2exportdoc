@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect, useMemo } from 'react';
@@ -5,8 +6,10 @@ import { Header } from '@/components/layout/header';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { IndianRupee, ArrowDown, ArrowUp } from 'lucide-react';
+import { IndianRupee, ArrowDown, ArrowUp, Search, ChevronLeft, ChevronRight } from 'lucide-react';
 import { format } from 'date-fns';
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 
 import type { ManuBill } from '@/types/manu-bill';
 import type { TransBill } from '@/types/trans-bill';
@@ -36,6 +39,8 @@ interface GstPaidItem {
   type: 'Manufacturer' | 'Transport' | 'Supply';
 }
 
+const ITEMS_PER_PAGE = 5;
+
 const StatCard = ({ title, value, icon, description, colorClass }: { title: string; value: string; icon: React.ReactNode; description: string; colorClass?: string }) => (
     <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -58,6 +63,14 @@ export default function GstPage() {
 
     const [totalGstPaid, setTotalGstPaid] = useState(0);
     const [totalGstReceived, setTotalGstReceived] = useState(0);
+
+    // State for GST Paid list
+    const [gstPaidSearchTerm, setGstPaidSearchTerm] = useState('');
+    const [gstPaidCurrentPage, setGstPaidCurrentPage] = useState(1);
+
+    // State for GST Received list
+    const [gstReceivedSearchTerm, setGstReceivedSearchTerm] = useState('');
+    const [gstReceivedCurrentPage, setGstReceivedCurrentPage] = useState(1);
 
     useEffect(() => {
         setIsClient(true);
@@ -143,6 +156,40 @@ export default function GstPage() {
 
     const remainingGst = useMemo(() => totalGstPaid - totalGstReceived, [totalGstPaid, totalGstReceived]);
 
+    // GST Paid filtering and pagination
+    const filteredGstPaid = useMemo(() => {
+        if (!gstPaidSearchTerm) return allGstPaid;
+        return allGstPaid.filter(
+            item =>
+                item.partyName.toLowerCase().includes(gstPaidSearchTerm.toLowerCase()) ||
+                item.invoiceNumber.toLowerCase().includes(gstPaidSearchTerm.toLowerCase())
+        );
+    }, [allGstPaid, gstPaidSearchTerm]);
+
+    const paginatedGstPaid = useMemo(() => {
+        const startIndex = (gstPaidCurrentPage - 1) * ITEMS_PER_PAGE;
+        return filteredGstPaid.slice(startIndex, startIndex + ITEMS_PER_PAGE);
+    }, [filteredGstPaid, gstPaidCurrentPage]);
+
+    const totalGstPaidPages = Math.ceil(filteredGstPaid.length / ITEMS_PER_PAGE);
+
+    // GST Received filtering and pagination
+    const filteredGstReceived = useMemo(() => {
+        if (!gstReceivedSearchTerm) return allGstReceived;
+        return allGstReceived.filter(
+            item =>
+                item.description?.toLowerCase().includes(gstReceivedSearchTerm.toLowerCase())
+        );
+    }, [allGstReceived, gstReceivedSearchTerm]);
+
+    const paginatedGstReceived = useMemo(() => {
+        const startIndex = (gstReceivedCurrentPage - 1) * ITEMS_PER_PAGE;
+        return filteredGstReceived.slice(startIndex, startIndex + ITEMS_PER_PAGE);
+    }, [filteredGstReceived, gstReceivedCurrentPage]);
+
+    const totalGstReceivedPages = Math.ceil(filteredGstReceived.length / ITEMS_PER_PAGE);
+
+
     if (!isClient || isLoading) {
       return (
         <div className="flex flex-col min-h-screen bg-background">
@@ -195,6 +242,18 @@ export default function GstPage() {
                             <CardDescription>List of all bills with GST paid.</CardDescription>
                         </CardHeader>
                         <CardContent>
+                            <div className="mb-4">
+                                <div className="relative">
+                                    <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                                    <Input
+                                        type="search"
+                                        placeholder="Search by Party or Invoice #"
+                                        value={gstPaidSearchTerm}
+                                        onChange={(e) => setGstPaidSearchTerm(e.target.value)}
+                                        className="pl-8 w-full"
+                                    />
+                                </div>
+                            </div>
                             <div className="rounded-md border h-96 overflow-auto">
                                 <Table>
                                     <TableHeader className="sticky top-0 bg-background">
@@ -206,7 +265,7 @@ export default function GstPage() {
                                         </TableRow>
                                     </TableHeader>
                                     <TableBody>
-                                        {allGstPaid.map(item => (
+                                        {paginatedGstPaid.map(item => (
                                             <TableRow key={item.id}>
                                                 <TableCell>{format(item.date, "dd/MM/yy")}</TableCell>
                                                 <TableCell>
@@ -220,6 +279,31 @@ export default function GstPage() {
                                     </TableBody>
                                 </Table>
                             </div>
+                            {totalGstPaidPages > 1 && (
+                                <div className="flex items-center justify-between mt-4">
+                                    <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => setGstPaidCurrentPage((p) => Math.max(1, p - 1))}
+                                    disabled={gstPaidCurrentPage === 1}
+                                    >
+                                    <ChevronLeft className="h-4 w-4 mr-1" />
+                                    Previous
+                                    </Button>
+                                    <span className="text-sm text-muted-foreground">
+                                    Page {gstPaidCurrentPage} of {totalGstPaidPages}
+                                    </span>
+                                    <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => setGstPaidCurrentPage((p) => Math.min(totalGstPaidPages, p + 1))}
+                                    disabled={gstPaidCurrentPage === totalGstPaidPages}
+                                    >
+                                    Next
+                                    <ChevronRight className="h-4 w-4 ml-1" />
+                                    </Button>
+                                </div>
+                            )}
                         </CardContent>
                     </Card>
                     <Card>
@@ -228,6 +312,18 @@ export default function GstPage() {
                              <CardDescription>List of all GST refund transactions.</CardDescription>
                         </CardHeader>
                         <CardContent>
+                           <div className="mb-4">
+                                <div className="relative">
+                                    <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                                    <Input
+                                        type="search"
+                                        placeholder="Search by description..."
+                                        value={gstReceivedSearchTerm}
+                                        onChange={(e) => setGstReceivedSearchTerm(e.target.value)}
+                                        className="pl-8 w-full"
+                                    />
+                                </div>
+                            </div>
                            <div className="rounded-md border h-96 overflow-auto">
                                 <Table>
                                     <TableHeader className="sticky top-0 bg-background">
@@ -238,7 +334,7 @@ export default function GstPage() {
                                         </TableRow>
                                     </TableHeader>
                                     <TableBody>
-                                        {allGstReceived.map(item => (
+                                        {paginatedGstReceived.map(item => (
                                             <TableRow key={item.id}>
                                                 <TableCell>{format(new Date(item.date), "dd/MM/yy")}</TableCell>
                                                 <TableCell>{item.description || 'GST Refund'}</TableCell>
@@ -248,6 +344,31 @@ export default function GstPage() {
                                     </TableBody>
                                 </Table>
                            </div>
+                            {totalGstReceivedPages > 1 && (
+                                <div className="flex items-center justify-between mt-4">
+                                    <Button
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={() => setGstReceivedCurrentPage((p) => Math.max(1, p - 1))}
+                                        disabled={gstReceivedCurrentPage === 1}
+                                    >
+                                        <ChevronLeft className="h-4 w-4 mr-1" />
+                                        Previous
+                                    </Button>
+                                    <span className="text-sm text-muted-foreground">
+                                        Page {gstReceivedCurrentPage} of {totalGstReceivedPages}
+                                    </span>
+                                    <Button
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={() => setGstReceivedCurrentPage((p) => Math.min(totalGstReceivedPages, p + 1))}
+                                        disabled={gstReceivedCurrentPage === totalGstReceivedPages}
+                                    >
+                                        Next
+                                        <ChevronRight className="h-4 w-4 ml-1" />
+                                    </Button>
+                                </div>
+                            )}
                         </CardContent>
                     </Card>
                 </div>
@@ -258,3 +379,4 @@ export default function GstPage() {
         </div>
     );
 }
+
