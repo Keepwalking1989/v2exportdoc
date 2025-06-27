@@ -94,7 +94,7 @@ export function ProductForm({ sizes, onSave, initialData, isEditing, onCancelEdi
           {isEditing ? "Edit Product" : "Add New Product"}
         </CardTitle>
         <CardDescription>
-          {isEditing ? "Modify the details of the existing product." : "Select a size, enter a design name, and save."}
+          {isEditing ? "Modify the details of the existing product." : "Select a size, then enter one or more design names separated by commas."}
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -130,9 +130,9 @@ export function ProductForm({ sizes, onSave, initialData, isEditing, onCancelEdi
               name="designName"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel className="flex items-center gap-2"><Palette className="h-4 w-4 text-muted-foreground" />Design Name</FormLabel>
+                  <FormLabel className="flex items-center gap-2"><Palette className="h-4 w-4 text-muted-foreground" />Design Name(s)</FormLabel>
                   <FormControl>
-                    <Input placeholder="e.g. Onyx Black" {...field} />
+                    <Input placeholder="e.g. Onyx Black, Pearl White..." {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -187,7 +187,7 @@ export function ProductForm({ sizes, onSave, initialData, isEditing, onCancelEdi
                 </Button>
               )}
               <Button type="submit" className="bg-accent hover:bg-accent/90 text-accent-foreground font-headline">
-                <Save className="mr-2 h-4 w-4" /> {isEditing ? "Save Changes" : "Save Product"}
+                <Save className="mr-2 h-4 w-4" /> {isEditing ? "Save Changes" : "Save Product(s)"}
               </Button>
             </div>
           </form>

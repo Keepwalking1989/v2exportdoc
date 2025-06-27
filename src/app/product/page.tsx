@@ -54,6 +54,7 @@ export default function ProductPage() {
     const allProducts: Product[] = allProductsRaw ? JSON.parse(allProductsRaw) : [];
 
     if (productToEdit) {
+      // Editing logic remains the same, only one product at a time.
       const updatedProducts = allProducts.map(p => 
         p.id === productToEdit.id ? { ...p, ...values } : p
       );
@@ -62,14 +63,39 @@ export default function ProductPage() {
       toast({ title: "Product Updated", description: `${values.designName} has been successfully updated.` });
       setProductToEdit(null);
     } else {
-      const newProduct: Product = { 
-        id: `${Date.now()}-${values.designName.replace(/\s+/g, '-')}`, 
-        ...values
-      };
-      const updatedProducts = [...allProducts, newProduct];
+      // Creation logic to handle multiple products.
+      const designNames = values.designName.split(',').map(name => name.trim()).filter(name => name);
+
+      if (designNames.length === 0) {
+        toast({
+          variant: "destructive",
+          title: "Invalid Input",
+          description: "Please provide at least one product name.",
+        });
+        return;
+      }
+      
+      const newProducts: Product[] = designNames.map(name => {
+        // Create a separate product object for each name
+        const productData: Product = {
+          id: `${Date.now()}-${name.replace(/\s+/g, '-')}-${Math.random()}`, // Ensure unique ID
+          sizeId: values.sizeId,
+          designName: name,
+          salesPrice: values.salesPrice,
+          boxWeight: values.boxWeight,
+        };
+        return productData;
+      });
+
+      const updatedProducts = [...allProducts, ...newProducts];
       localStorage.setItem(LOCAL_STORAGE_PRODUCTS_KEY, JSON.stringify(updatedProducts));
       setProducts(updatedProducts.filter(p => !p.isDeleted));
-      toast({ title: "Product Saved", description: `${values.designName} has been successfully saved.` });
+
+      if (designNames.length > 1) {
+          toast({ title: "Products Saved", description: `${designNames.length} products have been successfully created.` });
+      } else {
+          toast({ title: "Product Saved", description: `${designNames[0]} has been successfully created.` });
+      }
     }
   };
 
