@@ -42,7 +42,12 @@ export function TransBillList({ transBills, allTransporters, allExportDocuments,
       const exportDoc = allExportDocuments.find(d => d.id === bill.exportDocumentId);
       
       const payments = allTransactions
-        .filter(t => t.relatedInvoices?.some(inv => inv.type === 'trans' && inv.id === bill.id))
+        .filter(t => 
+            t.type === 'credit' &&
+            t.partyType === 'transporter' &&
+            t.partyId === bill.transporterId &&
+            t.relatedInvoices?.some(inv => inv.type === 'trans' && inv.id === bill.id)
+        )
         .reduce((sum, t) => sum + t.amount, 0);
 
       const outstandingAmount = bill.totalPayable - payments;

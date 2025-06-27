@@ -42,7 +42,12 @@ export function ManuBillList({ manuBills, allManufacturers, allExportDocuments, 
       const exportDoc = allExportDocuments.find(d => d.id === bill.exportDocumentId);
       
       const payments = allTransactions
-        .filter(t => t.relatedInvoices?.some(inv => inv.type === 'manu' && inv.id === bill.id))
+        .filter(t => 
+            t.type === 'credit' &&
+            t.partyType === 'manufacturer' &&
+            t.partyId === bill.manufacturerId &&
+            t.relatedInvoices?.some(inv => inv.type === 'manu' && inv.id === bill.id)
+        )
         .reduce((sum, t) => sum + t.amount, 0);
         
       const outstandingAmount = bill.grandTotal - payments;

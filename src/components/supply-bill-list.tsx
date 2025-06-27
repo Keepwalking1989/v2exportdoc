@@ -51,7 +51,12 @@ export function SupplyBillList({ supplyBills, allSuppliers, allPallets, allExpor
       const exportDoc = allExportDocuments.find(d => d.id === bill.exportDocumentId);
 
       const payments = allTransactions
-        .filter(t => t.relatedInvoices?.some(inv => inv.type === 'supply' && inv.id === bill.id))
+        .filter(t => 
+            t.type === 'credit' &&
+            (t.partyType === 'supplier' || t.partyType === 'pallet') &&
+            t.partyId === bill.supplierId &&
+            t.relatedInvoices?.some(inv => inv.type === 'supply' && inv.id === bill.id)
+        )
         .reduce((sum, t) => sum + t.amount, 0);
         
       const outstandingAmount = bill.grandTotal - payments;
