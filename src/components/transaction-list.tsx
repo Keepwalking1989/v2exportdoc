@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
-import { Search, ChevronLeft, ChevronRight, Edit, Trash2, ArrowUpCircle, ArrowDownCircle, User, Building2, Truck, Package, Palette, Landmark } from "lucide-react";
+import { Search, ChevronLeft, ChevronRight, Edit, Trash2, ArrowUpCircle, ArrowDownCircle, User, Building2, Truck, Package, Palette, Landmark, FileText } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { Transaction } from "@/types/transaction";
 import type { Client } from "@/types/client";
@@ -17,6 +17,9 @@ import type { Transporter } from "@/types/transporter";
 import type { Supplier } from "@/types/supplier";
 import type { Pallet } from "@/types/pallet";
 import type { ExportDocument } from "@/types/export-document";
+import type { ManuBill } from "@/types/manu-bill";
+import type { TransBill } from "@/types/trans-bill";
+import type { SupplyBill } from "@/types/supply-bill";
 import { Badge } from "./ui/badge";
 
 interface TransactionListProps {
@@ -29,6 +32,9 @@ interface TransactionListProps {
   allSuppliers: Supplier[];
   allPallets: Pallet[];
   allExportDocuments: ExportDocument[];
+  allManuBills: ManuBill[];
+  allTransBills: TransBill[];
+  allSupplyBills: SupplyBill[];
 }
 
 const ITEMS_PER_PAGE = 10;
@@ -43,6 +49,9 @@ export function TransactionList({
   allSuppliers,
   allPallets,
   allExportDocuments,
+  allManuBills,
+  allTransBills,
+  allSupplyBills,
 }: TransactionListProps) {
   const [searchTerm, setSearchTerm] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
@@ -73,13 +82,22 @@ export function TransactionList({
   const enrichedTransactions = useMemo(() => {
     return transactions.map(t => {
       const exportDoc = t.exportDocumentId ? allExportDocuments.find(d => d.id === t.exportDocumentId) : undefined;
+      const relatedInvoiceNumbers = t.relatedInvoices?.map(inv => {
+        let bill;
+        if(inv.type === 'manu') bill = allManuBills.find(b => b.id === inv.id);
+        else if(inv.type === 'trans') bill = allTransBills.find(b => b.id === inv.id);
+        else if(inv.type === 'supply') bill = allSupplyBills.find(b => b.id === inv.id);
+        return bill?.invoiceNumber || 'Unknown Bill';
+      }).join(', ');
+      
       return {
         ...t,
         partyDetails: getPartyDetails(t.partyType, t.partyId),
-        exportInvoiceNumber: exportDoc?.exportInvoiceNumber
+        exportInvoiceNumber: exportDoc?.exportInvoiceNumber,
+        relatedInvoiceNumbers: relatedInvoiceNumbers
       };
     });
-  }, [transactions, allClients, allManufacturers, allTransporters, allSuppliers, allPallets, allExportDocuments]);
+  }, [transactions, allClients, allManufacturers, allTransporters, allSuppliers, allPallets, allExportDocuments, allManuBills, allTransBills, allSupplyBills]);
 
   const filteredTransactions = useMemo(() => {
     if (!searchTerm) return enrichedTransactions;
@@ -87,6 +105,7 @@ export function TransactionList({
     return enrichedTransactions.filter(t =>
       t.partyDetails.name.toLowerCase().includes(lowercasedFilter) ||
       t.description?.toLowerCase().includes(lowercasedFilter) ||
+      t.relatedInvoiceNumbers?.toLowerCase().includes(lowercasedFilter) ||
       t.amount.toString().includes(lowercasedFilter)
     );
   }, [enrichedTransactions, searchTerm]);
@@ -110,7 +129,7 @@ export function TransactionList({
             <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
             <Input
               type="search"
-              placeholder="Search by party name, amount, or description..."
+              placeholder="Search by party, amount, description, invoice #..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="pl-8 w-full"
@@ -148,9 +167,10 @@ export function TransactionList({
                           <PartyIcon className="h-4 w-4 text-muted-foreground" />
                           {t.partyDetails.name}
                         </div>
-                        {t.exportInvoiceNumber && (
-                          <p className="text-xs text-muted-foreground mt-1">
-                            Ref: {t.exportInvoiceNumber}
+                        {(t.exportInvoiceNumber || t.relatedInvoiceNumbers) && (
+                          <p className="text-xs text-muted-foreground mt-1 flex items-center gap-1">
+                            <FileText className="h-3 w-3" />
+                            {t.exportInvoiceNumber || t.relatedInvoiceNumbers}
                           </p>
                         )}
                       </TableCell>

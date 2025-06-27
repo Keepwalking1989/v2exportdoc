@@ -12,6 +12,9 @@ import type { Transporter } from "@/types/transporter";
 import type { Supplier } from "@/types/supplier";
 import type { Pallet } from "@/types/pallet";
 import type { ExportDocument } from "@/types/export-document";
+import type { ManuBill } from "@/types/manu-bill";
+import type { TransBill } from "@/types/trans-bill";
+import type { SupplyBill } from "@/types/supply-bill";
 import { useToast } from "@/hooks/use-toast";
 
 const LOCAL_STORAGE_TRANSACTIONS_KEY = "bizform_transactions";
@@ -21,6 +24,9 @@ const LOCAL_STORAGE_TRANSPORTERS_KEY = "bizform_transporters";
 const LOCAL_STORAGE_SUPPLIERS_KEY = "bizform_suppliers";
 const LOCAL_STORAGE_PALLETS_KEY = "bizform_pallets";
 const LOCAL_STORAGE_EXPORT_DOCS_KEY_V2 = "bizform_export_documents_v2";
+const LOCAL_STORAGE_MANU_BILLS_KEY = "bizform_manu_bills";
+const LOCAL_STORAGE_TRANS_BILLS_KEY = "bizform_trans_bills";
+const LOCAL_STORAGE_SUPPLY_BILLS_KEY = "bizform_supply_bills";
 
 export default function TransactionPage() {
   const { toast } = useToast();
@@ -37,6 +43,9 @@ export default function TransactionPage() {
   const [allSuppliers, setAllSuppliers] = useState<Supplier[]>([]);
   const [allPallets, setAllPallets] = useState<Pallet[]>([]);
   const [allExportDocuments, setAllExportDocuments] = useState<ExportDocument[]>([]);
+  const [allManuBills, setAllManuBills] = useState<ManuBill[]>([]);
+  const [allTransBills, setAllTransBills] = useState<TransBill[]>([]);
+  const [allSupplyBills, setAllSupplyBills] = useState<SupplyBill[]>([]);
 
   useEffect(() => {
     setIsClient(true);
@@ -55,6 +64,9 @@ export default function TransactionPage() {
         setAllSuppliers(JSON.parse(localStorage.getItem(LOCAL_STORAGE_SUPPLIERS_KEY) || "[]").filter((s: Supplier) => !s.isDeleted));
         setAllPallets(JSON.parse(localStorage.getItem(LOCAL_STORAGE_PALLETS_KEY) || "[]").filter((p: Pallet) => !p.isDeleted));
         setAllExportDocuments(JSON.parse(localStorage.getItem(LOCAL_STORAGE_EXPORT_DOCS_KEY_V2) || "[]").filter((d: ExportDocument) => !d.isDeleted));
+        setAllManuBills(JSON.parse(localStorage.getItem(LOCAL_STORAGE_MANU_BILLS_KEY) || "[]").filter((b: ManuBill) => !b.isDeleted));
+        setAllTransBills(JSON.parse(localStorage.getItem(LOCAL_STORAGE_TRANS_BILLS_KEY) || "[]").filter((b: TransBill) => !b.isDeleted));
+        setAllSupplyBills(JSON.parse(localStorage.getItem(LOCAL_STORAGE_SUPPLY_BILLS_KEY) || "[]").filter((b: SupplyBill) => !b.isDeleted));
         
       } catch (error) {
         console.error("Failed to parse data from localStorage", error);
@@ -137,6 +149,10 @@ export default function TransactionPage() {
             allSuppliers={allSuppliers}
             allPallets={allPallets}
             allExportDocuments={allExportDocuments}
+            allManuBills={allManuBills}
+            allTransBills={allTransBills}
+            allSupplyBills={allSupplyBills}
+            allTransactions={transactions}
           />
         </div>
         <TransactionList 
@@ -149,6 +165,9 @@ export default function TransactionPage() {
           allSuppliers={allSuppliers}
           allPallets={allPallets}
           allExportDocuments={allExportDocuments}
+          allManuBills={allManuBills}
+          allTransBills={allTransBills}
+          allSupplyBills={allSupplyBills}
         />
       </main>
       <footer className="py-6 text-center text-sm text-muted-foreground border-t">

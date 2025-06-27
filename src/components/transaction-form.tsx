@@ -2,7 +2,7 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useForm, useWatch } from "react-hook-form";
+import { useForm, useWatch, Controller } from "react-hook-form";
 import * as z from "zod";
 import { Button } from "@/components/ui/button";
 import {
@@ -22,8 +22,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Combobox, type ComboboxOption } from "@/components/ui/combobox";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
-import { CalendarIcon, Save, XCircle, ArrowLeftRight, CreditCard, Landmark, Truck, Building2, User, Palette, Package, DollarSign, NotebookText, Link as LinkIcon } from "lucide-react";
-import React, { useEffect, useMemo } from "react";
+import { CalendarIcon, Save, XCircle, ArrowLeftRight, CreditCard, Landmark, Truck, Building2, User, Palette, Package, DollarSign, NotebookText, Link as LinkIcon, FileText } from "lucide-react";
+import React, { useEffect, useMemo, useState } from "react";
 import type { Transaction } from "@/types/transaction";
 import type { Client } from "@/types/client";
 import type { Manufacturer } from "@/types/manufacturer";
@@ -31,7 +31,12 @@ import type { Transporter } from "@/types/transporter";
 import type { Supplier } from "@/types/supplier";
 import type { Pallet } from "@/types/pallet";
 import type { ExportDocument } from "@/types/export-document";
+import type { ManuBill } from "@/types/manu-bill";
+import type { TransBill } from "@/types/trans-bill";
+import type { SupplyBill } from "@/types/supply-bill";
 import { RadioGroup, RadioGroupItem } from "./ui/radio-group";
+import { Checkbox } from "./ui/checkbox";
+import { ScrollArea } from "./ui/scroll-area";
 
 const formSchema = z.object({
   date: z.date(),
@@ -39,8 +44,9 @@ const formSchema = z.object({
   partyType: z.enum(['client', 'manufacturer', 'transporter', 'supplier', 'pallet', 'gst', 'duty_drawback', 'road_tp']),
   partyId: z.string().min(1, "Please select a party."),
   exportDocumentId: z.string().optional(),
+  relatedInvoices: z.array(z.object({ type: z.string(), id: z.string() })).optional(),
   currency: z.enum(['USD', 'EUR', 'INR']),
-  amount: z.coerce.number().positive("Amount must be a positive number."),
+  amount: z.coerce.number().positive("Amount must be a positive number.").default(0),
   description: z.string().optional(),
 });
 
@@ -57,6 +63,10 @@ interface TransactionFormProps {
   allSuppliers: Supplier[];
   allPallets: Pallet[];
   allExportDocuments: ExportDocument[];
+  allManuBills: ManuBill[];
+  allTransBills: TransBill[];
+  allSupplyBills: SupplyBill[];
+  allTransactions: Transaction[];
 }
 
 const defaultValues: TransactionFormValues = {
@@ -65,10 +75,14 @@ const defaultValues: TransactionFormValues = {
   partyType: 'client',
   partyId: "",
   exportDocumentId: "",
+  relatedInvoices: [],
   currency: 'USD',
   amount: 0,
   description: ""
 };
+
+type BillType = 'manu' | 'trans' | 'supply';
+type UnpaidBill = (ManuBill | TransBill | SupplyBill) & { billType: BillType };
 
 export function TransactionForm({
   initialData,
@@ -80,62 +94,118 @@ export function TransactionForm({
   allTransporters,
   allSuppliers,
   allPallets,
-  allExportDocuments
+  allExportDocuments,
+  allManuBills,
+  allTransBills,
+  allSupplyBills,
+  allTransactions
 }: TransactionFormProps) {
   const form = useForm<TransactionFormValues>({
     resolver: zodResolver(formSchema),
     defaultValues,
   });
 
+  const [unpaidBills, setUnpaidBills] = useState<UnpaidBill[]>([]);
+
   const transactionType = useWatch({ control: form.control, name: 'type' });
   const partyType = useWatch({ control: form.control, name: 'partyType' });
+  const partyId = useWatch({ control: form.control, name: 'partyId' });
+  const selectedInvoices = useWatch({ control: form.control, name: 'relatedInvoices' });
 
   const isGovernmentParty = useMemo(() => ['gst', 'duty_drawback', 'road_tp'].includes(partyType), [partyType]);
   const isGovPartyWithDocLink = useMemo(() => ['gst', 'duty_drawback'].includes(partyType), [partyType]);
+  const isDebitToCompany = useMemo(() => ['manufacturer', 'transporter', 'supplier', 'pallet'].includes(partyType), [partyType]);
 
   useEffect(() => {
     if (isEditing && initialData) {
-      form.reset({ ...initialData, date: new Date(initialData.date) });
+      form.reset({ ...initialData, date: new Date(initialData.date), relatedInvoices: initialData.relatedInvoices || [] });
     } else {
       form.reset(defaultValues);
     }
   }, [isEditing, initialData, form]);
 
   useEffect(() => {
-    if (isEditing) return; // Don't auto-reset when editing
+    if (isEditing) return;
 
     const currentPartyType = form.getValues('partyType');
     const isValidForCredit = ['client', 'gst', 'duty_drawback', 'road_tp'].includes(currentPartyType);
-    const isValidForDebit = ['manufacturer', 'transporter', 'supplier', 'pallet'].includes(currentPartyType);
+    const isValidForDebit = isDebitToCompany;
 
     if (transactionType === 'credit' && !isValidForCredit) {
       form.setValue('partyType', 'client');
     } else if (transactionType === 'debit' && !isValidForDebit) {
       form.setValue('partyType', 'manufacturer');
     }
-  }, [transactionType, form, isEditing]);
+  }, [transactionType, form, isEditing, isDebitToCompany]);
 
   useEffect(() => {
-    // When party type changes, reset the selected party and adjust currency
-    if (isEditing && !form.formState.isDirty) {
-      // Don't run on initial load of an edit form
-    } else {
-      form.setValue('partyId', '');
-    }
+    if (isEditing && !form.formState.isDirty) return;
+    
+    form.setValue('partyId', '');
+    form.setValue('relatedInvoices', []);
 
     if (isGovernmentParty) {
-      form.setValue('partyId', partyType); // Auto-set ID for gov types
+      form.setValue('partyId', partyType);
       form.setValue('currency', 'INR');
     } else if (partyType === 'client') {
       form.setValue('currency', 'USD');
-    } else { // It's a debit to a company
+    } else {
       form.setValue('currency', 'INR');
     }
 
     if (!isGovPartyWithDocLink) {
-        form.setValue('exportDocumentId', '');
+      form.setValue('exportDocumentId', '');
     }
   }, [partyType, isGovernmentParty, form, isEditing, isGovPartyWithDocLink]);
+  
+  // Effect to find unpaid bills for the selected party
+  useEffect(() => {
+    if (!partyId || !isDebitToCompany) {
+      setUnpaidBills([]);
+      return;
+    }
+
+    // For now, we consider all bills as potentially "unpaid".
+    // A future enhancement would be to track payment status on each bill.
+    let bills: UnpaidBill[] = [];
+    if (partyType === 'manufacturer') {
+      bills = allManuBills
+        .filter(b => b.manufacturerId === partyId)
+        .map(b => ({ ...b, billType: 'manu' }));
+    } else if (partyType === 'transporter') {
+      bills = allTransBills
+        .filter(b => b.transporterId === partyId)
+        .map(b => ({ ...b, billType: 'trans' }));
+    } else if (partyType === 'supplier' || partyType === 'pallet') {
+        bills = allSupplyBills
+        .filter(b => b.supplierId === partyId)
+        .map(b => ({...b, billType: 'supply'}));
+    }
+    setUnpaidBills(bills);
+
+  }, [partyId, partyType, isDebitToCompany, allManuBills, allTransBills, allSupplyBills]);
+
+  // Effect to calculate total amount from selected invoices
+  useEffect(() => {
+    if (!selectedInvoices) {
+      if (!isEditing) form.setValue('amount', 0);
+      return;
+    };
+    
+    let total = 0;
+    selectedInvoices.forEach(inv => {
+      let bill;
+      if (inv.type === 'manu') bill = allManuBills.find(b => b.id === inv.id);
+      else if (inv.type === 'trans') bill = allTransBills.find(b => b.id === inv.id);
+      else if (inv.type === 'supply') bill = allSupplyBills.find(b => b.id === inv.id);
+      
+      if (bill) {
+        total += bill.grandTotal || bill.totalPayable || 0;
+      }
+    });
+    form.setValue('amount', parseFloat(total.toFixed(2)));
+
+  }, [selectedInvoices, allManuBills, allTransBills, allSupplyBills, form, isEditing]);
 
 
   const partyOptions = useMemo((): ComboboxOption[] => {
@@ -286,9 +356,64 @@ export function TransactionForm({
               )}
             </div>
             
+            {isDebitToCompany && unpaidBills.length > 0 && (
+                <Card>
+                    <CardHeader>
+                        <CardTitle>Select Invoices to Pay</CardTitle>
+                        <CardDescription>Select one or more invoices. The total amount will be calculated automatically.</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                        <FormField
+                            control={form.control}
+                            name="relatedInvoices"
+                            render={({ field }) => (
+                                <FormItem>
+                                    <ScrollArea className="h-48 w-full rounded-md border p-4">
+                                        {unpaidBills.map((bill) => (
+                                            <FormField
+                                                key={bill.id}
+                                                control={form.control}
+                                                name="relatedInvoices"
+                                                render={({ field }) => {
+                                                    return (
+                                                        <FormItem
+                                                        key={bill.id}
+                                                        className="flex flex-row items-start space-x-3 space-y-0 mb-2"
+                                                        >
+                                                        <FormControl>
+                                                            <Checkbox
+                                                            checked={field.value?.some(item => item.id === bill.id)}
+                                                            onCheckedChange={(checked) => {
+                                                                return checked
+                                                                ? field.onChange([...(field.value || []), { type: bill.billType, id: bill.id }])
+                                                                : field.onChange(
+                                                                    field.value?.filter(
+                                                                    (value) => value.id !== bill.id
+                                                                    )
+                                                                )
+                                                            }}
+                                                            />
+                                                        </FormControl>
+                                                        <FormLabel className="font-normal w-full flex justify-between">
+                                                            <span>{bill.invoiceNumber} ({format(new Date(bill.invoiceDate), 'dd-MMM-yy')})</span>
+                                                            <span className="font-medium">₹ {(bill.grandTotal || bill.totalPayable || 0).toFixed(2)}</span>
+                                                        </FormLabel>
+                                                        </FormItem>
+                                                    )
+                                                }}
+                                            />
+                                        ))}
+                                    </ScrollArea>
+                                </FormItem>
+                            )}
+                        />
+                    </CardContent>
+                </Card>
+            )}
+
              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <FormField control={form.control} name="date" render={({ field }) => (<FormItem className="flex flex-col"><FormLabel>Date *</FormLabel><Popover><PopoverTrigger asChild><FormControl><Button variant="outline" className={cn("w-full justify-start text-left font-normal", !field.value && "text-muted-foreground")}>{field.value ? format(field.value, "PPP") : <span>Pick date</span>}<CalendarIcon className="ml-auto h-4 w-4 opacity-50"/></Button></FormControl></PopoverTrigger><PopoverContent className="w-auto p-0"><Calendar mode="single" selected={field.value} onSelect={field.onChange} initialFocus/></PopoverContent></Popover><FormMessage /></FormItem>)} />
-                <FormField control={form.control} name="amount" render={({ field }) => (<FormItem><FormLabel>Amount *</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormMessage /></FormItem>)} />
+                <FormField control={form.control} name="amount" render={({ field }) => (<FormItem><FormLabel>Amount *</FormLabel><FormControl><Input type="number" {...field} readOnly={isDebitToCompany && (selectedInvoices?.length || 0) > 0} /></FormControl><FormMessage /></FormItem>)} />
                 <FormField
                   control={form.control}
                   name="currency"
