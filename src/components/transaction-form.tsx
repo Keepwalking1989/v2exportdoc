@@ -22,7 +22,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Combobox, type ComboboxOption } from "@/components/ui/combobox";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
-import { CalendarIcon, Save, XCircle, ArrowLeftRight, Landmark, Truck, Building2, User, Palette, Package, DollarSign, NotebookText, Link as LinkIcon, FileText, ArrowUp, ArrowDown } from "lucide-react";
+import { CalendarIcon, Save, XCircle, ArrowLeftRight, Landmark, Truck, Building2, User, Palette, Package, DollarSign, NotebookText, Link as LinkIcon } from "lucide-react";
 import React, { useEffect, useMemo, useState } from "react";
 import type { Transaction } from "@/types/transaction";
 import type { Client } from "@/types/client";
@@ -261,17 +261,17 @@ export function TransactionForm({
                       value={field.value}
                       className="flex space-x-4"
                     >
-                      <FormItem className="flex items-center space-x-2 space-y-0">
-                        <FormControl>
-                          <RadioGroupItem value="credit" />
-                        </FormControl>
-                        <FormLabel className="font-normal flex items-center gap-2"><ArrowDown className="text-red-600"/> Payment Made</FormLabel>
-                      </FormItem>
-                      <FormItem className="flex items-center space-x-2 space-y-0">
+                      <FormItem className="flex items-center space-x-3 space-y-0">
                         <FormControl>
                           <RadioGroupItem value="debit" />
                         </FormControl>
-                        <FormLabel className="font-normal flex items-center gap-2"><ArrowUp className="text-green-600" /> Payment Received</FormLabel>
+                        <FormLabel className="font-normal">Debit (Payment Received)</FormLabel>
+                      </FormItem>
+                      <FormItem className="flex items-center space-x-3 space-y-0">
+                        <FormControl>
+                          <RadioGroupItem value="credit" />
+                        </FormControl>
+                        <FormLabel className="font-normal">Credit (Payment Made)</FormLabel>
                       </FormItem>
                     </RadioGroup>
                   </FormControl>
@@ -294,19 +294,19 @@ export function TransactionForm({
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          {transactionType === 'credit' ? ( // Payment Made To
+                          {transactionType === 'debit' ? ( // Debit is payment received FROM
                              <>
-                              <SelectItem value="manufacturer"><Building2 className="inline-block mr-2 h-4 w-4"/>Manufacturer</SelectItem>
-                              <SelectItem value="transporter"><Truck className="inline-block mr-2 h-4 w-4"/>Transporter</SelectItem>
-                              <SelectItem value="supplier"><Package className="inline-block mr-2 h-4 w-4"/>Supplier</SelectItem>
-                              <SelectItem value="pallet"><Palette className="inline-block mr-2 h-4 w-4"/>Pallet</SelectItem>
-                             </>
-                          ) : ( // Payment Received From
-                            <>
                               <SelectItem value="client"><User className="inline-block mr-2 h-4 w-4"/>Client</SelectItem>
                               <SelectItem value="gst"><Landmark className="inline-block mr-2 h-4 w-4"/>Government (GST)</SelectItem>
                               <SelectItem value="duty_drawback"><Landmark className="inline-block mr-2 h-4 w-4"/>Government (Duty Drawback)</SelectItem>
                               <SelectItem value="road_tp"><Landmark className="inline-block mr-2 h-4 w-4"/>Government (Road TP)</SelectItem>
+                             </>
+                          ) : ( // Credit is payment made TO
+                            <>
+                              <SelectItem value="manufacturer"><Building2 className="inline-block mr-2 h-4 w-4"/>Manufacturer</SelectItem>
+                              <SelectItem value="transporter"><Truck className="inline-block mr-2 h-4 w-4"/>Transporter</SelectItem>
+                              <SelectItem value="supplier"><Package className="inline-block mr-2 h-4 w-4"/>Supplier</SelectItem>
+                              <SelectItem value="pallet"><Palette className="inline-block mr-2 h-4 w-4"/>Pallet</SelectItem>
                             </>
                           )}
                         </SelectContent>

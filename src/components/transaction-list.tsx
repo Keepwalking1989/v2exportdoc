@@ -20,7 +20,6 @@ import type { ExportDocument } from "@/types/export-document";
 import type { ManuBill } from "@/types/manu-bill";
 import type { TransBill } from "@/types/trans-bill";
 import type { SupplyBill } from "@/types/supply-bill";
-import { Badge } from "./ui/badge";
 
 interface TransactionListProps {
   transactions: Transaction[];
@@ -90,17 +89,11 @@ export function TransactionList({
         return bill?.invoiceNumber || 'Unknown Bill';
       }).join(', ');
       
-      const isPayableParty = ['manufacturer', 'transporter', 'supplier', 'pallet'].includes(t.partyType);
-      const transactionFlow = t.type === 'credit' && isPayableParty 
-        ? 'Payment Made' 
-        : 'Payment Received';
-
       return {
         ...t,
         partyDetails: getPartyDetails(t.partyType, t.partyId),
         exportInvoiceNumber: exportDoc?.exportInvoiceNumber,
-        relatedInvoiceNumbers: relatedInvoiceNumbers,
-        transactionFlow
+        relatedInvoiceNumbers: relatedInvoiceNumbers
       };
     });
   }, [transactions, allClients, allManufacturers, allTransporters, allSuppliers, allPallets, allExportDocuments, allManuBills, allTransBills, allSupplyBills]);
@@ -159,14 +152,13 @@ export function TransactionList({
               <TableBody>
                 {paginatedTransactions.map((t) => {
                   const PartyIcon = t.partyDetails.icon;
-                  const isPaymentMade = t.transactionFlow === 'Payment Made';
                   return (
                     <TableRow key={t.id}>
                       <TableCell>
-                        <Badge variant={'outline'} className={cn(isPaymentMade ? 'border-red-600 text-red-600' : 'border-green-600 text-green-600')}>
-                          {isPaymentMade ? <ArrowDownCircle className="mr-1"/> : <ArrowUpCircle className="mr-1"/>}
-                          {t.transactionFlow}
-                        </Badge>
+                        {t.type === 'debit' ? 
+                          <span className="flex items-center gap-1 text-green-600"><ArrowUpCircle/> Debit</span> : 
+                          <span className="flex items-center gap-1 text-red-600"><ArrowDownCircle/> Credit</span>
+                        }
                       </TableCell>
                       <TableCell>{format(new Date(t.date), "dd/MM/yyyy")}</TableCell>
                       <TableCell>
@@ -182,7 +174,7 @@ export function TransactionList({
                         )}
                       </TableCell>
                       <TableCell>{t.description}</TableCell>
-                      <TableCell className={cn("text-right font-mono", isPaymentMade ? 'text-red-600' : 'text-green-600')}>
+                      <TableCell className={cn("text-right font-mono", t.type === 'debit' ? 'text-green-600' : 'text-red-600')}>
                           {t.amount.toLocaleString(undefined, { style: 'currency', currency: t.currency, minimumFractionDigits: 2 })}
                       </TableCell>
                       <TableCell className="text-right space-x-1">

@@ -189,7 +189,7 @@ export default function PartyTransactionPage() {
                 <div className="grid gap-8 lg:grid-cols-2">
                     <Card>
                         <CardHeader>
-                            <CardTitle className="flex items-center gap-2"><FileText className="text-destructive"/> Bill Entry</CardTitle>
+                            <CardTitle className="flex items-center gap-2"><FileText className="text-destructive"/> Bills Received (Debit)</CardTitle>
                             <CardDescription>A list of all bills from this company, increasing the amount you owe.</CardDescription>
                         </CardHeader>
                         <CardContent>
@@ -261,7 +261,7 @@ export default function PartyTransactionPage() {
 
                     <Card>
                         <CardHeader>
-                            <CardTitle className="flex items-center gap-2"><Banknote className="text-green-600"/> Payments Made</CardTitle>
+                            <CardTitle className="flex items-center gap-2"><Banknote className="text-green-600"/> Payments Made (Credit)</CardTitle>
                             <CardDescription>A list of all payments made to this company, reducing the amount you owe.</CardDescription>
                         </CardHeader>
                         <CardContent>
