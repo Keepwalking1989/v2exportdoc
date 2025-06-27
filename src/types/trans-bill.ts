@@ -2,7 +2,6 @@
 export interface TransBillItem {
   id: string;
   description: string;
-  hsnSac: string;
   quantity: number;
   rate: number;
   gstRate: number; // The GST rate percentage (e.g., 18)
@@ -15,14 +14,9 @@ export interface TransBill {
   transporterId: string;
   invoiceNumber: string;
   invoiceDate: Date;
-  jobNo?: string;
-  jobDate?: Date;
   shippingLine?: string;
   portOfLoading?: string;
   portOfDischarge?: string;
-  shipmentType?: string;
-  containerNo?: string;
-  shippingBillNo?: string;
   items: TransBillItem[];
   remarks?: string;
   subTotal: number; // Sum of item amounts

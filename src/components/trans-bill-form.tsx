@@ -30,7 +30,6 @@ import type { Transporter } from "@/types/transporter";
 const transBillItemSchema = z.object({
   id: z.string().optional(),
   description: z.string().min(1, "Description is required"),
-  hsnSac: z.string().min(1, "HSN/SAC is required"),
   quantity: z.coerce.number().positive(),
   rate: z.coerce.number().positive(),
   gstRate: z.coerce.number().min(0).max(100).default(18),
@@ -41,14 +40,9 @@ const formSchema = z.object({
   transporterId: z.string().min(1, "Transporter is required"),
   invoiceNumber: z.string().min(1, "Invoice number is required"),
   invoiceDate: z.date(),
-  jobNo: z.string().optional(),
-  jobDate: z.date().optional(),
   shippingLine: z.string().optional(),
   portOfLoading: z.string().optional(),
   portOfDischarge: z.string().optional(),
-  shipmentType: z.string().optional(),
-  containerNo: z.string().optional(),
-  shippingBillNo: z.string().optional(),
   items: z.array(transBillItemSchema).min(1, "At least one item is required"),
   remarks: z.string().optional(),
   cgstRate: z.coerce.number().min(0).default(9),
@@ -65,15 +59,10 @@ const defaultFormValues: TransBillFormValues = {
     transporterId: "",
     invoiceNumber: "",
     invoiceDate: new Date(),
-    jobNo: "",
-    jobDate: undefined,
     shippingLine: "",
     portOfLoading: "",
     portOfDischarge: "",
-    shipmentType: "FACTORY STUFFING",
-    containerNo: "",
-    shippingBillNo: "",
-    items: [{ description: "", hsnSac: "", quantity: 1, rate: 0, gstRate: 18 }],
+    items: [{ description: "", quantity: 1, rate: 0, gstRate: 18 }],
     remarks: "",
     cgstRate: 9,
     sgstRate: 9,
@@ -118,10 +107,6 @@ export function TransBillForm({
         if(doc.vesselFlightNo) form.setValue('shippingLine', doc.vesselFlightNo);
         if(doc.portOfLoading) form.setValue('portOfLoading', doc.portOfLoading);
         if(doc.portOfDischarge) form.setValue('portOfDischarge', doc.portOfDischarge);
-        if(doc.containerItems && doc.containerItems.length > 0) {
-            form.setValue('containerNo', doc.containerItems.map(c => c.containerNo).join(', '));
-        }
-        if(doc.shippingBillNumber) form.setValue('shippingBillNo', doc.shippingBillNumber);
       }
     }
   }, [selectedExportDocId, allExportDocuments, form]);
@@ -232,35 +217,29 @@ export function TransBillForm({
             
             <Card>
               <CardHeader><CardTitle>Invoice Details</CardTitle></CardHeader>
-              <CardContent className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
                  <FormField control={form.control} name="invoiceNumber" render={({ field }) => (<FormItem><FormLabel>Invoice No.</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)} />
                  <FormField control={form.control} name="invoiceDate" render={({ field }) => (<FormItem className="flex flex-col"><FormLabel>Invoice Date</FormLabel><Popover><PopoverTrigger asChild><FormControl><Button variant="outline" className={cn("w-full justify-start", !field.value && "text-muted-foreground")}>{field.value ? format(field.value, "PPP") : <span>Pick date</span>}<CalendarIcon className="ml-auto h-4 w-4"/></Button></FormControl></PopoverTrigger><PopoverContent><Calendar mode="single" selected={field.value} onSelect={field.onChange}/></PopoverContent></Popover><FormMessage /></FormItem>)} />
-                 <FormField control={form.control} name="jobNo" render={({ field }) => (<FormItem><FormLabel>Job No.</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)} />
-                 <FormField control={form.control} name="jobDate" render={({ field }) => (<FormItem className="flex flex-col"><FormLabel>Job Date</FormLabel><Popover><PopoverTrigger asChild><FormControl><Button variant="outline" className={cn("w-full justify-start", !field.value && "text-muted-foreground")}>{field.value ? format(field.value, "PPP") : <span>Pick date</span>}<CalendarIcon className="ml-auto h-4 w-4"/></Button></FormControl></PopoverTrigger><PopoverContent><Calendar mode="single" selected={field.value} onSelect={field.onChange}/></PopoverContent></Popover><FormMessage /></FormItem>)} />
               </CardContent>
             </Card>
 
             <Card>
               <CardHeader><CardTitle>Shipment Details</CardTitle></CardHeader>
-              <CardContent className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              <CardContent className="grid grid-cols-1 md:grid-cols-3 gap-4">
                  <FormField control={form.control} name="shippingLine" render={({ field }) => (<FormItem><FormLabel>Shipping Line</FormLabel><FormControl><Input {...field} /></FormControl></FormItem>)} />
                  <FormField control={form.control} name="portOfLoading" render={({ field }) => (<FormItem><FormLabel>Port Of Loading</FormLabel><FormControl><Input {...field} /></FormControl></FormItem>)} />
                  <FormField control={form.control} name="portOfDischarge" render={({ field }) => (<FormItem><FormLabel>Port Of Discharge</FormLabel><FormControl><Input {...field} /></FormControl></FormItem>)} />
-                 <FormField control={form.control} name="shipmentType" render={({ field }) => (<FormItem><FormLabel>Shipment Type</FormLabel><FormControl><Input {...field} /></FormControl></FormItem>)} />
-                 <FormField control={form.control} name="containerNo" render={({ field }) => (<FormItem><FormLabel>Container No.</FormLabel><FormControl><Input {...field} /></FormControl></FormItem>)} />
-                 <FormField control={form.control} name="shippingBillNo" render={({ field }) => (<FormItem><FormLabel>Shipping Bill No.</FormLabel><FormControl><Input {...field} /></FormControl></FormItem>)} />
               </CardContent>
             </Card>
 
             <Card>
-              <CardHeader><CardTitle className="flex justify-between">Items<Button type="button" size="sm" onClick={() => append({ description: "", hsnSac: "", quantity: 1, rate: 0, gstRate: 18 })}><PlusCircle className="mr-2 h-4 w-4"/>Add Item</Button></CardTitle></CardHeader>
+              <CardHeader><CardTitle className="flex justify-between">Items<Button type="button" size="sm" onClick={() => append({ description: "", quantity: 1, rate: 0, gstRate: 18 })}><PlusCircle className="mr-2 h-4 w-4"/>Add Item</Button></CardTitle></CardHeader>
               <CardContent className="space-y-4">
                 {fields.map((field, index) => (
                   <div key={field.id} className="p-4 border rounded-md space-y-2 relative">
                      <Button type="button" variant="destructive" size="icon" className="absolute top-1 right-1 h-6 w-6" onClick={() => remove(index)}><Trash2 className="h-3 w-3" /></Button>
                      <FormField control={form.control} name={`items.${index}.description`} render={({ field }) => (<FormItem><FormLabel>Description</FormLabel><FormControl><Textarea {...field} rows={1} /></FormControl></FormItem>)} />
-                     <div className="grid grid-cols-2 md:grid-cols-5 gap-2">
-                        <FormField control={form.control} name={`items.${index}.hsnSac`} render={({ field }) => (<FormItem><FormLabel>HSN/SAC</FormLabel><FormControl><Input {...field} /></FormControl></FormItem>)} />
+                     <div className="grid grid-cols-1 md:grid-cols-4 gap-2">
                         <FormField control={form.control} name={`items.${index}.quantity`} render={({ field }) => (<FormItem><FormLabel>Qty</FormLabel><FormControl><Input type="number" {...field} /></FormControl></FormItem>)} />
                         <FormField control={form.control} name={`items.${index}.gstRate`} render={({ field }) => (<FormItem><FormLabel>GST %</FormLabel><FormControl><Input type="number" {...field} /></FormControl></FormItem>)} />
                         <FormField control={form.control} name={`items.${index}.rate`} render={({ field }) => (<FormItem><FormLabel>Rate</FormLabel><FormControl><Input type="number" {...field} /></FormControl></FormItem>)} />
