@@ -336,15 +336,16 @@ export function generatePackingListPdf(
             [ // Row 1 of the whole block
                 {
                     content: `Declaration:\n${declarationText}`,
-                    rowSpan: 4, // Span all 4 conceptual rows of the signature block
+                    rowSpan: 4, 
                     styles: {
-                        lineWidth: 0.5, 
-                        lineColor: [0,0,0], 
-                        valign: 'top', 
-                        halign: 'left', 
-                        cellPadding: 2, // Explicitly set smaller padding
-                        ...classTwoStyles, 
-                        ...classThreeStyles
+                        fontStyle: 'normal',
+                        textColor: [0, 0, 0],
+                        fontSize: 8,
+                        lineWidth: 0.5,
+                        lineColor: [0, 0, 0],
+                        valign: 'top',
+                        halign: 'left',
+                        cellPadding: 2,
                     }
                 },
                 {
