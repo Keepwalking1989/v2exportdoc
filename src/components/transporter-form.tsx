@@ -16,8 +16,8 @@ import {
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import type { Transporter } from "@/types/transporter";
-import { Building2, BadgePercent, User, Phone } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
+import { Building2, BadgePercent, User, Phone, Save, XCircle } from "lucide-react";
+import { useEffect } from "react";
 
 const phoneRegex = new RegExp(
   /^([+]?[\s0-9]+)?(\d{3}|[(]?[0-9]+[)])?([-]?[\s]?[0-9])+$/
@@ -34,35 +34,41 @@ const formSchema = z.object({
   contactNumber: z.string().regex(phoneRegex, "Invalid phone number"),
 });
 
-type TransporterFormValues = z.infer<typeof formSchema>;
+export type TransporterFormValues = z.infer<typeof formSchema>;
+
+const defaultValues = {
+  companyName: "",
+  gstNumber: "",
+  contactPerson: "",
+  contactNumber: "",
+};
 
 interface TransporterFormProps {
-  onSave: (transporter: Transporter) => void;
+  onSave: (values: TransporterFormValues) => void;
+  initialData?: Transporter | null;
+  isEditing: boolean;
+  onCancelEdit: () => void;
 }
 
-export function TransporterForm({ onSave }: TransporterFormProps) {
-  const { toast } = useToast();
+export function TransporterForm({ onSave, initialData, isEditing, onCancelEdit }: TransporterFormProps) {
   const form = useForm<TransporterFormValues>({
     resolver: zodResolver(formSchema),
-    defaultValues: {
-      companyName: "",
-      gstNumber: "",
-      contactPerson: "",
-      contactNumber: "",
-    },
+    defaultValues,
   });
 
+  useEffect(() => {
+    if (isEditing && initialData) {
+      form.reset(initialData);
+    } else {
+      form.reset(defaultValues);
+    }
+  }, [isEditing, initialData, form]);
+
   function onSubmit(values: TransporterFormValues) {
-    const newTransporter: Transporter = {
-      id: Date.now().toString(),
-      ...values,
-    };
-    onSave(newTransporter);
-    toast({
-      title: "Transporter Company Saved",
-      description: `${values.companyName} has been successfully saved.`,
-    });
-    form.reset();
+    onSave(values);
+    if (!isEditing) {
+      form.reset();
+    }
   }
 
   return (
@@ -70,9 +76,11 @@ export function TransporterForm({ onSave }: TransporterFormProps) {
       <CardHeader>
         <CardTitle className="font-headline text-2xl flex items-center gap-2">
           <Building2 className="h-6 w-6 text-primary" />
-          Add New Transporter Company
+          {isEditing ? "Edit Transporter Company" : "Add New Transporter Company"}
         </CardTitle>
-        <CardDescription>Fill in the details below to add a new transporter company.</CardDescription>
+        <CardDescription>
+          {isEditing ? "Modify the details of the existing transporter." : "Fill in the details below to add a new transporter."}
+        </CardDescription>
       </CardHeader>
       <CardContent>
         <Form {...form}>
@@ -129,9 +137,16 @@ export function TransporterForm({ onSave }: TransporterFormProps) {
                 </FormItem>
               )}
             />
-            <Button type="submit" className="w-full bg-accent hover:bg-accent/90 text-accent-foreground font-headline">
-              Save Transporter Company
-            </Button>
+            <div className="flex justify-end space-x-4">
+              {isEditing && (
+                <Button type="button" variant="ghost" onClick={onCancelEdit}>
+                  <XCircle className="mr-2 h-4 w-4" /> Cancel
+                </Button>
+              )}
+              <Button type="submit" className="bg-accent hover:bg-accent/90 text-accent-foreground font-headline">
+                <Save className="mr-2 h-4 w-4" /> {isEditing ? "Save Changes" : "Save Transporter"}
+              </Button>
+            </div>
           </form>
         </Form>
       </CardContent>

@@ -14,23 +14,28 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Search, ChevronLeft, ChevronRight, Landmark, ListChecks } from "lucide-react";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
+import { Search, ChevronLeft, ChevronRight, Landmark, ListChecks, Edit, Trash2 } from "lucide-react";
 
 interface BankListProps {
   banks: Bank[];
+  onEditBank: (id: string) => void;
+  onDeleteBank: (id: string) => void;
 }
 
 const ITEMS_PER_PAGE = 5;
 
-export function BankList({ banks: initialBanks }: BankListProps) {
+export function BankList({ banks: initialBanks, onEditBank, onDeleteBank }: BankListProps) {
   const [banks, setBanks] = useState<Bank[]>(initialBanks);
   const [searchTerm, setSearchTerm] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
 
   useEffect(() => {
     setBanks(initialBanks);
-    setCurrentPage(1);
-  }, [initialBanks]);
+    if (initialBanks.length <= (currentPage - 1) * ITEMS_PER_PAGE && currentPage > 1) {
+      setCurrentPage(prev => prev - 1);
+    }
+  }, [initialBanks, currentPage]);
 
   const filteredBanks = useMemo(() => {
     if (!searchTerm) return banks;
@@ -79,20 +84,43 @@ export function BankList({ banks: initialBanks }: BankListProps) {
               <TableHeader>
                 <TableRow>
                   <TableHead className="font-headline">Bank Name</TableHead>
-                  <TableHead className="font-headline hidden md:table-cell">Address</TableHead>
                   <TableHead className="font-headline">A/C No.</TableHead>
                   <TableHead className="font-headline hidden sm:table-cell">SWIFT</TableHead>
-                  <TableHead className="font-headline hidden sm:table-cell">IFSC</TableHead>
+                  <TableHead className="font-headline text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {paginatedBanks.map((bank) => (
                   <TableRow key={bank.id}>
                     <TableCell className="font-medium">{bank.bankName}</TableCell>
-                    <TableCell className="hidden md:table-cell">{bank.bankAddress}</TableCell>
                     <TableCell>{bank.accountNumber}</TableCell>
                     <TableCell className="hidden sm:table-cell">{bank.swiftCode}</TableCell>
-                    <TableCell className="hidden sm:table-cell">{bank.ifscCode}</TableCell>
+                    <TableCell className="text-right space-x-1">
+                      <Button variant="ghost" size="icon" onClick={() => onEditBank(bank.id)} className="hover:text-primary">
+                        <Edit className="h-4 w-4" />
+                      </Button>
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <Button variant="ghost" size="icon" className="hover:text-destructive">
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                            <AlertDialogDescription>
+                              This action will mark the bank "{bank.bankName}" as deleted.
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                            <AlertDialogAction onClick={() => onDeleteBank(bank.id)}>
+                              Delete
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
+                    </TableCell>
                   </TableRow>
                 ))}
               </TableBody>

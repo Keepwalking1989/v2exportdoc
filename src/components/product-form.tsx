@@ -18,85 +18,52 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import type { Product } from "@/types/product";
 import type { Size } from "@/types/size";
-import { PackagePlus, Ruler, Box, Weight, DollarSign, Barcode, Palette } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
-import React from "react";
+import { PackagePlus, Ruler, Box, Weight, DollarSign, Barcode, Palette, Save, XCircle } from "lucide-react";
+import { useEffect } from "react";
 
 const formSchema = z.object({
-  selectedSizeId: z.string().min(1, { message: "Please select a size." }),
-  designNames: z.string().min(1, { message: "Design name(s) are required." })
-    .refine(value => value.split(',').every(name => name.trim().length > 0), {
-      message: "All comma-separated design names must be valid and non-empty.",
-    }),
-  sqmPerBoxDisplay: z.string().optional(),
-  boxWeightDisplay: z.string().optional(),
-  purchasePriceDisplay: z.string().optional(),
-  salesPriceDisplay: z.string().optional(),
-  hsnCodeDisplay: z.string().optional(),
+  sizeId: z.string().min(1, { message: "Please select a size." }),
+  designName: z.string().min(1, { message: "Design name is required." }),
 });
 
-type ProductFormValues = z.infer<typeof formSchema>;
+export type ProductFormValues = z.infer<typeof formSchema>;
+
+const defaultValues = {
+  sizeId: "",
+  designName: "",
+};
 
 interface ProductFormProps {
   sizes: Size[];
-  onSave: (products: Product[]) => void;
+  onSave: (product: ProductFormValues) => void;
+  initialData?: Product | null;
+  isEditing: boolean;
+  onCancelEdit: () => void;
 }
 
-export function ProductForm({ sizes, onSave }: ProductFormProps) {
-  const { toast } = useToast();
+export function ProductForm({ sizes, onSave, initialData, isEditing, onCancelEdit }: ProductFormProps) {
   const form = useForm<ProductFormValues>({
     resolver: zodResolver(formSchema),
-    defaultValues: {
-      selectedSizeId: "",
-      designNames: "",
-      sqmPerBoxDisplay: "",
-      boxWeightDisplay: "",
-      purchasePriceDisplay: "",
-      salesPriceDisplay: "",
-      hsnCodeDisplay: "",
-    },
+    defaultValues,
   });
 
-  const handleSizeChange = (sizeId: string) => {
-    const selectedSize = sizes.find(s => s.id === sizeId);
-    if (selectedSize) {
-      form.setValue("selectedSizeId", sizeId);
-      form.setValue("sqmPerBoxDisplay", selectedSize.sqmPerBox.toString());
-      form.setValue("boxWeightDisplay", selectedSize.boxWeight.toString());
-      form.setValue("purchasePriceDisplay", selectedSize.purchasePrice.toString());
-      form.setValue("salesPriceDisplay", selectedSize.salesPrice.toString());
-      form.setValue("hsnCodeDisplay", selectedSize.hsnCode);
+  const selectedSizeId = form.watch("sizeId");
+  
+  const selectedSizeDetails = selectedSizeId ? sizes.find(s => s.id === selectedSizeId) : null;
+
+  useEffect(() => {
+    if (isEditing && initialData) {
+      form.reset(initialData);
     } else {
-      form.setValue("selectedSizeId", "");
-      form.setValue("sqmPerBoxDisplay", "");
-      form.setValue("boxWeightDisplay", "");
-      form.setValue("purchasePriceDisplay", "");
-      form.setValue("salesPriceDisplay", "");
-      form.setValue("hsnCodeDisplay", "");
+      form.reset(defaultValues);
     }
-  };
+  }, [isEditing, initialData, form]);
 
   function onSubmit(values: ProductFormValues) {
-    const designNameArray = values.designNames.split(',').map(name => name.trim()).filter(name => name.length > 0);
-    
-    const newProducts: Product[] = designNameArray.map(dName => ({
-      id: `${Date.now()}-${dName.replace(/\s+/g, '-')}-${Math.random().toString(36).substring(2, 7)}`, // More robust ID
-      sizeId: values.selectedSizeId,
-      designName: dName,
-    }));
-
-    onSave(newProducts);
-    toast({
-      title: "Product(s) Saved",
-      description: `${newProducts.length} product(s) based on size ID ${values.selectedSizeId} have been successfully saved.`,
-    });
-    form.reset();
-    // Reset display fields manually as they are not part of standard reset behavior when controlled this way
-    form.setValue("sqmPerBoxDisplay", "");
-    form.setValue("boxWeightDisplay", "");
-    form.setValue("purchasePriceDisplay", "");
-    form.setValue("salesPriceDisplay", "");
-    form.setValue("hsnCodeDisplay", "");
+    onSave(values);
+    if (!isEditing) {
+      form.reset();
+    }
   }
 
   return (
@@ -104,20 +71,22 @@ export function ProductForm({ sizes, onSave }: ProductFormProps) {
       <CardHeader>
         <CardTitle className="font-headline text-2xl flex items-center gap-2">
           <PackagePlus className="h-6 w-6 text-primary" />
-          Add New Product(s)
+          {isEditing ? "Edit Product" : "Add New Product"}
         </CardTitle>
-        <CardDescription>Select a size, enter design names (comma-separated for multiple), and save.</CardDescription>
+        <CardDescription>
+          {isEditing ? "Modify the details of the existing product." : "Select a size, enter a design name, and save."}
+        </CardDescription>
       </CardHeader>
       <CardContent>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
             <FormField
               control={form.control}
-              name="selectedSizeId"
+              name="sizeId"
               render={({ field }) => (
                 <FormItem>
                   <FormLabel className="flex items-center gap-2"><Ruler className="h-4 w-4 text-muted-foreground" />Select Size</FormLabel>
-                  <Select onValueChange={handleSizeChange} defaultValue={field.value}>
+                  <Select onValueChange={field.onChange} value={field.value}>
                     <FormControl>
                       <SelectTrigger>
                         <SelectValue placeholder="Select a size..." />
@@ -138,93 +107,48 @@ export function ProductForm({ sizes, onSave }: ProductFormProps) {
 
             <FormField
               control={form.control}
-              name="designNames"
+              name="designName"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel className="flex items-center gap-2"><Palette className="h-4 w-4 text-muted-foreground" />Design Name(s)</FormLabel>
+                  <FormLabel className="flex items-center gap-2"><Palette className="h-4 w-4 text-muted-foreground" />Design Name</FormLabel>
                   <FormControl>
-                    <Input placeholder="e.g. Onyx Black, Marble White, Stone Grey" {...field} />
+                    <Input placeholder="e.g. Onyx Black" {...field} />
                   </FormControl>
                   <FormMessage />
-                  <p className="text-xs text-muted-foreground">Enter one or more design names, separated by commas.</p>
                 </FormItem>
               )}
             />
 
-            <FormField
-              control={form.control}
-              name="sqmPerBoxDisplay"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="flex items-center gap-2"><Box className="h-4 w-4 text-muted-foreground" />SQM per Box</FormLabel>
-                  <FormControl>
-                    <Input placeholder="Auto-filled" {...field} readOnly className="bg-muted/50" />
-                  </FormControl>
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="boxWeightDisplay"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="flex items-center gap-2"><Weight className="h-4 w-4 text-muted-foreground" />Box Weight (kg)</FormLabel>
-                  <FormControl>
-                    <Input placeholder="Auto-filled" {...field} readOnly className="bg-muted/50" />
-                  </FormControl>
-                </FormItem>
-              )}
-            />
+            {selectedSizeDetails && (
+              <div className="space-y-4 pt-4 border-t">
+                 <FormItem>
+                    <FormLabel className="flex items-center gap-2"><Box className="h-4 w-4 text-muted-foreground" />SQM per Box</FormLabel>
+                    <FormControl>
+                        <Input value={selectedSizeDetails.sqmPerBox} readOnly className="bg-muted/50" />
+                    </FormControl>
+                 </FormItem>
+                 <FormItem>
+                    <FormLabel className="flex items-center gap-2"><Weight className="h-4 w-4 text-muted-foreground" />Box Weight (kg)</FormLabel>
+                    <FormControl>
+                        <Input value={selectedSizeDetails.boxWeight} readOnly className="bg-muted/50" />
+                    </FormControl>
+                 </FormItem>
+              </div>
+            )}
             
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <FormField
-                control={form.control}
-                name="purchasePriceDisplay"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="flex items-center gap-2"><DollarSign className="h-4 w-4 text-muted-foreground" />Purchase Price</FormLabel>
-                    <FormControl>
-                      <Input placeholder="Auto-filled" {...field} readOnly className="bg-muted/50" />
-                    </FormControl>
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="salesPriceDisplay"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="flex items-center gap-2"><DollarSign className="h-4 w-4 text-muted-foreground" />Sales Price</FormLabel>
-                    <FormControl>
-                      <Input placeholder="Auto-filled" {...field} readOnly className="bg-muted/50" />
-                    </FormControl>
-                  </FormItem>
-                )}
-              />
+            <div className="flex justify-end space-x-4">
+              {isEditing && (
+                <Button type="button" variant="ghost" onClick={onCancelEdit}>
+                  <XCircle className="mr-2 h-4 w-4" /> Cancel
+                </Button>
+              )}
+              <Button type="submit" className="bg-accent hover:bg-accent/90 text-accent-foreground font-headline">
+                <Save className="mr-2 h-4 w-4" /> {isEditing ? "Save Changes" : "Save Product"}
+              </Button>
             </div>
-
-            <FormField
-              control={form.control}
-              name="hsnCodeDisplay"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="flex items-center gap-2"><Barcode className="h-4 w-4 text-muted-foreground" />HSN Code</FormLabel>
-                  <FormControl>
-                    <Input placeholder="Auto-filled" {...field} readOnly className="bg-muted/50" />
-                  </FormControl>
-                </FormItem>
-              )}
-            />
-            
-            <Button type="submit" className="w-full bg-accent hover:bg-accent/90 text-accent-foreground font-headline">
-              Save Product(s)
-            </Button>
           </form>
         </Form>
       </CardContent>
     </Card>
   );
 }
-

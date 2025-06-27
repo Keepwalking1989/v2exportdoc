@@ -17,8 +17,8 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import type { Bank } from "@/types/bank";
-import { Landmark, MapPin, ReceiptText, Globe, Code } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
+import { Landmark, MapPin, ReceiptText, Globe, Code, Save, XCircle } from "lucide-react";
+import { useEffect } from "react";
 
 const formSchema = z.object({
   bankName: z.string().min(2, {
@@ -38,36 +38,42 @@ const formSchema = z.object({
   }),
 });
 
-type BankFormValues = z.infer<typeof formSchema>;
+export type BankFormValues = z.infer<typeof formSchema>;
+
+const defaultValues = {
+  bankName: "",
+  bankAddress: "",
+  accountNumber: "",
+  swiftCode: "",
+  ifscCode: "",
+};
 
 interface BankFormProps {
-  onSave: (bank: Bank) => void;
+  onSave: (values: BankFormValues) => void;
+  initialData?: Bank | null;
+  isEditing: boolean;
+  onCancelEdit: () => void;
 }
 
-export function BankForm({ onSave }: BankFormProps) {
-  const { toast } = useToast();
+export function BankForm({ onSave, initialData, isEditing, onCancelEdit }: BankFormProps) {
   const form = useForm<BankFormValues>({
     resolver: zodResolver(formSchema),
-    defaultValues: {
-      bankName: "",
-      bankAddress: "",
-      accountNumber: "",
-      swiftCode: "",
-      ifscCode: "",
-    },
+    defaultValues,
   });
 
+  useEffect(() => {
+    if (isEditing && initialData) {
+      form.reset(initialData);
+    } else {
+      form.reset(defaultValues);
+    }
+  }, [isEditing, initialData, form]);
+
   function onSubmit(values: BankFormValues) {
-    const newBank: Bank = {
-      id: Date.now().toString(),
-      ...values,
-    };
-    onSave(newBank);
-    toast({
-      title: "Bank Saved",
-      description: `${values.bankName} has been successfully saved.`,
-    });
-    form.reset();
+    onSave(values);
+    if (!isEditing) {
+      form.reset();
+    }
   }
 
   return (
@@ -75,9 +81,11 @@ export function BankForm({ onSave }: BankFormProps) {
       <CardHeader>
         <CardTitle className="font-headline text-2xl flex items-center gap-2">
           <Landmark className="h-6 w-6 text-primary" />
-          Add New Bank
+          {isEditing ? "Edit Bank" : "Add New Bank"}
         </CardTitle>
-        <CardDescription>Fill in the details below to add a new bank.</CardDescription>
+        <CardDescription>
+          {isEditing ? "Modify the details of the existing bank." : "Fill in the details below to add a new bank."}
+        </CardDescription>
       </CardHeader>
       <CardContent>
         <Form {...form}>
@@ -147,9 +155,16 @@ export function BankForm({ onSave }: BankFormProps) {
                 </FormItem>
               )}
             />
-            <Button type="submit" className="w-full bg-accent hover:bg-accent/90 text-accent-foreground font-headline">
-              Save Bank
-            </Button>
+            <div className="flex justify-end space-x-4">
+              {isEditing && (
+                <Button type="button" variant="ghost" onClick={onCancelEdit}>
+                  <XCircle className="mr-2 h-4 w-4" /> Cancel
+                </Button>
+              )}
+              <Button type="submit" className="bg-accent hover:bg-accent/90 text-accent-foreground font-headline">
+                <Save className="mr-2 h-4 w-4" /> {isEditing ? "Save Changes" : "Save Bank"}
+              </Button>
+            </div>
           </form>
         </Form>
       </CardContent>

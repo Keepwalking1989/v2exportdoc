@@ -19,10 +19,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import type { Manufacturer } from "@/types/manufacturer";
-import { Building2, User, MapPin, BadgePercent, FileSignature, CalendarDays, LocateFixed } from "lucide-react";
+import { Building2, User, MapPin, BadgePercent, FileSignature, CalendarDays, LocateFixed, Save, XCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
+import { useEffect } from "react";
 
 const pinCodeRegex = /^[1-9][0-9]{5}$/;
 
@@ -46,38 +47,47 @@ const formSchema = z.object({
   pinCode: z.string().regex(pinCodeRegex, "Invalid PIN code (must be 6 digits)."),
 });
 
-type ManufacturerFormValues = z.infer<typeof formSchema>;
+export type ManufacturerFormValues = z.infer<typeof formSchema>;
+
+const defaultValues = {
+  companyName: "",
+  contactPerson: "",
+  address: "",
+  gstNumber: "",
+  stuffingPermissionNumber: "",
+  stuffingPermissionDate: undefined,
+  pinCode: "",
+};
 
 interface ManufacturerFormProps {
-  onSave: (manufacturer: Manufacturer) => void;
+  onSave: (values: ManufacturerFormValues) => void;
+  initialData?: Manufacturer | null;
+  isEditing: boolean;
+  onCancelEdit: () => void;
 }
 
-export function ManufacturerForm({ onSave }: ManufacturerFormProps) {
-  const { toast } = useToast();
+export function ManufacturerForm({ onSave, initialData, isEditing, onCancelEdit }: ManufacturerFormProps) {
   const form = useForm<ManufacturerFormValues>({
     resolver: zodResolver(formSchema),
-    defaultValues: {
-      companyName: "",
-      contactPerson: "",
-      address: "",
-      gstNumber: "",
-      stuffingPermissionNumber: "",
-      stuffingPermissionDate: undefined,
-      pinCode: "",
-    },
+    defaultValues,
   });
 
+  useEffect(() => {
+    if (isEditing && initialData) {
+      form.reset({
+        ...initialData,
+        stuffingPermissionDate: new Date(initialData.stuffingPermissionDate)
+      });
+    } else {
+      form.reset(defaultValues);
+    }
+  }, [isEditing, initialData, form]);
+
   function onSubmit(values: ManufacturerFormValues) {
-    const newManufacturer: Manufacturer = {
-      id: Date.now().toString(),
-      ...values,
-    };
-    onSave(newManufacturer);
-    toast({
-      title: "Manufacturer Saved",
-      description: `${values.companyName} has been successfully saved.`,
-    });
-    form.reset();
+    onSave(values);
+    if (!isEditing) {
+      form.reset();
+    }
   }
 
   return (
@@ -85,9 +95,11 @@ export function ManufacturerForm({ onSave }: ManufacturerFormProps) {
       <CardHeader>
         <CardTitle className="font-headline text-2xl flex items-center gap-2">
           <Building2 className="h-6 w-6 text-primary" />
-          Add New Manufacturer
+          {isEditing ? "Edit Manufacturer" : "Add New Manufacturer"}
         </CardTitle>
-        <CardDescription>Fill in the details below to add a new manufacturer.</CardDescription>
+        <CardDescription>
+          {isEditing ? "Modify the details of the existing manufacturer." : "Fill in the details below to add a new manufacturer."}
+        </CardDescription>
       </CardHeader>
       <CardContent>
         <Form {...form}>
@@ -211,9 +223,16 @@ export function ManufacturerForm({ onSave }: ManufacturerFormProps) {
                 </FormItem>
               )}
             />
-            <Button type="submit" className="w-full bg-accent hover:bg-accent/90 text-accent-foreground font-headline">
-              Save Manufacturer
-            </Button>
+            <div className="flex justify-end space-x-4">
+              {isEditing && (
+                <Button type="button" variant="ghost" onClick={onCancelEdit}>
+                  <XCircle className="mr-2 h-4 w-4" /> Cancel
+                </Button>
+              )}
+              <Button type="submit" className="bg-accent hover:bg-accent/90 text-accent-foreground font-headline">
+                <Save className="mr-2 h-4 w-4" /> {isEditing ? "Save Changes" : "Save Manufacturer"}
+              </Button>
+            </div>
           </form>
         </Form>
       </CardContent>

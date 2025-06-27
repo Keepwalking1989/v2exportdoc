@@ -17,8 +17,8 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import type { Size } from "@/types/size";
-import { Ruler, Box, Weight, DollarSign, Barcode, FileText, Info } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
+import { Ruler, Box, Weight, DollarSign, Barcode, FileText, Info, Save, XCircle } from "lucide-react";
+import { useEffect } from "react";
 
 const formSchema = z.object({
   size: z.string().min(1, { message: "Size cannot be empty." }),
@@ -30,38 +30,44 @@ const formSchema = z.object({
   palletDetails: z.string().min(5, { message: "Pallet details must be at least 5 characters." }),
 });
 
-type SizeFormValues = z.infer<typeof formSchema>;
+export type SizeFormValues = z.infer<typeof formSchema>;
+
+const defaultValues = {
+  size: "",
+  sqmPerBox: 0,
+  boxWeight: 0,
+  purchasePrice: 0,
+  salesPrice: 0,
+  hsnCode: "",
+  palletDetails: "",
+};
 
 interface SizeFormProps {
-  onSave: (size: Size) => void;
+  onSave: (values: SizeFormValues) => void;
+  initialData?: Size | null;
+  isEditing: boolean;
+  onCancelEdit: () => void;
 }
 
-export function SizeForm({ onSave }: SizeFormProps) {
-  const { toast } = useToast();
+export function SizeForm({ onSave, initialData, isEditing, onCancelEdit }: SizeFormProps) {
   const form = useForm<SizeFormValues>({
     resolver: zodResolver(formSchema),
-    defaultValues: {
-      size: "",
-      sqmPerBox: 0,
-      boxWeight: 0,
-      purchasePrice: 0,
-      salesPrice: 0,
-      hsnCode: "",
-      palletDetails: "",
-    },
+    defaultValues,
   });
 
+  useEffect(() => {
+    if (isEditing && initialData) {
+      form.reset(initialData);
+    } else {
+      form.reset(defaultValues);
+    }
+  }, [isEditing, initialData, form]);
+
   function onSubmit(values: SizeFormValues) {
-    const newSize: Size = {
-      id: Date.now().toString(),
-      ...values,
-    };
-    onSave(newSize);
-    toast({
-      title: "Size Saved",
-      description: `Size ${values.size} has been successfully saved.`,
-    });
-    form.reset();
+    onSave(values);
+    if (!isEditing) {
+      form.reset();
+    }
   }
 
   return (
@@ -69,9 +75,11 @@ export function SizeForm({ onSave }: SizeFormProps) {
       <CardHeader>
         <CardTitle className="font-headline text-2xl flex items-center gap-2">
           <Ruler className="h-6 w-6 text-primary" />
-          Add New Size
+          {isEditing ? "Edit Size" : "Add New Size"}
         </CardTitle>
-        <CardDescription>Fill in the details below to add a new product size.</CardDescription>
+        <CardDescription>
+          {isEditing ? "Modify the details of the existing size." : "Fill in the details below to add a new product size."}
+        </CardDescription>
       </CardHeader>
       <CardContent>
         <Form {...form}>
@@ -167,9 +175,16 @@ export function SizeForm({ onSave }: SizeFormProps) {
                 </FormItem>
               )}
             />
-            <Button type="submit" className="w-full bg-accent hover:bg-accent/90 text-accent-foreground font-headline">
-              Save Size
-            </Button>
+            <div className="flex justify-end space-x-4">
+              {isEditing && (
+                <Button type="button" variant="ghost" onClick={onCancelEdit}>
+                  <XCircle className="mr-2 h-4 w-4" /> Cancel
+                </Button>
+              )}
+              <Button type="submit" className="bg-accent hover:bg-accent/90 text-accent-foreground font-headline">
+                <Save className="mr-2 h-4 w-4" /> {isEditing ? "Save Changes" : "Save Size"}
+              </Button>
+            </div>
           </form>
         </Form>
       </CardContent>

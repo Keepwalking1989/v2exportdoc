@@ -14,23 +14,28 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Search, ChevronLeft, ChevronRight, ListChecks } from "lucide-react";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
+import { Search, ChevronLeft, ChevronRight, ListChecks, Edit, Trash2 } from "lucide-react";
 
 interface PalletListProps {
   pallets: Pallet[];
+  onEditPallet: (id: string) => void;
+  onDeletePallet: (id: string) => void;
 }
 
 const ITEMS_PER_PAGE = 5;
 
-export function PalletList({ pallets: initialPallets }: PalletListProps) {
+export function PalletList({ pallets: initialPallets, onEditPallet, onDeletePallet }: PalletListProps) {
   const [pallets, setPallets] = useState<Pallet[]>(initialPallets);
   const [searchTerm, setSearchTerm] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
 
   useEffect(() => {
     setPallets(initialPallets);
-    setCurrentPage(1);
-  }, [initialPallets]);
+    if (initialPallets.length <= (currentPage - 1) * ITEMS_PER_PAGE && currentPage > 1) {
+      setCurrentPage(prev => prev - 1);
+    }
+  }, [initialPallets, currentPage]);
 
   const filteredPallets = useMemo(() => {
     if (!searchTerm) return pallets;
@@ -79,8 +84,8 @@ export function PalletList({ pallets: initialPallets }: PalletListProps) {
                 <TableRow>
                   <TableHead className="font-headline">Company Name</TableHead>
                   <TableHead className="font-headline">GST No.</TableHead>
-                  <TableHead className="font-headline hidden md:table-cell">Contact Person</TableHead>
-                  <TableHead className="font-headline hidden sm:table-cell">Contact No.</TableHead>
+                  <TableHead className="font-headline hidden md:table-cell">Contact</TableHead>
+                  <TableHead className="font-headline text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -89,7 +94,32 @@ export function PalletList({ pallets: initialPallets }: PalletListProps) {
                     <TableCell className="font-medium">{pallet.companyName}</TableCell>
                     <TableCell>{pallet.gstNumber}</TableCell>
                     <TableCell className="hidden md:table-cell">{pallet.contactPerson}</TableCell>
-                    <TableCell className="hidden sm:table-cell">{pallet.contactNumber}</TableCell>
+                    <TableCell className="text-right space-x-1">
+                      <Button variant="ghost" size="icon" onClick={() => onEditPallet(pallet.id)} className="hover:text-primary">
+                        <Edit className="h-4 w-4" />
+                      </Button>
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <Button variant="ghost" size="icon" className="hover:text-destructive">
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                            <AlertDialogDescription>
+                              This action will mark the pallet company "{pallet.companyName}" as deleted.
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                            <AlertDialogAction onClick={() => onDeletePallet(pallet.id)}>
+                              Delete
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
+                    </TableCell>
                   </TableRow>
                 ))}
               </TableBody>

@@ -14,24 +14,29 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Search, ChevronLeft, ChevronRight, ListChecks } from "lucide-react";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
+import { Search, ChevronLeft, ChevronRight, ListChecks, Edit, Trash2 } from "lucide-react";
 import { format } from "date-fns";
 
 interface ManufacturerListProps {
   manufacturers: Manufacturer[];
+  onEditManufacturer: (id: string) => void;
+  onDeleteManufacturer: (id: string) => void;
 }
 
 const ITEMS_PER_PAGE = 5;
 
-export function ManufacturerList({ manufacturers: initialManufacturers }: ManufacturerListProps) {
+export function ManufacturerList({ manufacturers: initialManufacturers, onEditManufacturer, onDeleteManufacturer }: ManufacturerListProps) {
   const [manufacturers, setManufacturers] = useState<Manufacturer[]>(initialManufacturers);
   const [searchTerm, setSearchTerm] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
 
   useEffect(() => {
     setManufacturers(initialManufacturers);
-    setCurrentPage(1); 
-  }, [initialManufacturers]);
+    if (initialManufacturers.length <= (currentPage - 1) * ITEMS_PER_PAGE && currentPage > 1) {
+      setCurrentPage(prev => prev - 1);
+    }
+  }, [initialManufacturers, currentPage]);
 
   const filteredManufacturers = useMemo(() => {
     if (!searchTerm) return manufacturers;
@@ -80,11 +85,10 @@ export function ManufacturerList({ manufacturers: initialManufacturers }: Manufa
               <TableHeader>
                 <TableRow>
                   <TableHead className="font-headline">Company Name</TableHead>
-                  <TableHead className="font-headline hidden md:table-cell">Contact Person</TableHead>
+                  <TableHead className="font-headline hidden md:table-cell">Contact</TableHead>
                   <TableHead className="font-headline">GST No.</TableHead>
-                  <TableHead className="font-headline hidden lg:table-cell">Stuffing No.</TableHead>
                   <TableHead className="font-headline hidden sm:table-cell">Stuffing Date</TableHead>
-                  <TableHead className="font-headline">PIN Code</TableHead>
+                  <TableHead className="font-headline text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -93,11 +97,35 @@ export function ManufacturerList({ manufacturers: initialManufacturers }: Manufa
                     <TableCell className="font-medium">{manufacturer.companyName}</TableCell>
                     <TableCell className="hidden md:table-cell">{manufacturer.contactPerson}</TableCell>
                     <TableCell>{manufacturer.gstNumber}</TableCell>
-                    <TableCell className="hidden lg:table-cell">{manufacturer.stuffingPermissionNumber}</TableCell>
                     <TableCell className="hidden sm:table-cell">
                       {format(new Date(manufacturer.stuffingPermissionDate), "dd/MM/yyyy")}
                     </TableCell>
-                    <TableCell>{manufacturer.pinCode}</TableCell>
+                    <TableCell className="text-right space-x-1">
+                      <Button variant="ghost" size="icon" onClick={() => onEditManufacturer(manufacturer.id)} className="hover:text-primary">
+                        <Edit className="h-4 w-4" />
+                      </Button>
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <Button variant="ghost" size="icon" className="hover:text-destructive">
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                            <AlertDialogDescription>
+                              This action will mark the manufacturer "{manufacturer.companyName}" as deleted.
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                            <AlertDialogAction onClick={() => onDeleteManufacturer(manufacturer.id)}>
+                              Delete
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
+                    </TableCell>
                   </TableRow>
                 ))}
               </TableBody>

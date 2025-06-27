@@ -15,24 +15,29 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Search, ChevronLeft, ChevronRight, PackageSearch, Palette } from "lucide-react";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
+import { Search, ChevronLeft, ChevronRight, PackageSearch, Palette, Edit, Trash2 } from "lucide-react";
 
 interface ProductListProps {
   products: Product[];
-  sizes: Size[]; // Sizes are needed to look up details
+  sizes: Size[];
+  onEditProduct: (id: string) => void;
+  onDeleteProduct: (id: string) => void;
 }
 
 const ITEMS_PER_PAGE = 10;
 
-export function ProductList({ products: initialProducts, sizes }: ProductListProps) {
+export function ProductList({ products: initialProducts, sizes, onEditProduct, onDeleteProduct }: ProductListProps) {
   const [products, setProducts] = useState<Product[]>(initialProducts);
   const [searchTerm, setSearchTerm] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
 
   useEffect(() => {
     setProducts(initialProducts);
-    setCurrentPage(1);
-  }, [initialProducts]);
+    if (initialProducts.length <= (currentPage - 1) * ITEMS_PER_PAGE && currentPage > 1) {
+      setCurrentPage(prev => prev - 1);
+    }
+  }, [initialProducts, currentPage]);
 
   const enrichedProducts = useMemo(() => {
     return products.map(product => {
@@ -40,10 +45,6 @@ export function ProductList({ products: initialProducts, sizes }: ProductListPro
       return {
         ...product,
         sizeName: sizeDetails?.size || "N/A",
-        sqmPerBox: sizeDetails?.sqmPerBox || 0,
-        boxWeight: sizeDetails?.boxWeight || 0,
-        purchasePrice: sizeDetails?.purchasePrice || 0,
-        salesPrice: sizeDetails?.salesPrice || 0,
         hsnCode: sizeDetails?.hsnCode || "N/A",
       };
     });
@@ -96,11 +97,8 @@ export function ProductList({ products: initialProducts, sizes }: ProductListPro
                 <TableRow>
                   <TableHead className="font-headline flex items-center gap-1"><Palette className="h-4 w-4" />Design Name</TableHead>
                   <TableHead className="font-headline">Size</TableHead>
-                  <TableHead className="font-headline hidden sm:table-cell">SQM/Box</TableHead>
-                  <TableHead className="font-headline hidden md:table-cell">Box Wt.</TableHead>
-                  <TableHead className="font-headline hidden lg:table-cell">Purchase Price</TableHead>
-                  <TableHead className="font-headline hidden lg:table-cell">Sales Price</TableHead>
                   <TableHead className="font-headline">HSN Code</TableHead>
+                  <TableHead className="font-headline text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -108,11 +106,33 @@ export function ProductList({ products: initialProducts, sizes }: ProductListPro
                   <TableRow key={product.id}>
                     <TableCell className="font-medium">{product.designName}</TableCell>
                     <TableCell>{product.sizeName}</TableCell>
-                    <TableCell className="hidden sm:table-cell">{product.sqmPerBox}</TableCell>
-                    <TableCell className="hidden md:table-cell">{product.boxWeight}</TableCell>
-                    <TableCell className="hidden lg:table-cell">{product.purchasePrice}</TableCell>
-                    <TableCell className="hidden lg:table-cell">{product.salesPrice}</TableCell>
                     <TableCell>{product.hsnCode}</TableCell>
+                    <TableCell className="text-right space-x-1">
+                      <Button variant="ghost" size="icon" onClick={() => onEditProduct(product.id)} className="hover:text-primary">
+                        <Edit className="h-4 w-4" />
+                      </Button>
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <Button variant="ghost" size="icon" className="hover:text-destructive">
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                            <AlertDialogDescription>
+                              This action will mark the product "{product.designName}" as deleted.
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                            <AlertDialogAction onClick={() => onDeleteProduct(product.id)}>
+                              Delete
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
+                    </TableCell>
                   </TableRow>
                 ))}
               </TableBody>

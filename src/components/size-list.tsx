@@ -14,23 +14,28 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Search, ChevronLeft, ChevronRight, ListChecks, Ruler } from "lucide-react";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
+import { Search, ChevronLeft, ChevronRight, ListChecks, Ruler, Edit, Trash2 } from "lucide-react";
 
 interface SizeListProps {
   sizes: Size[];
+  onEditSize: (id: string) => void;
+  onDeleteSize: (id: string) => void;
 }
 
 const ITEMS_PER_PAGE = 5;
 
-export function SizeList({ sizes: initialSizes }: SizeListProps) {
+export function SizeList({ sizes: initialSizes, onEditSize, onDeleteSize }: SizeListProps) {
   const [sizes, setSizes] = useState<Size[]>(initialSizes);
   const [searchTerm, setSearchTerm] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
 
   useEffect(() => {
     setSizes(initialSizes);
-    setCurrentPage(1);
-  }, [initialSizes]);
+    if (initialSizes.length <= (currentPage - 1) * ITEMS_PER_PAGE && currentPage > 1) {
+      setCurrentPage(prev => prev - 1);
+    }
+  }, [initialSizes, currentPage]);
 
   const filteredSizes = useMemo(() => {
     if (!searchTerm) return sizes;
@@ -79,11 +84,9 @@ export function SizeList({ sizes: initialSizes }: SizeListProps) {
                 <TableRow>
                   <TableHead className="font-headline">Size</TableHead>
                   <TableHead className="font-headline hidden sm:table-cell">SQM/Box</TableHead>
-                  <TableHead className="font-headline hidden sm:table-cell">Box Wt.</TableHead>
-                  <TableHead className="font-headline hidden md:table-cell">Purchase Price</TableHead>
                   <TableHead className="font-headline hidden md:table-cell">Sales Price</TableHead>
                   <TableHead className="font-headline">HSN Code</TableHead>
-                  <TableHead className="font-headline hidden lg:table-cell">Pallet Details</TableHead>
+                  <TableHead className="font-headline text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -91,11 +94,34 @@ export function SizeList({ sizes: initialSizes }: SizeListProps) {
                   <TableRow key={size.id}>
                     <TableCell className="font-medium">{size.size}</TableCell>
                     <TableCell className="hidden sm:table-cell">{size.sqmPerBox}</TableCell>
-                    <TableCell className="hidden sm:table-cell">{size.boxWeight}</TableCell>
-                    <TableCell className="hidden md:table-cell">{size.purchasePrice}</TableCell>
                     <TableCell className="hidden md:table-cell">{size.salesPrice}</TableCell>
                     <TableCell>{size.hsnCode}</TableCell>
-                    <TableCell className="hidden lg:table-cell">{size.palletDetails}</TableCell>
+                    <TableCell className="text-right space-x-1">
+                      <Button variant="ghost" size="icon" onClick={() => onEditSize(size.id)} className="hover:text-primary">
+                        <Edit className="h-4 w-4" />
+                      </Button>
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <Button variant="ghost" size="icon" className="hover:text-destructive">
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                            <AlertDialogDescription>
+                              This action will mark the size "{size.size}" as deleted.
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                            <AlertDialogAction onClick={() => onDeleteSize(size.id)}>
+                              Delete
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
+                    </TableCell>
                   </TableRow>
                 ))}
               </TableBody>
