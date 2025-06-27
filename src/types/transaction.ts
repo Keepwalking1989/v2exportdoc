@@ -5,6 +5,7 @@ export interface Transaction {
   type: 'credit' | 'debit';
   partyType: 'client' | 'manufacturer' | 'transporter' | 'supplier' | 'pallet' | 'gst' | 'duty_drawback' | 'road_tp';
   partyId: string;
+  exportDocumentId?: string; // Link to the export document
   currency: 'USD' | 'EUR' | 'INR';
   amount: number;
   description: string;

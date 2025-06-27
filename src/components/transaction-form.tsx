@@ -22,7 +22,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Combobox, type ComboboxOption } from "@/components/ui/combobox";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
-import { CalendarIcon, Save, XCircle, ArrowLeftRight, CreditCard, Landmark, Truck, Building2, User, Palette, Package, DollarSign, NotebookText } from "lucide-react";
+import { CalendarIcon, Save, XCircle, ArrowLeftRight, CreditCard, Landmark, Truck, Building2, User, Palette, Package, DollarSign, NotebookText, Link as LinkIcon } from "lucide-react";
 import React, { useEffect, useMemo } from "react";
 import type { Transaction } from "@/types/transaction";
 import type { Client } from "@/types/client";
@@ -30,6 +30,7 @@ import type { Manufacturer } from "@/types/manufacturer";
 import type { Transporter } from "@/types/transporter";
 import type { Supplier } from "@/types/supplier";
 import type { Pallet } from "@/types/pallet";
+import type { ExportDocument } from "@/types/export-document";
 import { RadioGroup, RadioGroupItem } from "./ui/radio-group";
 
 const formSchema = z.object({
@@ -37,6 +38,7 @@ const formSchema = z.object({
   type: z.enum(['credit', 'debit']),
   partyType: z.enum(['client', 'manufacturer', 'transporter', 'supplier', 'pallet', 'gst', 'duty_drawback', 'road_tp']),
   partyId: z.string().min(1, "Please select a party."),
+  exportDocumentId: z.string().optional(),
   currency: z.enum(['USD', 'EUR', 'INR']),
   amount: z.coerce.number().positive("Amount must be a positive number."),
   description: z.string().optional(),
@@ -54,6 +56,7 @@ interface TransactionFormProps {
   allTransporters: Transporter[];
   allSuppliers: Supplier[];
   allPallets: Pallet[];
+  allExportDocuments: ExportDocument[];
 }
 
 const defaultValues: TransactionFormValues = {
@@ -61,6 +64,7 @@ const defaultValues: TransactionFormValues = {
   type: 'credit',
   partyType: 'client',
   partyId: "",
+  exportDocumentId: "",
   currency: 'USD',
   amount: 0,
   description: ""
@@ -75,7 +79,8 @@ export function TransactionForm({
   allManufacturers,
   allTransporters,
   allSuppliers,
-  allPallets
+  allPallets,
+  allExportDocuments
 }: TransactionFormProps) {
   const form = useForm<TransactionFormValues>({
     resolver: zodResolver(formSchema),
@@ -86,6 +91,7 @@ export function TransactionForm({
   const partyType = useWatch({ control: form.control, name: 'partyType' });
 
   const isGovernmentParty = useMemo(() => ['gst', 'duty_drawback', 'road_tp'].includes(partyType), [partyType]);
+  const isGovPartyWithDocLink = useMemo(() => ['gst', 'duty_drawback'].includes(partyType), [partyType]);
 
   useEffect(() => {
     if (isEditing && initialData) {
@@ -125,7 +131,11 @@ export function TransactionForm({
     } else { // It's a debit to a company
       form.setValue('currency', 'INR');
     }
-  }, [partyType, isGovernmentParty, form, isEditing]);
+
+    if (!isGovPartyWithDocLink) {
+        form.setValue('exportDocumentId', '');
+    }
+  }, [partyType, isGovernmentParty, form, isEditing, isGovPartyWithDocLink]);
 
 
   const partyOptions = useMemo((): ComboboxOption[] => {
@@ -144,6 +154,10 @@ export function TransactionForm({
         return [];
     }
   }, [partyType, allClients, allManufacturers, allTransporters, allSuppliers, allPallets]);
+
+  const exportDocOptions = useMemo((): ComboboxOption[] => 
+    allExportDocuments.map(d => ({ value: d.id, label: d.exportInvoiceNumber }))
+  , [allExportDocuments]);
   
   function onSubmit(values: TransactionFormValues) {
     onSave(values);
@@ -249,6 +263,26 @@ export function TransactionForm({
                       </FormItem>
                     )}
                   />
+              )}
+              {isGovPartyWithDocLink && (
+                  <FormField
+                    control={form.control}
+                    name="exportDocumentId"
+                    render={({ field }) => (
+                    <FormItem>
+                        <FormLabel className="flex items-center gap-2"><LinkIcon className="h-4 w-4 text-muted-foreground"/>Link to Export Document</FormLabel>
+                        <Combobox
+                        options={exportDocOptions}
+                        value={field.value}
+                        onChange={field.onChange}
+                        placeholder="Select an export document..."
+                        disabled={exportDocOptions.length === 0}
+                        emptySearchMessage="No export documents found."
+                        />
+                        <FormMessage />
+                    </FormItem>
+                    )}
+                />
               )}
             </div>
             

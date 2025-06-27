@@ -11,8 +11,8 @@ import type { Manufacturer } from "@/types/manufacturer";
 import type { Transporter } from "@/types/transporter";
 import type { Supplier } from "@/types/supplier";
 import type { Pallet } from "@/types/pallet";
+import type { ExportDocument } from "@/types/export-document";
 import { useToast } from "@/hooks/use-toast";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
 const LOCAL_STORAGE_TRANSACTIONS_KEY = "bizform_transactions";
 const LOCAL_STORAGE_CLIENTS_KEY = "bizform_clients";
@@ -20,6 +20,7 @@ const LOCAL_STORAGE_MANUFACTURERS_KEY = "bizform_manufacturers";
 const LOCAL_STORAGE_TRANSPORTERS_KEY = "bizform_transporters";
 const LOCAL_STORAGE_SUPPLIERS_KEY = "bizform_suppliers";
 const LOCAL_STORAGE_PALLETS_KEY = "bizform_pallets";
+const LOCAL_STORAGE_EXPORT_DOCS_KEY_V2 = "bizform_export_documents_v2";
 
 export default function TransactionPage() {
   const { toast } = useToast();
@@ -35,6 +36,7 @@ export default function TransactionPage() {
   const [allTransporters, setAllTransporters] = useState<Transporter[]>([]);
   const [allSuppliers, setAllSuppliers] = useState<Supplier[]>([]);
   const [allPallets, setAllPallets] = useState<Pallet[]>([]);
+  const [allExportDocuments, setAllExportDocuments] = useState<ExportDocument[]>([]);
 
   useEffect(() => {
     setIsClient(true);
@@ -52,6 +54,7 @@ export default function TransactionPage() {
         setAllTransporters(JSON.parse(localStorage.getItem(LOCAL_STORAGE_TRANSPORTERS_KEY) || "[]").filter((t: Transporter) => !t.isDeleted));
         setAllSuppliers(JSON.parse(localStorage.getItem(LOCAL_STORAGE_SUPPLIERS_KEY) || "[]").filter((s: Supplier) => !s.isDeleted));
         setAllPallets(JSON.parse(localStorage.getItem(LOCAL_STORAGE_PALLETS_KEY) || "[]").filter((p: Pallet) => !p.isDeleted));
+        setAllExportDocuments(JSON.parse(localStorage.getItem(LOCAL_STORAGE_EXPORT_DOCS_KEY_V2) || "[]").filter((d: ExportDocument) => !d.isDeleted));
         
       } catch (error) {
         console.error("Failed to parse data from localStorage", error);
@@ -133,6 +136,7 @@ export default function TransactionPage() {
             allTransporters={allTransporters}
             allSuppliers={allSuppliers}
             allPallets={allPallets}
+            allExportDocuments={allExportDocuments}
           />
         </div>
         <TransactionList 
@@ -144,6 +148,7 @@ export default function TransactionPage() {
           allTransporters={allTransporters}
           allSuppliers={allSuppliers}
           allPallets={allPallets}
+          allExportDocuments={allExportDocuments}
         />
       </main>
       <footer className="py-6 text-center text-sm text-muted-foreground border-t">

@@ -16,6 +16,7 @@ import type { Manufacturer } from "@/types/manufacturer";
 import type { Transporter } from "@/types/transporter";
 import type { Supplier } from "@/types/supplier";
 import type { Pallet } from "@/types/pallet";
+import type { ExportDocument } from "@/types/export-document";
 import { Badge } from "./ui/badge";
 
 interface TransactionListProps {
@@ -27,6 +28,7 @@ interface TransactionListProps {
   allTransporters: Transporter[];
   allSuppliers: Supplier[];
   allPallets: Pallet[];
+  allExportDocuments: ExportDocument[];
 }
 
 const ITEMS_PER_PAGE = 10;
@@ -39,7 +41,8 @@ export function TransactionList({
   allManufacturers,
   allTransporters,
   allSuppliers,
-  allPallets
+  allPallets,
+  allExportDocuments,
 }: TransactionListProps) {
   const [searchTerm, setSearchTerm] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
@@ -68,11 +71,15 @@ export function TransactionList({
   };
 
   const enrichedTransactions = useMemo(() => {
-    return transactions.map(t => ({
-      ...t,
-      partyDetails: getPartyDetails(t.partyType, t.partyId)
-    }));
-  }, [transactions, allClients, allManufacturers, allTransporters, allSuppliers, allPallets]);
+    return transactions.map(t => {
+      const exportDoc = t.exportDocumentId ? allExportDocuments.find(d => d.id === t.exportDocumentId) : undefined;
+      return {
+        ...t,
+        partyDetails: getPartyDetails(t.partyType, t.partyId),
+        exportInvoiceNumber: exportDoc?.exportInvoiceNumber
+      };
+    });
+  }, [transactions, allClients, allManufacturers, allTransporters, allSuppliers, allPallets, allExportDocuments]);
 
   const filteredTransactions = useMemo(() => {
     if (!searchTerm) return enrichedTransactions;
@@ -141,6 +148,11 @@ export function TransactionList({
                           <PartyIcon className="h-4 w-4 text-muted-foreground" />
                           {t.partyDetails.name}
                         </div>
+                        {t.exportInvoiceNumber && (
+                          <p className="text-xs text-muted-foreground mt-1">
+                            Ref: {t.exportInvoiceNumber}
+                          </p>
+                        )}
                       </TableCell>
                       <TableCell>{t.description}</TableCell>
                       <TableCell className={cn("text-right font-mono", t.type === 'credit' ? 'text-green-600' : 'text-red-600')}>
