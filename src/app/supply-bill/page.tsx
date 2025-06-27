@@ -32,6 +32,7 @@ export default function SupplyBillPage() {
   const [allExportDocuments, setAllExportDocuments] = useState<ExportDocument[]>([]);
   const [allSuppliers, setAllSuppliers] = useState<Supplier[]>([]);
   const [allPallets, setAllPallets] = useState<Pallet[]>([]);
+  const [allTransactions, setAllTransactions] = useState<Transaction[]>([]);
 
   useEffect(() => {
     setIsClient(true);
@@ -48,6 +49,7 @@ export default function SupplyBillPage() {
         setAllExportDocuments(JSON.parse(localStorage.getItem(LOCAL_STORAGE_EXPORT_DOCS_KEY_V2) || "[]"));
         setAllSuppliers(JSON.parse(localStorage.getItem(LOCAL_STORAGE_SUPPLIERS_KEY) || "[]"));
         setAllPallets(JSON.parse(localStorage.getItem(LOCAL_STORAGE_PALLETS_KEY) || "[]"));
+        setAllTransactions(JSON.parse(localStorage.getItem(LOCAL_STORAGE_TRANSACTIONS_KEY) || "[]"));
 
       } catch (error) {
         console.error("Failed to parse data from localStorage", error);
@@ -55,6 +57,7 @@ export default function SupplyBillPage() {
         setAllExportDocuments([]);
         setAllSuppliers([]);
         setAllPallets([]);
+        setAllTransactions([]);
       }
     }
   }, []);
@@ -196,6 +199,7 @@ export default function SupplyBillPage() {
           allSuppliers={allSuppliers}
           allPallets={allPallets}
           allExportDocuments={allExportDocuments}
+          allTransactions={allTransactions}
           onEditBill={handleEditBill}
           onDeleteBill={handleDeleteBill}
         />

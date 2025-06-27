@@ -28,6 +28,7 @@ export default function ManuBillPage() {
   // Data for dependencies
   const [allExportDocuments, setAllExportDocuments] = useState<ExportDocument[]>([]);
   const [allManufacturers, setAllManufacturers] = useState<Manufacturer[]>([]);
+  const [allTransactions, setAllTransactions] = useState<Transaction[]>([]);
 
   useEffect(() => {
     setIsClient(true);
@@ -43,12 +44,14 @@ export default function ManuBillPage() {
         
         setAllExportDocuments(JSON.parse(localStorage.getItem(LOCAL_STORAGE_EXPORT_DOCS_KEY_V2) || "[]"));
         setAllManufacturers(JSON.parse(localStorage.getItem(LOCAL_STORAGE_MANUFACTURERS_KEY) || "[]"));
+        setAllTransactions(JSON.parse(localStorage.getItem(LOCAL_STORAGE_TRANSACTIONS_KEY) || "[]"));
 
       } catch (error) {
         console.error("Failed to parse data from localStorage", error);
         setManuBills([]);
         setAllExportDocuments([]);
         setAllManufacturers([]);
+        setAllTransactions([]);
       }
     }
   }, []);
@@ -184,6 +187,7 @@ export default function ManuBillPage() {
           manuBills={manuBills}
           allManufacturers={allManufacturers}
           allExportDocuments={allExportDocuments}
+          allTransactions={allTransactions}
           onEditBill={handleEditBill}
           onDeleteBill={handleDeleteBill}
         />

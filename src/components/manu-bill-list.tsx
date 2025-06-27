@@ -1,9 +1,11 @@
+
 "use client";
 
 import { useState, useMemo, useEffect } from "react";
 import type { ManuBill } from "@/types/manu-bill";
 import type { Manufacturer } from "@/types/manufacturer";
 import type { ExportDocument } from "@/types/export-document";
+import type { Transaction } from "@/types/transaction";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import {
@@ -23,13 +25,14 @@ interface ManuBillListProps {
   manuBills: ManuBill[];
   allManufacturers: Manufacturer[];
   allExportDocuments: ExportDocument[];
+  allTransactions: Transaction[];
   onEditBill: (id: string) => void;
   onDeleteBill: (id: string) => void;
 }
 
 const ITEMS_PER_PAGE = 5;
 
-export function ManuBillList({ manuBills, allManufacturers, allExportDocuments, onEditBill, onDeleteBill }: ManuBillListProps) {
+export function ManuBillList({ manuBills, allManufacturers, allExportDocuments, allTransactions, onEditBill, onDeleteBill }: ManuBillListProps) {
   const [searchTerm, setSearchTerm] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
 
@@ -37,13 +40,21 @@ export function ManuBillList({ manuBills, allManufacturers, allExportDocuments, 
     return manuBills.map(bill => {
       const manufacturer = allManufacturers.find(m => m.id === bill.manufacturerId);
       const exportDoc = allExportDocuments.find(d => d.id === bill.exportDocumentId);
+      
+      const payments = allTransactions
+        .filter(t => t.relatedInvoices?.some(inv => inv.type === 'manu' && inv.id === bill.id))
+        .reduce((sum, t) => sum + t.amount, 0);
+        
+      const outstandingAmount = bill.grandTotal - payments;
+
       return {
         ...bill,
         manufacturerName: manufacturer?.companyName || "N/A",
         exportInvoiceNumber: exportDoc?.exportInvoiceNumber || "N/A",
+        outstandingAmount,
       };
     });
-  }, [manuBills, allManufacturers, allExportDocuments]);
+  }, [manuBills, allManufacturers, allExportDocuments, allTransactions]);
 
   const filteredBills = useMemo(() => {
     if (!searchTerm) return enrichedBills;
@@ -93,7 +104,7 @@ export function ManuBillList({ manuBills, allManufacturers, allExportDocuments, 
                   <TableHead className="font-headline">Invoice #</TableHead>
                   <TableHead className="font-headline hidden sm:table-cell">Date</TableHead>
                   <TableHead className="font-headline">Manufacturer</TableHead>
-                  <TableHead className="font-headline hidden md:table-cell">Linked Export Doc</TableHead>
+                  <TableHead className="font-headline hidden md:table-cell">Outstanding</TableHead>
                   <TableHead className="font-headline text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
@@ -103,7 +114,13 @@ export function ManuBillList({ manuBills, allManufacturers, allExportDocuments, 
                     <TableCell className="font-medium">{bill.invoiceNumber}</TableCell>
                     <TableCell className="hidden sm:table-cell">{format(new Date(bill.invoiceDate), "dd/MM/yyyy")}</TableCell>
                     <TableCell>{bill.manufacturerName}</TableCell>
-                    <TableCell className="hidden md:table-cell">{bill.exportInvoiceNumber}</TableCell>
+                    <TableCell className="hidden md:table-cell font-mono">
+                      {bill.outstandingAmount <= 0.01 ? (
+                        <span className="text-green-600 font-medium">Paid</span>
+                      ) : (
+                        `₹ ${bill.outstandingAmount.toFixed(2)}`
+                      )}
+                    </TableCell>
                     <TableCell className="text-right space-x-1">
                       {bill.billDocumentUri && (
                         <Button asChild variant="ghost" size="icon" className="hover:text-blue-600">

@@ -5,6 +5,7 @@ import { useState, useMemo } from "react";
 import type { TransBill } from "@/types/trans-bill";
 import type { Transporter } from "@/types/transporter";
 import type { ExportDocument } from "@/types/export-document";
+import type { Transaction } from "@/types/transaction";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import {
@@ -24,13 +25,14 @@ interface TransBillListProps {
   transBills: TransBill[];
   allTransporters: Transporter[];
   allExportDocuments: ExportDocument[];
+  allTransactions: Transaction[];
   onEditBill: (id: string) => void;
   onDeleteBill: (id: string) => void;
 }
 
 const ITEMS_PER_PAGE = 5;
 
-export function TransBillList({ transBills, allTransporters, allExportDocuments, onEditBill, onDeleteBill }: TransBillListProps) {
+export function TransBillList({ transBills, allTransporters, allExportDocuments, allTransactions, onEditBill, onDeleteBill }: TransBillListProps) {
   const [searchTerm, setSearchTerm] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
 
@@ -38,13 +40,21 @@ export function TransBillList({ transBills, allTransporters, allExportDocuments,
     return transBills.map(bill => {
       const transporter = allTransporters.find(t => t.id === bill.transporterId);
       const exportDoc = allExportDocuments.find(d => d.id === bill.exportDocumentId);
+      
+      const payments = allTransactions
+        .filter(t => t.relatedInvoices?.some(inv => inv.type === 'trans' && inv.id === bill.id))
+        .reduce((sum, t) => sum + t.amount, 0);
+
+      const outstandingAmount = bill.totalPayable - payments;
+
       return {
         ...bill,
         transporterName: transporter?.companyName || "N/A",
         exportInvoiceNumber: exportDoc?.exportInvoiceNumber || "N/A",
+        outstandingAmount,
       };
     });
-  }, [transBills, allTransporters, allExportDocuments]);
+  }, [transBills, allTransporters, allExportDocuments, allTransactions]);
 
   const filteredBills = useMemo(() => {
     if (!searchTerm) return enrichedBills;
@@ -94,7 +104,7 @@ export function TransBillList({ transBills, allTransporters, allExportDocuments,
                   <TableHead className="font-headline">Invoice #</TableHead>
                   <TableHead className="font-headline hidden sm:table-cell">Date</TableHead>
                   <TableHead className="font-headline">Transporter</TableHead>
-                  <TableHead className="font-headline hidden md:table-cell">Linked Export Doc</TableHead>
+                  <TableHead className="font-headline hidden md:table-cell">Outstanding</TableHead>
                   <TableHead className="font-headline text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
@@ -104,7 +114,13 @@ export function TransBillList({ transBills, allTransporters, allExportDocuments,
                     <TableCell className="font-medium">{bill.invoiceNumber}</TableCell>
                     <TableCell className="hidden sm:table-cell">{format(new Date(bill.invoiceDate), "dd/MM/yyyy")}</TableCell>
                     <TableCell>{bill.transporterName}</TableCell>
-                    <TableCell className="hidden md:table-cell">{bill.exportInvoiceNumber}</TableCell>
+                    <TableCell className="hidden md:table-cell font-mono">
+                      {bill.outstandingAmount <= 0.01 ? (
+                        <span className="text-green-600 font-medium">Paid</span>
+                      ) : (
+                        `₹ ${bill.outstandingAmount.toFixed(2)}`
+                      )}
+                    </TableCell>
                     <TableCell className="text-right space-x-1">
                       {bill.billDocumentUri && (
                         <Button asChild variant="ghost" size="icon" className="hover:text-blue-600">

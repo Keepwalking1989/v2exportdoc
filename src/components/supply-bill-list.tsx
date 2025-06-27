@@ -6,6 +6,7 @@ import type { SupplyBill } from "@/types/supply-bill";
 import type { Supplier } from "@/types/supplier";
 import type { Pallet } from "@/types/pallet";
 import type { ExportDocument } from "@/types/export-document";
+import type { Transaction } from "@/types/transaction";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import {
@@ -26,13 +27,14 @@ interface SupplyBillListProps {
   allSuppliers: Supplier[];
   allPallets: Pallet[];
   allExportDocuments: ExportDocument[];
+  allTransactions: Transaction[];
   onEditBill: (id: string) => void;
   onDeleteBill: (id: string) => void;
 }
 
 const ITEMS_PER_PAGE = 5;
 
-export function SupplyBillList({ supplyBills, allSuppliers, allPallets, allExportDocuments, onEditBill, onDeleteBill }: SupplyBillListProps) {
+export function SupplyBillList({ supplyBills, allSuppliers, allPallets, allExportDocuments, allTransactions, onEditBill, onDeleteBill }: SupplyBillListProps) {
   const [searchTerm, setSearchTerm] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
 
@@ -47,13 +49,21 @@ export function SupplyBillList({ supplyBills, allSuppliers, allPallets, allExpor
     return supplyBills.map(bill => {
       const supplier = combinedSuppliers.find(s => s.id === bill.supplierId);
       const exportDoc = allExportDocuments.find(d => d.id === bill.exportDocumentId);
+
+      const payments = allTransactions
+        .filter(t => t.relatedInvoices?.some(inv => inv.type === 'supply' && inv.id === bill.id))
+        .reduce((sum, t) => sum + t.amount, 0);
+        
+      const outstandingAmount = bill.grandTotal - payments;
+
       return {
         ...bill,
         supplierName: supplier?.name || "N/A",
         exportInvoiceNumber: exportDoc?.exportInvoiceNumber || "N/A",
+        outstandingAmount,
       };
     });
-  }, [supplyBills, combinedSuppliers, allExportDocuments]);
+  }, [supplyBills, combinedSuppliers, allExportDocuments, allTransactions]);
 
   const filteredBills = useMemo(() => {
     if (!searchTerm) return enrichedBills;
@@ -103,7 +113,7 @@ export function SupplyBillList({ supplyBills, allSuppliers, allPallets, allExpor
                   <TableHead className="font-headline">Invoice #</TableHead>
                   <TableHead className="font-headline hidden sm:table-cell">Date</TableHead>
                   <TableHead className="font-headline">Supplier/Pallet Co.</TableHead>
-                  <TableHead className="font-headline hidden md:table-cell">Linked Export Doc</TableHead>
+                  <TableHead className="font-headline hidden md:table-cell">Outstanding</TableHead>
                   <TableHead className="font-headline text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
@@ -113,7 +123,13 @@ export function SupplyBillList({ supplyBills, allSuppliers, allPallets, allExpor
                     <TableCell className="font-medium">{bill.invoiceNumber}</TableCell>
                     <TableCell className="hidden sm:table-cell">{format(new Date(bill.invoiceDate), "dd/MM/yyyy")}</TableCell>
                     <TableCell>{bill.supplierName}</TableCell>
-                    <TableCell className="hidden md:table-cell">{bill.exportInvoiceNumber}</TableCell>
+                    <TableCell className="hidden md:table-cell font-mono">
+                      {bill.outstandingAmount <= 0.01 ? (
+                        <span className="text-green-600 font-medium">Paid</span>
+                      ) : (
+                        `₹ ${bill.outstandingAmount.toFixed(2)}`
+                      )}
+                    </TableCell>
                     <TableCell className="text-right space-x-1">
                       {bill.billDocumentUri && (
                         <Button asChild variant="ghost" size="icon" className="hover:text-blue-600">

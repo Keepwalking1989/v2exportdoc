@@ -29,6 +29,7 @@ export default function TransBillPage() {
   // Data for dependencies
   const [allExportDocuments, setAllExportDocuments] = useState<ExportDocument[]>([]);
   const [allTransporters, setAllTransporters] = useState<Transporter[]>([]);
+  const [allTransactions, setAllTransactions] = useState<Transaction[]>([]);
 
   useEffect(() => {
     setIsClient(true);
@@ -44,12 +45,14 @@ export default function TransBillPage() {
         
         setAllExportDocuments(JSON.parse(localStorage.getItem(LOCAL_STORAGE_EXPORT_DOCS_KEY_V2) || "[]"));
         setAllTransporters(JSON.parse(localStorage.getItem(LOCAL_STORAGE_TRANSPORTERS_KEY) || "[]"));
+        setAllTransactions(JSON.parse(localStorage.getItem(LOCAL_STORAGE_TRANSACTIONS_KEY) || "[]"));
 
       } catch (error) {
         console.error("Failed to parse data from localStorage", error);
         setTransBills([]);
         setAllExportDocuments([]);
         setAllTransporters([]);
+        setAllTransactions([]);
       }
     }
   }, []);
@@ -186,6 +189,7 @@ export default function TransBillPage() {
           transBills={transBills}
           allTransporters={allTransporters}
           allExportDocuments={allExportDocuments}
+          allTransactions={allTransactions}
           onEditBill={handleEditBill}
           onDeleteBill={handleDeleteBill}
         />
