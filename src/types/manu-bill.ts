@@ -22,7 +22,6 @@ export interface ManuBill {
   ackNo?: string;
   ackDate?: Date;
   irnNo?: string;
-  lrNo?: string;
   lrDate?: Date;
   vehicleNo?: string;
   items: ManuBillItem[];
