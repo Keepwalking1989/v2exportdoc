@@ -309,8 +309,17 @@ export function generatePackingListPdf(
     autoTable(doc, {
         startY: yPos,
         theme: 'grid',
+        body: [[{ content: dutyDrawbackText, styles: { ...classTwoStyles, ...classThreeStyles, halign: 'left'} }]],
+        margin: { left: pageMargin, right: pageMargin },
+        didDrawPage: data => { yPos = data.cursor?.y ?? yPos; }
+    });
+    // @ts-ignore
+    yPos = doc.lastAutoTable.finalY;
+
+    autoTable(doc, {
+        startY: yPos,
+        theme: 'grid',
         body: [[
-            { content: dutyDrawbackText, styles: {...classTwoStyles, ...classThreeStyles, halign: 'left'} },
             { content: 'Certified That Goods Are Of Indian Origin', styles: {...classTwoStyles, ...classThreeStyles, halign: 'center'} }
         ]],
         margin: { left: pageMargin, right: pageMargin },
@@ -328,7 +337,15 @@ export function generatePackingListPdf(
                 {
                     content: `Declaration:\n${declarationText}`,
                     rowSpan: 4, // Span all 4 conceptual rows of the signature block
-                    styles: {lineWidth: 0.5, lineColor: [0,0,0], valign: 'top', halign: 'left', ...classTwoStyles, ...classThreeStyles}
+                    styles: {
+                        lineWidth: 0.5, 
+                        lineColor: [0,0,0], 
+                        valign: 'top', 
+                        halign: 'left', 
+                        cellPadding: 2, // Explicitly set smaller padding
+                        ...classTwoStyles, 
+                        ...classThreeStyles
+                    }
                 },
                 {
                     content: 'Signature & Date:',
