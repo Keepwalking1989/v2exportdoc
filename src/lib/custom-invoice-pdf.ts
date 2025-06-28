@@ -8,6 +8,8 @@ import type { Manufacturer } from '@/types/manufacturer';
 import type { Size } from '@/types/size';
 import type { Product } from '@/types/product';
 
+const FONT_CAT3_SIZE = 8;
+
 // --- Helper for amount in words ---
 function amountToWordsUSD(amount: number): string {
     if (amount === null || amount === undefined) return 'Zero Dollars only';
