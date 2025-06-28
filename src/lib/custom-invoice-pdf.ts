@@ -77,6 +77,7 @@ export function generateCustomInvoicePdf(
         lineWidth: 0.5,
         lineColor: '#000000',
         fillColor: COLOR_BLUE_RGB,
+        cellPadding: 2,
     };
     const classTwoStyles = { 
         fontStyle: 'normal',
@@ -84,6 +85,7 @@ export function generateCustomInvoicePdf(
         valign: 'middle',
         lineWidth: 0.5,
         lineColor: '#000000',
+        cellPadding: 2,
     };
     const classThreeStyles = { 
         fontStyle: 'normal',
@@ -229,17 +231,20 @@ export function generateCustomInvoicePdf(
             const size = product ? allSizes.find(s => s.id === product.sizeId) : undefined;
             if (!size) return;
 
-            const key = size.id; // Group by size only
+            // Group by both size and rate to handle different prices for the same size
+            const key = `${size.id}-${item.rate}`;
 
             if (!grouped.has(key)) {
                 const hsnCode = size.hsnCode || 'N/A';
-                const description = hsnCode === '69072100'
-                    ? `Polished Glazed Vitrified Tiles ( PGVT ) (${size.size})`
-                    : `Vitrified Tiles (${size.size})`;
-
+                let description = `Vitrified Tiles (${size.size})`;
+                if (hsnCode === '69072100') {
+                    description = `Polished Glazed Vitrified Tiles ( PGVT ) (${size.size})`;
+                }
+                
                 grouped.set(key, {
                     hsnCode: hsnCode,
                     description: description,
+                    rate: item.rate || 0,
                     boxes: 0,
                     sqm: 0,
                     total: 0,
@@ -254,15 +259,6 @@ export function generateCustomInvoicePdf(
             existing.total += sqmForThisItem * (item.rate || 0);
         });
         
-        // Calculate weighted average rate after grouping
-        grouped.forEach(group => {
-            if (group.sqm > 0) {
-                group.rate = group.total / group.sqm;
-            } else {
-                group.rate = 0;
-            }
-        });
-
         return Array.from(grouped.values());
     };
 
