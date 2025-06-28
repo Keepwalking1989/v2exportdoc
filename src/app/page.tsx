@@ -77,6 +77,9 @@ const DashboardDetailModal = ({ open, onOpenChange, title, children }: { open: b
       <DialogContent className="max-w-2xl">
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
+          <DialogDescription>
+            A detailed breakdown for the selected metric. This dialog provides more information.
+          </DialogDescription>
         </DialogHeader>
         <ScrollArea className="max-h-[60vh] pr-4">
           {children}
@@ -447,13 +450,15 @@ export default function DashboardPage() {
                     </Card>
                 </div>
                 
-                <DashboardDetailModal
-                    open={modalState.open}
-                    onOpenChange={(isOpen) => setModalState({ ...modalState, open: isOpen })}
-                    title={modalState.title}
-                >
-                    {modalState.content}
-                </DashboardDetailModal>
+                {modalState.open && (
+                  <DashboardDetailModal
+                      open={modalState.open}
+                      onOpenChange={(isOpen) => setModalState({ ...modalState, open: isOpen })}
+                      title={modalState.title}
+                  >
+                      {modalState.content}
+                  </DashboardDetailModal>
+                )}
 
             </main>
             <footer className="py-6 text-center text-sm text-muted-foreground border-t">
