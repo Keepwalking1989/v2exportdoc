@@ -2,7 +2,7 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useForm, useFieldArray, Controller, Control, useWatch, UseFormGetValues } from "react-hook-form";
+import { useForm, useFieldArray, Controller, Control, useWatch, UseFormGetValues, UseFormSetValue } from "react-hook-form";
 import * as z from "zod";
 import { Button } from "@/components/ui/button";
 import {
@@ -157,6 +157,8 @@ interface ItemManagerProps {
     control: Control<ExportDocumentFormValues>;
     allProducts: Product[];
     allSizes: Size[];
+    getValues: UseFormGetValues<ExportDocumentFormValues>;
+    setValue: UseFormSetValue<ExportDocumentFormValues>;
 }
 
 interface ItemProps {
@@ -168,6 +170,8 @@ interface ItemProps {
     allProducts: Product[];
     allSizes: Size[];
     fieldArrayName: 'productItems' | 'sampleItems';
+    getValues: UseFormGetValues<ExportDocumentFormValues>;
+    setValue: UseFormSetValue<ExportDocumentFormValues>;
 }
 
 const ContainerProductItem: React.FC<ItemProps> = ({
@@ -179,9 +183,9 @@ const ContainerProductItem: React.FC<ItemProps> = ({
     allProducts,
     allSizes,
     fieldArrayName,
+    getValues,
+    setValue,
 }) => {
-    const { getValues, setValue } = useForm<ExportDocumentFormValues>();
-
     const currentItem = useWatch({
         control,
         name: `containerItems.${containerIndex}.${fieldArrayName}.${productIndex}`,
@@ -189,7 +193,6 @@ const ContainerProductItem: React.FC<ItemProps> = ({
     
     const { productId, boxes, rate } = currentItem;
 
-    // Effect to auto-populate rate when product changes
     useEffect(() => {
         const product = allProducts.find(p => p.id === productId);
         if (product) {
@@ -199,7 +202,6 @@ const ContainerProductItem: React.FC<ItemProps> = ({
         }
     }, [productId, allProducts, allSizes, setValue, containerIndex, productIndex, fieldArrayName]);
     
-    // Effect to recalculate weights whenever product or box count changes
     useEffect(() => {
         const product = allProducts.find(p => p.id === productId);
         if (!product) return;
@@ -212,9 +214,8 @@ const ContainerProductItem: React.FC<ItemProps> = ({
         
         setValue(`containerItems.${containerIndex}.${fieldArrayName}.${productIndex}.netWeight`, newNetWeight);
         
-        // Only update gross weight if it was tracking net weight or is zero
         const currentGrossWeightVal = getValues(`containerItems.${containerIndex}.${fieldArrayName}.${productIndex}.grossWeight`);
-        if (!currentGrossWeightVal || Number(currentGrossWeightVal) === 0) {
+        if (!currentGrossWeightVal || Number(currentGrossWeightVal) < newNetWeight) {
             setValue(`containerItems.${containerIndex}.${fieldArrayName}.${productIndex}.grossWeight`, newNetWeight);
         }
     }, [productId, boxes, allProducts, allSizes, setValue, getValues, containerIndex, productIndex, fieldArrayName]);
@@ -362,7 +363,7 @@ const ContainerProductItem: React.FC<ItemProps> = ({
 };
 
 
-const ContainerProductManager: React.FC<ItemManagerProps> = ({ containerIndex, control, allProducts, allSizes }) => {
+const ContainerProductManager: React.FC<ItemManagerProps> = ({ containerIndex, control, allProducts, allSizes, getValues, setValue }) => {
     const { fields, append, remove } = useFieldArray({
         control,
         name: `containerItems.${containerIndex}.productItems`,
@@ -406,6 +407,8 @@ const ContainerProductManager: React.FC<ItemManagerProps> = ({ containerIndex, c
                         allProducts={allProducts}
                         allSizes={allSizes}
                         fieldArrayName="productItems"
+                        getValues={getValues}
+                        setValue={setValue}
                     />
                 ))}
                 {fields.length === 0 && (
@@ -418,7 +421,7 @@ const ContainerProductManager: React.FC<ItemManagerProps> = ({ containerIndex, c
     );
 };
 
-const ContainerSampleManager: React.FC<ItemManagerProps> = ({ containerIndex, control, allProducts, allSizes }) => {
+const ContainerSampleManager: React.FC<ItemManagerProps> = ({ containerIndex, control, allProducts, allSizes, getValues, setValue }) => {
     const { fields, append, remove } = useFieldArray({
         control,
         name: `containerItems.${containerIndex}.sampleItems`,
@@ -462,6 +465,8 @@ const ContainerSampleManager: React.FC<ItemManagerProps> = ({ containerIndex, co
                         allProducts={allProducts}
                         allSizes={allSizes}
                         fieldArrayName="sampleItems"
+                        getValues={getValues}
+                        setValue={setValue}
                     />
                 ))}
                 {fields.length === 0 && (
@@ -1261,6 +1266,8 @@ export function ExportDocumentForm({
                                 control={form.control}
                                 allProducts={allProducts}
                                 allSizes={allSizes}
+                                getValues={form.getValues}
+                                setValue={form.setValue}
                             />
                              <Separator className="my-6 border-dashed"/>
                              <ContainerSampleManager
@@ -1268,6 +1275,8 @@ export function ExportDocumentForm({
                                 control={form.control}
                                 allProducts={allProducts}
                                 allSizes={allSizes}
+                                getValues={form.getValues}
+                                setValue={form.setValue}
                             />
                             <ContainerTotals
                                 containerIndex={index}
