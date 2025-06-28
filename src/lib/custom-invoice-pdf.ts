@@ -2,7 +2,7 @@
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { format } from 'date-fns';
-import type { ExportDocument, ManufacturerInfo } from '@/types/export-document';
+import type { ExportDocument, ManufacturerInfo, ExportDocumentProductItem } from '@/types/export-document';
 import type { Company } from '@/types/company'; // For Exporter
 import type { Manufacturer } from '@/types/manufacturer';
 import type { Size } from '@/types/size';
@@ -66,7 +66,7 @@ export function generateCustomInvoicePdf(
     let yPos = 20;
     const pageMargin = 20;
     
-    const COLOR_BLUE_RGB = [217, 234, 247];
+    const COLOR_BLUE_RGB = [217, 234, 247]; // Light Blue
 
     // --- Style Definitions (Classes) ---
     const classOneStyles = { 
@@ -214,12 +214,14 @@ export function generateCustomInvoicePdf(
     // @ts-ignore
     yPos = doc.lastAutoTable.finalY;
 
+    const allProductItems: ExportDocumentProductItem[] = [];
+    const allSampleItems: ExportDocumentProductItem[] = [];
+    docData.containerItems?.forEach(container => {
+        (container.productItems || []).forEach(item => allProductItems.push(item));
+        (container.sampleItems || []).forEach(item => allSampleItems.push(item));
+    });
 
-    // --- Main Product Table ---
-    const allProductItems = (docData.containerItems || []).flatMap(c => c.productItems || []);
-    const allSampleItems = (docData.containerItems || []).flatMap(c => c.sampleItems || []);
-
-    const groupItems = (items: typeof allProductItems) => {
+    const groupItems = (items: ExportDocumentProductItem[]) => {
         const grouped = new Map<string, any>();
 
         items.forEach(item => {
@@ -335,7 +337,7 @@ export function generateCustomInvoicePdf(
         ],
         [
             { content: '', colSpan: 3, styles: { ...classTwoStyles, cellPadding: 2 } },
-            { content: 'EXCHANGE RATE NOFICATION NUMBER AND DATE', colSpan: 4, styles: { ...classOneStyles, cellPadding: 2, fontSize: 8 } }
+            { content: 'EXCHANGE RATE NOFICATION NUMBER AND DATE', colSpan: 4, styles: { ...classOneStyles, cellPadding: 2, fontSize: FONT_CAT3_SIZE } }
         ],
         [
             { content: '', colSpan: 3, styles: { ...classTwoStyles, cellPadding: 2 } },
@@ -344,7 +346,7 @@ export function generateCustomInvoicePdf(
         ],
         [
             { content: '', colSpan: 3, styles: { ...classTwoStyles, cellPadding: 2 } },
-            { content: 'EXCHANGE RATE', styles: { ...classOneStyles, cellPadding: 2, fontSize: 8 } },
+            { content: 'EXCHANGE RATE', styles: { ...classOneStyles, cellPadding: 2, fontSize: FONT_CAT3_SIZE } },
             { content: '1 USD', styles: { ...classTwoStyles, cellPadding: 2 } },
             { content: conversationRate.toFixed(2), colSpan: 2, styles: { ...classTwoStyles, halign: 'right', cellPadding: 2 } }
         ],
@@ -379,13 +381,13 @@ export function generateCustomInvoicePdf(
         bodyStyles: {...classTwoStyles, halign: 'left', cellPadding: 1 },
         footStyles: { ...classOneStyles, cellPadding: 2 },
         columnStyles: {
-            0: { cellWidth: 70, halign: 'center' },
-            1: { cellWidth: 40, halign: 'center' },
-            2: { cellWidth: 'auto' },
-            3: { halign: 'right' },
-            4: { halign: 'right' },
-            5: { halign: 'right' },
-            6: { halign: 'right' },
+            0: { cellWidth: 60, halign: 'center' },   // HSN Code
+            1: { cellWidth: 30, halign: 'center' },   // Sr. No
+            2: { cellWidth: 'auto' },                 // Description Of Goods
+            3: { cellWidth: 45, halign: 'right' },    // Boxes
+            4: { cellWidth: 60, halign: 'right' },    // Sq.Mtr
+            5: { cellWidth: 55, halign: 'right' },    // Rate
+            6: { cellWidth: 70, halign: 'right' },    // Total Amount
         },
         didDrawPage: data => { yPos = data.cursor?.y ?? yPos; }
     });
