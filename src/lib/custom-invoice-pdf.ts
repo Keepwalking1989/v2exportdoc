@@ -61,7 +61,7 @@ function amountToWordsUSD(amount: number): string {
 }
 
 // --- Main PDF Generation Function ---
-export async function generateCustomInvoicePdf(
+export function generateCustomInvoicePdf(
     docData: ExportDocument,
     exporter: Company,
     manufacturersWithDetails: (Manufacturer & { invoiceNumber: string, invoiceDate?: Date })[],
@@ -93,23 +93,6 @@ export async function generateCustomInvoicePdf(
         lineColor: '#000000',
         cellPadding: 2,
     };
-
-    // Fetch signature image and convert to data URI
-    let signatureImageData: string | null = null;
-    try {
-        const response = await fetch('/signature.png');
-        if (response.ok) {
-            const blob = await response.blob();
-            signatureImageData = await new Promise((resolve, reject) => {
-                const reader = new FileReader();
-                reader.onloadend = () => resolve(reader.result as string);
-                reader.onerror = reject;
-                reader.readAsDataURL(blob);
-            });
-        }
-    } catch (error) {
-        console.error("Signature image could not be loaded from /signature.png. It will be skipped.", error);
-    }
     
     // --- Document Header ---
     doc.setFontSize(20);
@@ -172,8 +155,8 @@ export async function generateCustomInvoicePdf(
             ],
              // Row 2: Data (Class 2)
             [
-                { content: 'TO THE\nORDER', styles: { ...classTwoStyles, halign: 'center' } },
-                { content: 'TO THE\nORDER', styles: { ...classTwoStyles, halign: 'center' } }
+                { content: 'TO THE\nORDER', styles: { ...classTwoStyles, halign: 'center', minCellHeight: 10 } },
+                { content: 'TO THE\nORDER', styles: { ...classTwoStyles, halign: 'center', minCellHeight: 10 } }
             ]
         ],
         margin: { left: pageMargin, right: pageMargin },
@@ -517,23 +500,6 @@ export async function generateCustomInvoicePdf(
             2: { cellWidth: 'auto' },
         },
         margin: { left: pageMargin, right: pageMargin },
-        didDrawCell: (data) => {
-            if (signatureImageData && data.section === 'body' && data.row.index === 2 && data.column.index === 1) {
-                try {
-                    const imageProps = doc.getImageProperties(signatureImageData);
-                    
-                    const imgWidth = 80; 
-                    const imgHeight = (imageProps.height * imgWidth) / imageProps.width;
-
-                    const imgX = data.cell.x + (data.cell.width - imgWidth) / 2;
-                    const imgY = data.cell.y + (data.cell.height - imgHeight) / 2 - 10;
-                    
-                    doc.addImage(signatureImageData, 'PNG', imgX, imgY, imgWidth, imgHeight);
-                } catch (e) {
-                    console.error("Error adding signature image to PDF:", e);
-                }
-            }
-        },
     });
 
     doc.save(`Custom_Invoice_${docData.exportInvoiceNumber.replace(/[\\/:*?"<>|]/g, '_')}.pdf`);
