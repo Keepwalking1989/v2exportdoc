@@ -258,13 +258,13 @@ export function generatePackingListPdf(
         footStyles: {...classOneStyles, cellPadding: 1 },
         margin: { left: pageMargin, right: pageMargin },
         columnStyles: {
-            0: { cellWidth: 70, halign: 'center' },
-            1: { cellWidth: 40, halign: 'center' },
-            2: { cellWidth: 'auto', halign: 'left' },
-            3: { cellWidth: 50, halign: 'right' },
-            4: { cellWidth: 60, halign: 'right' },
-            5: { cellWidth: 65, halign: 'right' },
-            6: { cellWidth: 65, halign: 'right' },
+            0: { cellWidth: 55, halign: 'center' },    // HSN Code
+            1: { cellWidth: 30, halign: 'center' },    // Sr. No.
+            2: { cellWidth: 'auto', halign: 'left' },  // Description Of Goods
+            3: { cellWidth: 40, halign: 'right' },     // Boxes
+            4: { cellWidth: 45, halign: 'right' },     // Sq.Mtr
+            5: { cellWidth: 60, halign: 'right' },     // Net Wt. (Kgs)
+            6: { cellWidth: 60, halign: 'right' },     // Gross Wt. (Kgs)
         },
         didDrawPage: data => { yPos = data.cursor?.y ?? yPos; }
     });
