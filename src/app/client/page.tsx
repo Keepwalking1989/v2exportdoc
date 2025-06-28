@@ -125,7 +125,7 @@ export default function ClientPage() {
         />
       </main>
       <footer className="py-6 text-center text-sm text-muted-foreground border-t">
-        © {new Date().getFullYear()} BizForm. All rights reserved.
+        © {new Date().getFullYear()} HEMITH ERP. All rights reserved.
       </footer>
     </div>
   );
