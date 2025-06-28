@@ -2,7 +2,7 @@
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { format } from 'date-fns';
-import type { ExportDocument, ExportDocumentProductItem } from '@/types/export-document';
+import type { ExportDocument, ManufacturerInfo } from '@/types/export-document';
 import type { Company } from '@/types/company'; // For Exporter
 import type { Manufacturer } from '@/types/manufacturer';
 import type { Size } from '@/types/size';
@@ -154,8 +154,8 @@ export function generateCustomInvoicePdf(
             ],
              // Row 2: Data (Class 2)
             [
-                { content: 'TO\nTHE\nORDER', styles: { ...classTwoStyles, minCellHeight: 35, halign: 'center' } },
-                { content: 'TO\nTHE\nORDER', styles: { ...classTwoStyles, minCellHeight: 35, halign: 'center' } }
+                { content: 'TO THE\nORDER', styles: { ...classTwoStyles, minCellHeight: 35, halign: 'center' } },
+                { content: 'TO THE\nORDER', styles: { ...classTwoStyles, minCellHeight: 35, halign: 'center' } }
             ]
         ],
         margin: { left: pageMargin, right: pageMargin },
@@ -206,7 +206,7 @@ export function generateCustomInvoicePdf(
         theme: 'grid',
         body: [
             [{ content: 'Terms Of Delivery & Payments', styles: {...classOneStyles, halign: 'left', cellPadding: 1} }],
-            [{ content: docData.termsOfDeliveryAndPayment || 'N/A', styles: {...classTwoStyles, halign: 'left', minCellHeight: 30, cellPadding: 1} }],
+            [{ content: docData.termsOfDeliveryAndPayment || 'N/A', styles: {...classTwoStyles, halign: 'left', cellPadding: 1} }],
         ],
          margin: { left: pageMargin, right: pageMargin },
         didDrawPage: data => { yPos = data.cursor?.y ?? yPos; }
@@ -216,14 +216,10 @@ export function generateCustomInvoicePdf(
 
 
     // --- Main Product Table ---
-    const allProductItems: ExportDocumentProductItem[] = [];
-    const allSampleItems: ExportDocumentProductItem[] = [];
-    docData.containerItems?.forEach(container => {
-        (container.productItems || []).forEach(item => allProductItems.push(item));
-        (container.sampleItems || []).forEach(item => allSampleItems.push(item));
-    });
+    const allProductItems = (docData.containerItems || []).flatMap(c => c.productItems || []);
+    const allSampleItems = (docData.containerItems || []).flatMap(c => c.sampleItems || []);
 
-    const groupItems = (items: ExportDocumentProductItem[]) => {
+    const groupItems = (items: typeof allProductItems) => {
         const grouped = new Map<string, any>();
 
         items.forEach(item => {
@@ -236,11 +232,10 @@ export function generateCustomInvoicePdf(
 
             if (!grouped.has(key)) {
                 const hsnCode = size.hsnCode || 'N/A';
-                let description = `Vitrified Tiles (${size.size})`;
-                if (hsnCode === '69072100') {
-                    description = `Polished Glazed Vitrified Tiles ( PGVT ) (${size.size})`;
-                }
-                
+                const description = hsnCode === '69072100'
+                    ? `Polished Glazed Vitrified Tiles ( PGVT ) (${size.size})`
+                    : `Vitrified Tiles (${size.size})`;
+
                 grouped.set(key, {
                     hsnCode: hsnCode,
                     description: description,
@@ -276,6 +271,9 @@ export function generateCustomInvoicePdf(
         grandTotalBoxes += item.boxes;
         grandTotalSqm += item.sqm;
         grandTotalAmount += item.total;
+        
+        // After grouping, the effective rate is the total value divided by total sqm for that group
+        const effectiveRate = item.sqm > 0 ? item.total / item.sqm : 0;
 
         tableBody.push([
             item.hsnCode,
@@ -283,7 +281,7 @@ export function generateCustomInvoicePdf(
             item.description,
             item.boxes.toString(),
             item.sqm.toFixed(2),
-            item.rate.toFixed(2),
+            effectiveRate.toFixed(2),
             item.total.toFixed(2)
         ]);
     });
