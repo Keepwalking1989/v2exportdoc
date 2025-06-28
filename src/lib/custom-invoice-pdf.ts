@@ -89,11 +89,6 @@ export function generateCustomInvoicePdf(
         lineColor: '#000000',
         cellPadding: 2,
     };
-    const classThreeStyles = { 
-        fontStyle: 'normal',
-        textColor: '#000000',
-        fontSize: 8,
-    };
     
     // --- Document Header ---
     doc.setFontSize(20);
@@ -383,12 +378,12 @@ export function generateCustomInvoicePdf(
         bodyStyles: {...classTwoStyles, halign: 'left', cellPadding: 1 },
         footStyles: { ...classOneStyles, cellPadding: 2 },
         columnStyles: {
-            0: { cellWidth: 60, halign: 'center' },   // HSN Code
-            1: { cellWidth: 30, halign: 'center' },   // Sr. No
+            0: { cellWidth: 55, halign: 'center' },   // HSN Code
+            1: { cellWidth: 25, halign: 'center' },   // Sr. No
             2: { cellWidth: 'auto' },                 // Description Of Goods
-            3: { cellWidth: 45, halign: 'right' },    // Boxes
-            4: { cellWidth: 60, halign: 'right' },    // Sq.Mtr
-            5: { cellWidth: 55, halign: 'right' },    // Rate
+            3: { cellWidth: 40, halign: 'right' },    // Boxes
+            4: { cellWidth: 45, halign: 'right' },    // Sq.Mtr
+            5: { cellWidth: 60, halign: 'right' },    // Rate
             6: { cellWidth: 70, halign: 'right' },    // Total Amount
         },
         didDrawPage: data => { yPos = data.cursor?.y ?? yPos; }
