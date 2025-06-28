@@ -154,8 +154,8 @@ export function generateCustomInvoicePdf(
             ],
              // Row 2: Data (Class 2)
             [
-                { content: 'TO THE\nORDER', styles: { ...classTwoStyles, minCellHeight: 35, halign: 'center' } },
-                { content: 'TO THE\nORDER', styles: { ...classTwoStyles, minCellHeight: 35, halign: 'center' } }
+                { content: 'TO THE\nORDER', styles: { ...classTwoStyles, halign: 'center' } },
+                { content: 'TO THE\nORDER', styles: { ...classTwoStyles, halign: 'center' } }
             ]
         ],
         margin: { left: pageMargin, right: pageMargin },
