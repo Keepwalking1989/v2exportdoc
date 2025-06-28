@@ -290,7 +290,7 @@ export default function DocumentDataPage() {
     }
     const exporter = allExporters.find(e => e.id === document.exporterId);
     
-    const manufacturersWithDetails = document.manufacturerDetails?.map(md => {
+    const manufacturersWithDetails = (document.manufacturerDetails || []).map(md => {
       const manu = allManufacturers.find(m => m.id === md.manufacturerId);
       return manu ? { ...manu, ...md } : null;
     }).filter(Boolean) as (Manufacturer & { invoiceNumber: string, invoiceDate?: Date })[];
@@ -325,7 +325,7 @@ export default function DocumentDataPage() {
       return;
     }
     const exporter = allExporters.find(e => e.id === document.exporterId);
-    const manufacturersWithDetails = document.manufacturerDetails?.map(md => {
+    const manufacturersWithDetails = (document.manufacturerDetails || []).map(md => {
         const manu = allManufacturers.find(m => m.id === md.manufacturerId);
         return manu ? { ...manu, ...md } : null;
     }).filter(Boolean) as (Manufacturer & { invoiceNumber: string, invoiceDate?: Date })[];
