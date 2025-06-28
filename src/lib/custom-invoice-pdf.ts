@@ -229,9 +229,15 @@ export function generateCustomInvoicePdf(
             if (!acc[key]) {
                 const product = allProducts.find(p => p.id === item.productId);
                 const size = product ? allSizes.find(s => s.id === product.sizeId) : undefined;
+                
+                const hsnCode = size?.hsnCode || 'N/A';
+                const description = hsnCode === '69072100'
+                    ? `Polished Glazed Vitrified Tiles ( PGVT ) (${size?.size || 'N/A'})`
+                    : `${product?.designName || 'Unknown'} (${size?.size || 'N/A'})`;
+
                 acc[key] = {
-                    hsnCode: size?.hsnCode || 'N/A',
-                    description: `${product?.designName || 'Unknown'} (${size?.size || 'N/A'})`,
+                    hsnCode: hsnCode,
+                    description: description,
                     boxes: 0,
                     sqm: 0,
                     rate: item.rate || 0,
@@ -256,7 +262,7 @@ export function generateCustomInvoicePdf(
     let grandTotalAmount = 0;
     let srNoCounter = 1;
 
-    const tableBody: any[] = []; // Use any[] to accommodate different row structures
+    const tableBody: any[] = [];
 
     groupedProducts.forEach(item => {
         grandTotalBoxes += item.boxes;
@@ -306,7 +312,6 @@ export function generateCustomInvoicePdf(
         tableBody.push(['', '', '', '', '', '', '']);
     }
 
-    // --- Calculations for Footer ---
     const conversationRate = docData.conversationRate || 0;
     const totalAmountInr = grandTotalAmount * conversationRate;
     const gstString = docData.gst || "0";
@@ -314,48 +319,48 @@ export function generateCustomInvoicePdf(
     const gstAmount = totalAmountInr * gstRate;
     const finalTotalInr = totalAmountInr + gstAmount;
 
-    // --- Footer Structure ---
-    const tableFooter = [];
-    tableFooter.push([
-        { content: 'TOTAL', colSpan: 3, styles: {...classOneStyles, halign: 'left'} },
-        { content: grandTotalBoxes.toString(), styles: {...classTwoStyles, halign: 'right'} },
-        { content: grandTotalSqm.toFixed(2), styles: {...classTwoStyles, halign: 'right'} },
-        { content: '', styles: {...classTwoStyles} },
-        { content: `$ ${grandTotalAmount.toFixed(2)}`, styles: {...classTwoStyles, halign: 'right'} },
-    ]);
-    tableFooter.push([
-        { content: '', colSpan: 3, styles: { ...classTwoStyles } },
-        { content: 'EXCHANGE RATE NOFICATION NUMBER AND DATE', colSpan: 4, styles: { ...classOneStyles } }
-    ]);
-    tableFooter.push([
-        { content: '', colSpan: 3, styles: { ...classTwoStyles } },
-        { content: docData.exchangeNotification || 'N/A', colSpan: 2, styles: { ...classTwoStyles, halign: 'left' } },
-        { content: docData.exchangeDate ? format(new Date(docData.exchangeDate), 'dd/MM/yyyy') : 'N/A', colSpan: 2, styles: { ...classTwoStyles, halign: 'right' } }
-    ]);
-    tableFooter.push([
-        { content: '', colSpan: 3, styles: { ...classTwoStyles } },
-        { content: 'EXCHANGE RATE', styles: { ...classOneStyles } },
-        { content: '1 USD', styles: { ...classTwoStyles } },
-        { content: conversationRate.toFixed(2), colSpan: 2, styles: { ...classTwoStyles, halign: 'right' } }
-    ]);
-    tableFooter.push([
-        { content: '', colSpan: 3, styles: { ...classTwoStyles } },
-        { content: 'FOB', styles: { ...classOneStyles } },
-        { content: 'INR', styles: { ...classTwoStyles } },
-        { content: totalAmountInr.toFixed(2), colSpan: 2, styles: { ...classTwoStyles, halign: 'right' } }
-    ]);
-    tableFooter.push([
-        { content: '', colSpan: 3, styles: { ...classTwoStyles } },
-        { content: 'IGST %', styles: { ...classOneStyles } },
-        { content: docData.gst || '0%', styles: { ...classTwoStyles } },
-        { content: gstAmount.toFixed(2), colSpan: 2, styles: { ...classTwoStyles, halign: 'right' } }
-    ]);
-    tableFooter.push([
-        { content: '', colSpan: 3, styles: { ...classTwoStyles } },
-        { content: 'TOTAL', styles: { ...classOneStyles } },
-        { content: 'INR', styles: { ...classTwoStyles } },
-        { content: finalTotalInr.toFixed(2), colSpan: 2, styles: { ...classTwoStyles, halign: 'right' } }
-    ]);
+    const tableFooter = [
+        [
+            { content: 'TOTAL', colSpan: 3, styles: {...classOneStyles, halign: 'left'} },
+            { content: grandTotalBoxes.toString(), styles: {...classTwoStyles, halign: 'right'} },
+            { content: grandTotalSqm.toFixed(2), styles: {...classTwoStyles, halign: 'right'} },
+            { content: '', styles: {...classTwoStyles} },
+            { content: `$ ${grandTotalAmount.toFixed(2)}`, styles: {...classTwoStyles, halign: 'right'} },
+        ],
+        [
+            { content: '', colSpan: 3, styles: { ...classTwoStyles } },
+            { content: 'EXCHANGE RATE NOFICATION NUMBER AND DATE', colSpan: 4, styles: { ...classOneStyles } }
+        ],
+        [
+            { content: '', colSpan: 3, styles: { ...classTwoStyles } },
+            { content: docData.exchangeNotification || 'N/A', colSpan: 2, styles: { ...classTwoStyles, halign: 'left' } },
+            { content: docData.exchangeDate ? format(new Date(docData.exchangeDate), 'dd/MM/yyyy') : 'N/A', colSpan: 2, styles: { ...classTwoStyles, halign: 'right' } }
+        ],
+        [
+            { content: '', colSpan: 3, styles: { ...classTwoStyles } },
+            { content: 'EXCHANGE RATE', styles: { ...classOneStyles } },
+            { content: '1 USD', styles: { ...classTwoStyles } },
+            { content: conversationRate.toFixed(2), colSpan: 2, styles: { ...classTwoStyles, halign: 'right' } }
+        ],
+        [
+            { content: '', colSpan: 3, styles: { ...classTwoStyles } },
+            { content: 'FOB', styles: { ...classOneStyles } },
+            { content: 'INR', styles: { ...classTwoStyles } },
+            { content: totalAmountInr.toFixed(2), colSpan: 2, styles: { ...classTwoStyles, halign: 'right' } }
+        ],
+        [
+            { content: '', colSpan: 3, styles: { ...classTwoStyles } },
+            { content: 'IGST %', styles: { ...classOneStyles } },
+            { content: docData.gst || '0%', styles: { ...classTwoStyles } },
+            { content: gstAmount.toFixed(2), colSpan: 2, styles: { ...classTwoStyles, halign: 'right' } }
+        ],
+        [
+            { content: '', colSpan: 3, styles: { ...classTwoStyles } },
+            { content: 'TOTAL', styles: { ...classOneStyles } },
+            { content: 'INR', styles: { ...classTwoStyles } },
+            { content: finalTotalInr.toFixed(2), colSpan: 2, styles: { ...classTwoStyles, halign: 'right' } }
+        ],
+    ];
 
     autoTable(doc, {
         startY: yPos,
@@ -381,8 +386,7 @@ export function generateCustomInvoicePdf(
     // @ts-ignore
     yPos = doc.lastAutoTable.finalY;
 
-    // --- Amount in Words & Totals ---
-     autoTable(doc, {
+    autoTable(doc, {
         startY: yPos,
         theme: 'grid',
         body: [
@@ -401,7 +405,6 @@ export function generateCustomInvoicePdf(
     // @ts-ignore
     yPos = doc.lastAutoTable.finalY;
 
-    // --- Footer Section ---
     const footerText = 'Export Under Duty Drawback Scheme, We shall claim the benefit as admissible under , RoDTEP , DBK';
     const declarationText = 'We declare that this Invoice shows the actual price of the goods described and that all particulars are true and correct.';
     
@@ -416,7 +419,6 @@ export function generateCustomInvoicePdf(
     // @ts-ignore
     yPos = doc.lastAutoTable.finalY;
 
-    // --- Manufacturer Details Section ---
     autoTable(doc, {
         startY: yPos,
         theme: 'grid',
@@ -473,18 +475,6 @@ export function generateCustomInvoicePdf(
     // @ts-ignore
     yPos = doc.lastAutoTable.finalY;
 
-    // --- Final Declarations & Signature (copied from packing-list) ---
-    const declarationCellStyle = {
-        fontStyle: 'normal',
-        textColor: [0, 0, 0],
-        fontSize: 8,
-        lineWidth: 0.5,
-        lineColor: [0, 0, 0],
-        valign: 'top',
-        halign: 'left',
-        cellPadding: 2,
-    };
-
     autoTable(doc, {
         startY: yPos,
         theme: 'plain',
@@ -493,7 +483,16 @@ export function generateCustomInvoicePdf(
                 {
                     content: `Declaration:\n${declarationText}`,
                     rowSpan: 4, 
-                    styles: declarationCellStyle
+                    styles: {
+                        fontStyle: 'normal',
+                        textColor: [0, 0, 0],
+                        fontSize: 8,
+                        lineWidth: 0.5,
+                        lineColor: [0, 0, 0],
+                        valign: 'top',
+                        halign: 'left',
+                        cellPadding: 2,
+                    }
                 },
                 {
                     content: 'Signature & Date:',
@@ -534,10 +533,6 @@ export function generateCustomInvoicePdf(
         margin: { left: pageMargin, right: pageMargin },
         didDrawPage: data => { yPos = data.cursor?.y ?? yPos; }
     });
-    // @ts-ignore
-    yPos = doc.lastAutoTable.finalY;
 
-
-    // --- Save the PDF ---
     doc.save(`Custom_Invoice_${docData.exportInvoiceNumber.replace(/[\\/:*?"<>|]/g, '_')}.pdf`);
 }

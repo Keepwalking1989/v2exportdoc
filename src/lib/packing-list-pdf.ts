@@ -56,13 +56,11 @@ export function generatePackingListPdf(
         startY: yPos,
         theme: 'grid',
         body: [
-            // Row 1: Labels
             [
                 { content: 'Exporter', styles: { ...classOneStyles } },
                 { content: 'Export Invoice No & Date', styles: { ...classOneStyles } },
                 { content: 'Export Ref.', styles: { ...classOneStyles } }
             ],
-            // Row 2: Data
             [
                 { content: `${exporter.companyName}\n${exporter.address || ''}`, styles: { ...classTwoStyles, halign: 'left' } },
                 { content: `${docData.exportInvoiceNumber}\n${format(new Date(docData.exportInvoiceDate), 'dd/MM/yyyy')}`, styles: { ...classTwoStyles, halign: 'center' } },
@@ -81,12 +79,10 @@ export function generatePackingListPdf(
         startY: yPos,
         theme: 'grid',
         body: [
-             // Row 1: Labels
             [
                 { content: 'Consignee:-', styles: { ...classOneStyles, halign: 'center' } },
                 { content: 'Buyer (If Not Consignee)', styles: { ...classOneStyles, halign: 'center' } }
             ],
-             // Row 2: Data 
             [
                 { content: `Davare Floors, Inc.\n19 E 60 TH ST, Hialeah,FL.33013 . USA`, styles: { ...classTwoStyles, minCellHeight: 35, halign: 'left' } },
                 { content: `Davare Floors, Inc.\n19 E 60 TH ST, Hialeah,FL.33013 . USA`, styles: { ...classTwoStyles, minCellHeight: 35, halign: 'left' } }
@@ -151,7 +147,6 @@ export function generatePackingListPdf(
     const tableBody: any[] = [];
     let srNoCounter = 1;
 
-    // New logic: separate products and samples
     const allProductItems: ExportDocumentProductItem[] = [];
     const allSampleItems: ExportDocumentProductItem[] = [];
     docData.containerItems?.forEach(container => {
@@ -165,9 +160,15 @@ export function generatePackingListPdf(
             if (!acc[key]) {
                 const product = allProducts.find(p => p.id === item.productId);
                 const size = product ? allSizes.find(s => s.id === product.sizeId) : undefined;
+                
+                const hsnCode = size?.hsnCode || 'N/A';
+                const description = hsnCode === '69072100'
+                    ? `Polished Glazed Vitrified Tiles ( PGVT ) (${size?.size || 'N/A'})`
+                    : `${product?.designName || 'Unknown'} (${size?.size || 'N/A'})`;
+
                 acc[key] = {
-                    hsnCode: size?.hsnCode || 'N/A',
-                    description: `${product?.designName || 'Unknown'} (${size?.size || 'N/A'})`,
+                    hsnCode: hsnCode,
+                    description: description,
                     boxes: 0,
                     sqm: 0,
                     netWt: 0,
@@ -186,7 +187,6 @@ export function generatePackingListPdf(
         }, {} as Record<string, any>);
     };
 
-    // Process regular products
     const groupedProducts = Object.values(groupItems(allProductItems));
     groupedProducts.forEach(item => {
         grandTotalBoxes += item.boxes;
@@ -205,7 +205,6 @@ export function generatePackingListPdf(
         ]);
     });
 
-    // Process sample products
     if (allSampleItems.length > 0) {
         tableBody.push([
             { 
@@ -234,7 +233,6 @@ export function generatePackingListPdf(
         });
     }
 
-    // Add empty rows
     const emptyRowCount = 5;
     for (let i = 0; i < emptyRowCount; i++) {
         tableBody.push(['', '', '', '', '', '', '']);
