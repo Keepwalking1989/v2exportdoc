@@ -2,7 +2,7 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useForm, useFieldArray, Controller, useWatch } from "react-hook-form";
+import { useForm, useFieldArray, Controller, useWatch, Control, UseFormGetValues } from "react-hook-form";
 import * as z from "zod";
 import { Button } from "@/components/ui/button";
 import {
@@ -99,6 +99,159 @@ const getDefaultFormValues = (invoiceNumber: string): PerformaInvoiceFormValues 
   note: defaultNote,
   items: [{ sizeId: "", productId: "", boxes: 1, ratePerSqmt: 0, commission: 0 }],
 });
+
+interface PerformaInvoiceItemCardProps {
+  index: number;
+  control: Control<PerformaInvoiceFormValues>;
+  remove: (index: number) => void;
+  sizes: Size[];
+  sizeOptions: ComboboxOption[];
+  getProductOptions: (sizeId: string) => ComboboxOption[];
+  handleSizeChange: (index: number, newSizeId: string) => void;
+  handleProductChange: (index: number, newProductId: string) => void;
+  getValues: UseFormGetValues<PerformaInvoiceFormValues>;
+  fieldsLength: number;
+}
+
+const PerformaInvoiceItemCard: React.FC<PerformaInvoiceItemCardProps> = ({
+  index,
+  control,
+  remove,
+  sizes,
+  sizeOptions,
+  getProductOptions,
+  handleSizeChange,
+  handleProductChange,
+  getValues,
+  fieldsLength,
+}) => {
+  const currentItemValues = useWatch({ control: control, name: `items.${index}` });
+  const { sizeId, boxes, ratePerSqmt } = currentItemValues || {};
+  
+  const { quantitySqmt, amount } = useMemo(() => {
+    const sizeDetail = sizes.find(s => s.id === sizeId);
+    if (!sizeDetail) return { quantitySqmt: 0, amount: 0 };
+
+    const numBoxes = parseFloat(String(boxes)) || 0;
+    const numRatePerSqmt = parseFloat(String(ratePerSqmt)) || 0;
+    const sqmPerBox = parseFloat(String(sizeDetail.sqmPerBox)) || 0;
+
+    const calculatedSqm = numBoxes * sqmPerBox;
+    const calculatedAmount = calculatedSqm * numRatePerSqmt;
+
+    return { quantitySqmt: calculatedSqm, amount: calculatedAmount };
+  }, [sizeId, boxes, ratePerSqmt, sizes]);
+
+  const productOptionsForThisItem = getProductOptions(sizeId);
+
+  return (
+    <div className="p-4 border rounded-md space-y-4 relative bg-card/50">
+      <Button
+        type="button"
+        variant="destructive"
+        size="icon"
+        onClick={() => remove(index)}
+        className="absolute top-2 right-2 h-7 w-7"
+        disabled={fieldsLength <= 1}
+      >
+        <Trash2 className="h-4 w-4" />
+        <span className="sr-only">Remove Item</span>
+      </Button>
+      <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+        <FormField
+          control={control}
+          name={`items.${index}.sizeId`}
+          render={({ field }) => (
+            <FormItem className="md:col-span-2">
+              <FormLabel>Size</FormLabel>
+              <Select
+                onValueChange={(value) => handleSizeChange(index, value)}
+                value={field.value}
+                disabled={sizeOptions.length === 0}
+              >
+                <FormControl>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select size" />
+                  </SelectTrigger>
+                </FormControl>
+                <SelectContent>
+                  {sizeOptions.map(opt => <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>)}
+                </SelectContent>
+              </Select>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={control}
+          name={`items.${index}.productId`}
+          render={({ field }) => (
+            <FormItem className="md:col-span-3">
+              <FormLabel>Product</FormLabel>
+              <Combobox
+                options={productOptionsForThisItem}
+                value={field.value}
+                onChange={(value) => handleProductChange(index, value)}
+                placeholder="Select Product..."
+                searchPlaceholder="Search Products..."
+                emptySearchMessage="No product found for this size."
+                disabled={!sizeId || productOptionsForThisItem.length === 0}
+              />
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+      </div>
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <FormField
+          control={control}
+          name={`items.${index}.boxes`}
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Boxes</FormLabel>
+              <FormControl>
+                <Input type="number" {...field} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={control}
+          name={`items.${index}.ratePerSqmt`}
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Rate/Sqmt</FormLabel>
+              <FormControl>
+                <Input type="number" step="0.01" {...field} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={control}
+          name={`items.${index}.commission`}
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Commission</FormLabel>
+              <FormControl>
+                <Input type="number" step="0.01" {...field} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        <div className="pt-8">
+          Qty Sqmt: {quantitySqmt.toFixed(2)}
+        </div>
+      </div>
+      <div className="text-right font-medium">
+        Item Amount: {amount.toFixed(2)} {getValues("currencyType")}
+      </div>
+    </div>
+  );
+};
 
 
 export function PerformaInvoiceForm({
@@ -471,134 +624,21 @@ export function PerformaInvoiceForm({
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                {fields.map((fieldItem, index) => {
-                  const currentItemValues = useWatch({ control: form.control, name: `items.${index}`});
-                  const { sizeId, boxes, ratePerSqmt } = currentItemValues;
-
-                  const { quantitySqmt, amount } = useMemo(() => {
-                    const sizeDetail = sizes.find(s => s.id === sizeId);
-                    if (!sizeDetail) return { quantitySqmt: 0, amount: 0 };
-                    
-                    const numBoxes = parseFloat(String(boxes)) || 0;
-                    const numRatePerSqmt = parseFloat(String(ratePerSqmt)) || 0;
-                    const sqmPerBox = parseFloat(String(sizeDetail.sqmPerBox)) || 0;
-
-                    const calculatedSqm = numBoxes * sqmPerBox;
-                    const calculatedAmount = calculatedSqm * numRatePerSqmt;
-
-                    return { quantitySqmt: calculatedSqm, amount: calculatedAmount };
-                  }, [sizeId, boxes, ratePerSqmt, sizes]);
-                  
-                  const productOptionsForThisItem = getProductOptions(sizeId);
-
-                  return (
-                    <div key={fieldItem.id} className="p-4 border rounded-md space-y-4 relative bg-card/50">
-                       <Button
-                          type="button"
-                          variant="destructive"
-                          size="icon"
-                          onClick={() => remove(index)}
-                          className="absolute top-2 right-2 h-7 w-7"
-                          disabled={fields.length <= 1}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                          <span className="sr-only">Remove Item</span>
-                        </Button>
-                      <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
-                        <FormField
-                          control={form.control}
-                          name={`items.${index}.sizeId`}
-                          render={({ field }) => (
-                            <FormItem className="md:col-span-2">
-                              <FormLabel>Size</FormLabel>
-                              <Select
-                                onValueChange={(value) => handleSizeChange(index, value)}
-                                value={field.value}
-                                disabled={sizeOptions.length === 0}
-                              >
-                                <FormControl>
-                                  <SelectTrigger>
-                                    <SelectValue placeholder="Select size" />
-                                  </SelectTrigger>
-                                </FormControl>
-                                <SelectContent>
-                                  {sizeOptions.map(opt => <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>)}
-                                </SelectContent>
-                              </Select>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                        <FormField
-                          control={form.control}
-                          name={`items.${index}.productId`}
-                          render={({ field }) => (
-                            <FormItem className="md:col-span-3">
-                              <FormLabel>Product</FormLabel>
-                              <Combobox
-                                options={productOptionsForThisItem}
-                                value={field.value}
-                                onChange={(value) => handleProductChange(index, value)}
-                                placeholder="Select Product..."
-                                searchPlaceholder="Search Products..."
-                                emptySearchMessage="No product found for this size."
-                                disabled={!sizeId || productOptionsForThisItem.length === 0}
-                              />
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                      </div>
-                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                        <FormField
-                          control={form.control}
-                          name={`items.${index}.boxes`}
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Boxes</FormLabel>
-                              <FormControl>
-                                <Input type="number" {...field} />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                        <FormField
-                          control={form.control}
-                          name={`items.${index}.ratePerSqmt`}
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Rate/Sqmt</FormLabel>
-                              <FormControl>
-                                <Input type="number" step="0.01" {...field} />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                        <FormField
-                          control={form.control}
-                          name={`items.${index}.commission`}
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Commission</FormLabel>
-                              <FormControl>
-                                <Input type="number" step="0.01" {...field} />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                         <div className="pt-8">
-                            Qty Sqmt: {quantitySqmt.toFixed(2)}
-                        </div>
-                      </div>
-                      <div className="text-right font-medium">
-                          Item Amount: {amount.toFixed(2)} {form.getValues("currencyType")}
-                      </div>
-                    </div>
-                  );
-                })}
+                {fields.map((fieldItem, index) => (
+                  <PerformaInvoiceItemCard
+                    key={fieldItem.id}
+                    index={index}
+                    control={form.control}
+                    remove={remove}
+                    sizes={sizes}
+                    sizeOptions={sizeOptions}
+                    getProductOptions={getProductOptions}
+                    handleSizeChange={handleSizeChange}
+                    handleProductChange={handleProductChange}
+                    getValues={form.getValues}
+                    fieldsLength={fields.length}
+                  />
+                ))}
               </CardContent>
             </Card>
 
@@ -692,3 +732,5 @@ export function PerformaInvoiceForm({
     </Card>
   );
 }
+
+    
