@@ -2,7 +2,7 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useForm, useFieldArray, Controller, Control, useWatch } from "react-hook-form";
+import { useForm, useFieldArray, Controller, Control, useWatch, UseFormGetValues } from "react-hook-form";
 import * as z from "zod";
 import { Button } from "@/components/ui/button";
 import {
@@ -167,7 +167,6 @@ interface ItemProps {
     productOptions: ComboboxOption[];
     allProducts: Product[];
     allSizes: Size[];
-    handleProductChange: (productIndex: number, productId: string) => void;
     fieldArrayName: 'productItems' | 'sampleItems';
 }
 
@@ -179,11 +178,9 @@ const ContainerProductItem: React.FC<ItemProps> = ({
     productOptions,
     allProducts,
     allSizes,
-    handleProductChange,
     fieldArrayName,
 }) => {
     const { getValues, setValue } = useForm<ExportDocumentFormValues>();
-    const productOrBoxesChanged = useRef(false);
 
     const currentItem = useWatch({
         control,
@@ -192,40 +189,51 @@ const ContainerProductItem: React.FC<ItemProps> = ({
     
     const { productId, boxes, rate } = currentItem;
 
-    const { sqm, amount, netWeight } = useMemo(() => {
+    // Effect to auto-populate rate when product changes
+    useEffect(() => {
+        const product = allProducts.find(p => p.id === productId);
+        if (product) {
+            const size = allSizes.find(s => s.id === product.sizeId);
+            const newRate = product.salesPrice ?? (size?.salesPrice || 0);
+            setValue(`containerItems.${containerIndex}.${fieldArrayName}.${productIndex}.rate`, newRate);
+        }
+    }, [productId, allProducts, allSizes, setValue, containerIndex, productIndex, fieldArrayName]);
+    
+    // Effect to recalculate weights whenever product or box count changes
+    useEffect(() => {
+        const product = allProducts.find(p => p.id === productId);
+        if (!product) return;
+        const size = allSizes.find(s => s.id === product.sizeId);
+        if (!size) return;
+
+        const numBoxes = Number(boxes) || 0;
+        const baseBoxWeight = product.boxWeight ?? (size.boxWeight || 0);
+        const newNetWeight = numBoxes * baseBoxWeight;
+        
+        setValue(`containerItems.${containerIndex}.${fieldArrayName}.${productIndex}.netWeight`, newNetWeight);
+        
+        // Only update gross weight if it was tracking net weight or is zero
+        const currentGrossWeightVal = getValues(`containerItems.${containerIndex}.${fieldArrayName}.${productIndex}.grossWeight`);
+        if (!currentGrossWeightVal || Number(currentGrossWeightVal) === 0) {
+            setValue(`containerItems.${containerIndex}.${fieldArrayName}.${productIndex}.grossWeight`, newNetWeight);
+        }
+    }, [productId, boxes, allProducts, allSizes, setValue, getValues, containerIndex, productIndex, fieldArrayName]);
+
+
+    const { sqm, amount } = useMemo(() => {
         const product = allProducts.find(p => p.id === productId);
         const size = product ? allSizes.find(s => s.id === product.sizeId) : undefined;
         
-        if (!product || !size) return { sqm: 0, amount: 0, netWeight: 0 };
+        if (!product || !size) return { sqm: 0, amount: 0 };
         
         const numBoxes = Number(boxes) || 0;
         const numRate = Number(rate) || 0;
         
         const calculatedSqm = numBoxes * (size.sqmPerBox || 0);
         const calculatedAmount = calculatedSqm * numRate;
-        const calculatedNetWeight = numBoxes * (product.boxWeight ?? (size.boxWeight || 0));
 
-        return { sqm: calculatedSqm, amount: calculatedAmount, netWeight: calculatedNetWeight };
+        return { sqm: calculatedSqm, amount: calculatedAmount };
     }, [productId, boxes, rate, allProducts, allSizes]);
-    
-    useEffect(() => {
-        productOrBoxesChanged.current = true;
-    }, [productId, boxes]);
-
-    useEffect(() => {
-        if (productOrBoxesChanged.current) {
-            const currentNetWeight = getValues(`containerItems.${containerIndex}.${fieldArrayName}.${productIndex}.netWeight`);
-            const currentGrossWeight = getValues(`containerItems.${containerIndex}.${fieldArrayName}.${productIndex}.grossWeight`);
-            
-            setValue(`containerItems.${containerIndex}.${fieldArrayName}.${productIndex}.netWeight`, netWeight);
-            
-            if (Number(currentGrossWeight) === Number(currentNetWeight) || !currentGrossWeight) {
-                setValue(`containerItems.${containerIndex}.${fieldArrayName}.${productIndex}.grossWeight`, netWeight);
-            }
-            productOrBoxesChanged.current = false;
-        }
-    }, [netWeight, setValue, getValues, containerIndex, productIndex, fieldArrayName]);
-
     
     return (
       <div className="p-3 border rounded-md space-y-3 relative bg-background/80">
@@ -251,7 +259,6 @@ const ContainerProductItem: React.FC<ItemProps> = ({
                         value={field.value}
                         onChange={(value) => {
                             field.onChange(value);
-                            handleProductChange(productIndex, value);
                         }}
                         placeholder="Select Product..."
                     />
@@ -311,7 +318,6 @@ const ContainerProductItem: React.FC<ItemProps> = ({
                       {...field}
                       onChange={(e) => {
                           field.onChange(e.target.valueAsNumber || 0);
-                          productOrBoxesChanged.current = false;
                       }}
                       className={cn(Number(field.value) > 27000 && "border-destructive text-destructive focus-visible:ring-destructive")}
                     />
@@ -362,8 +368,6 @@ const ContainerProductManager: React.FC<ItemManagerProps> = ({ containerIndex, c
         name: `containerItems.${containerIndex}.productItems`,
     });
     
-    const { setValue } = useForm<ExportDocumentFormValues>();
-
     const productOptions: ComboboxOption[] = useMemo(() =>
         allProducts.map(p => {
             const size = allSizes.find(s => s.id === p.sizeId);
@@ -372,14 +376,6 @@ const ContainerProductManager: React.FC<ItemManagerProps> = ({ containerIndex, c
                 label: `${p.designName} (${size?.size || 'N/A'})`
             };
         }), [allProducts, allSizes]);
-
-    const handleProductChange = (productIndex: number, productId: string) => {
-        const product = allProducts.find(p => p.id === productId);
-        if (product) {
-            const size = allSizes.find(s => s.id === product.sizeId);
-            setValue(`containerItems.${containerIndex}.productItems.${productIndex}.rate`, product.salesPrice ?? (size?.salesPrice || 0));
-        }
-    };
     
     return (
         <div className="mt-4">
@@ -409,7 +405,6 @@ const ContainerProductManager: React.FC<ItemManagerProps> = ({ containerIndex, c
                         productOptions={productOptions}
                         allProducts={allProducts}
                         allSizes={allSizes}
-                        handleProductChange={handleProductChange}
                         fieldArrayName="productItems"
                     />
                 ))}
@@ -429,8 +424,6 @@ const ContainerSampleManager: React.FC<ItemManagerProps> = ({ containerIndex, co
         name: `containerItems.${containerIndex}.sampleItems`,
     });
     
-    const { setValue } = useForm<ExportDocumentFormValues>();
-
     const productOptions: ComboboxOption[] = useMemo(() =>
         allProducts.map(p => {
             const size = allSizes.find(s => s.id === p.sizeId);
@@ -440,14 +433,6 @@ const ContainerSampleManager: React.FC<ItemManagerProps> = ({ containerIndex, co
             };
         }), [allProducts, allSizes]);
 
-    const handleProductChange = (productIndex: number, productId: string) => {
-        const product = allProducts.find(p => p.id === productId);
-        if (product) {
-            // Samples have no rate
-            setValue(`containerItems.${containerIndex}.sampleItems.${productIndex}.rate`, 0);
-        }
-    };
-    
     return (
         <div className="mt-4">
             <div className="flex justify-between items-center mb-2">
@@ -476,7 +461,6 @@ const ContainerSampleManager: React.FC<ItemManagerProps> = ({ containerIndex, co
                         productOptions={productOptions}
                         allProducts={allProducts}
                         allSizes={allSizes}
-                        handleProductChange={handleProductChange}
                         fieldArrayName="sampleItems"
                     />
                 ))}
