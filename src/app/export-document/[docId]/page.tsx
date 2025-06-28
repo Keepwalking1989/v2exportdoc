@@ -289,14 +289,18 @@ export default function DocumentDataPage() {
       return;
     }
     const exporter = allExporters.find(e => e.id === document.exporterId);
-    
+    if (!exporter) {
+        toast({ variant: "destructive", title: "Error", description: "The exporter for this document could not be found. It may have been deleted." });
+        return;
+    }
+
     const manufacturersWithDetails = (document.manufacturerDetails || []).map(md => {
       const manu = allManufacturers.find(m => m.id === md.manufacturerId);
       return manu ? { ...manu, ...md } : null;
     }).filter(Boolean) as (Manufacturer & { invoiceNumber: string, invoiceDate?: Date })[];
 
-    if (!exporter || manufacturersWithDetails.length === 0) {
-       toast({ variant: "destructive", title: "Error", description: "Exporter or Manufacturer data is missing for this document." });
+    if (manufacturersWithDetails.length === 0) {
+       toast({ variant: "destructive", title: "Error", description: "No valid manufacturers found for this document. They may have been deleted." });
        return;
     }
     generateCustomInvoicePdf(document, exporter, manufacturersWithDetails, allProducts, allSizes);
@@ -308,12 +312,17 @@ export default function DocumentDataPage() {
       return;
     }
     const exporter = allExporters.find(e => e.id === document.exporterId);
+    if (!exporter) {
+        toast({ variant: "destructive", title: "Error", description: "The exporter for this document could not be found. It may have been deleted." });
+        return;
+    }
+
     const firstManufacturer = document.manufacturerDetails?.[0]?.manufacturerId
       ? allManufacturers.find(m => m.id === document.manufacturerDetails?.[0].manufacturerId)
       : undefined;
 
-    if (!exporter || !firstManufacturer) {
-       toast({ variant: "destructive", title: "Error", description: "Exporter or primary manufacturer data is missing." });
+    if (!firstManufacturer) {
+       toast({ variant: "destructive", title: "Error", description: "The primary manufacturer for this document is missing or has been deleted." });
        return;
     }
     generatePackingListPdf(document, exporter, firstManufacturer, allProducts, allSizes);
@@ -325,13 +334,18 @@ export default function DocumentDataPage() {
       return;
     }
     const exporter = allExporters.find(e => e.id === document.exporterId);
+    if (!exporter) {
+        toast({ variant: "destructive", title: "Error", description: "The exporter for this document could not be found. It may have been deleted." });
+        return;
+    }
+
     const manufacturersWithDetails = (document.manufacturerDetails || []).map(md => {
         const manu = allManufacturers.find(m => m.id === md.manufacturerId);
         return manu ? { ...manu, ...md } : null;
     }).filter(Boolean) as (Manufacturer & { invoiceNumber: string, invoiceDate?: Date })[];
 
-    if (!exporter || manufacturersWithDetails.length === 0) {
-      toast({ variant: "destructive", title: "Error", description: "Exporter or Manufacturer data is missing for this document." });
+    if (manufacturersWithDetails.length === 0) {
+      toast({ variant: "destructive", title: "Error", description: "No valid manufacturers found for this document. They may have been deleted." });
       return;
     }
     generateAnnexurePdf(document, exporter, manufacturersWithDetails);
@@ -343,14 +357,20 @@ export default function DocumentDataPage() {
       return;
     }
     const exporter = allExporters.find(e => e.id === document.exporterId);
+    if (!exporter) {
+      toast({ variant: "destructive", title: "Error", description: "The exporter for this document could not be found. It may have been deleted." });
+      return;
+    }
+
     const firstManufacturer = document.manufacturerDetails?.[0]?.manufacturerId
       ? allManufacturers.find(m => m.id === document.manufacturerDetails?.[0].manufacturerId)
       : undefined;
-
-    if (!exporter) {
-      toast({ variant: "destructive", title: "Error", description: "Exporter data is missing for this document." });
+      
+    if (!firstManufacturer) {
+      toast({ variant: "destructive", title: "Error", description: "The primary manufacturer for this document is missing or has been deleted." });
       return;
     }
+
     generateVgmPdf(document, exporter, firstManufacturer);
   };
 
