@@ -156,15 +156,18 @@ export function generatePackingListPdf(
 
     const groupItems = (items: ExportDocumentProductItem[]) => {
         return items.reduce((acc, item) => {
-            const key = item.productId; // Group only by product for packing list
+            const product = allProducts.find(p => p.id === item.productId);
+            const size = product ? allSizes.find(s => s.id === product.sizeId) : undefined;
+            if (!size) return acc; // Skip if size info is missing
+
+            // Group by size only for packing list
+            const key = size.id;
+
             if (!acc[key]) {
-                const product = allProducts.find(p => p.id === item.productId);
-                const size = product ? allSizes.find(s => s.id === product.sizeId) : undefined;
-                
-                const hsnCode = size?.hsnCode || 'N/A';
+                const hsnCode = size.hsnCode || 'N/A';
                 const description = hsnCode === '69072100'
-                    ? `Polished Glazed Vitrified Tiles ( PGVT ) (${size?.size || 'N/A'})`
-                    : `${product?.designName || 'Unknown'} (${size?.size || 'N/A'})`;
+                    ? `Polished Glazed Vitrified Tiles ( PGVT ) (${size.size})`
+                    : `Vitrified Tiles (${size.size})`; // Generic for grouping
 
                 acc[key] = {
                     hsnCode: hsnCode,
@@ -175,10 +178,8 @@ export function generatePackingListPdf(
                     grossWt: 0,
                 };
             }
-            const product = allProducts.find(p => p.id === item.productId);
-            const size = product ? allSizes.find(s => s.id === product.sizeId) : undefined;
-            const sqmForThisItem = (item.boxes || 0) * (size?.sqmPerBox || 0);
             
+            const sqmForThisItem = (item.boxes || 0) * (size.sqmPerBox || 0);
             acc[key].boxes += item.boxes || 0;
             acc[key].sqm += sqmForThisItem;
             acc[key].netWt += item.netWeight || 0;
