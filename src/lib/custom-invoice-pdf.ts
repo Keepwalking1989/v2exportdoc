@@ -473,24 +473,70 @@ export function generateCustomInvoicePdf(
     // @ts-ignore
     yPos = doc.lastAutoTable.finalY;
 
+    // --- Final Declarations & Signature (copied from packing-list) ---
+    const declarationCellStyle = {
+        fontStyle: 'normal',
+        textColor: [0, 0, 0],
+        fontSize: 8,
+        lineWidth: 0.5,
+        lineColor: [0, 0, 0],
+        valign: 'top',
+        halign: 'left',
+        cellPadding: 2,
+    };
+
     autoTable(doc, {
         startY: yPos,
-        theme: 'grid',
+        theme: 'plain',
         body: [
-            [
-                { content: `Declaration:\n${declarationText}`, styles: {...classTwoStyles, ...classThreeStyles, halign: 'left', minCellHeight: 50} },
-                { content: `Signature & Date:\n${format(new Date(), 'dd/MM/yyyy')}\n\nFOR, ${exporter.companyName}\n\n\nAUTHORISED SIGNATURE`, styles: {...classTwoStyles, halign: 'center', minCellHeight: 50} }
+            [ // Row 1 of the whole block
+                {
+                    content: `Declaration:\n${declarationText}`,
+                    rowSpan: 4, 
+                    styles: declarationCellStyle
+                },
+                {
+                    content: 'Signature & Date:',
+                    styles: {lineWidth: 0.5, lineColor: [0,0,0], ...classTwoStyles, fontStyle: 'bold', halign: 'left'}
+                },
+                {
+                    content: format(new Date(), 'dd/MM/yyyy'),
+                    styles: {lineWidth: 0.5, lineColor: [0,0,0], ...classTwoStyles, halign: 'center'}
+                }
+            ],
+            [ // Row 2 of the signature block (declaration cell is spanned)
+                {
+                    content: `FOR, ${exporter.companyName.toUpperCase()}`,
+                    colSpan: 2,
+                    styles: {lineWidth: 0.5, lineColor: [0,0,0], ...classOneStyles}
+                }
+            ],
+            [ // Row 3 (empty for signature)
+                 {
+                    content: '',
+                    colSpan: 2,
+                    styles: {lineWidth: 0.5, lineColor: [0,0,0], minCellHeight: 40}
+                }
+            ],
+            [ // Row 4
+                {
+                    content: 'AUTHORISED SIGNATURE',
+                    colSpan: 2,
+                    styles: {lineWidth: 0.5, lineColor: [0,0,0], ...classTwoStyles, fontStyle: 'bold', halign: 'center'}
+                }
             ]
         ],
         columnStyles: {
-            0: { cellWidth: '50%' },
-            1: { cellWidth: '50%' },
+            0: { cellWidth: 350 },
+            1: { cellWidth: 'auto' },
+            2: { cellWidth: 'auto' },
         },
         margin: { left: pageMargin, right: pageMargin },
         didDrawPage: data => { yPos = data.cursor?.y ?? yPos; }
     });
     // @ts-ignore
     yPos = doc.lastAutoTable.finalY;
+
 
     // --- Save the PDF ---
     doc.save(`Custom_Invoice_${docData.exportInvoiceNumber.replace(/[\\/:*?"<>|]/g, '_')}.pdf`);
