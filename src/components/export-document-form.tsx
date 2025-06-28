@@ -203,7 +203,7 @@ const ContainerProductItem: React.FC<ItemProps> = ({
         
         const calculatedSqm = numBoxes * (size.sqmPerBox || 0);
         const calculatedAmount = calculatedSqm * numRate;
-        const calculatedNetWeight = numBoxes * (size.boxWeight || 0);
+        const calculatedNetWeight = numBoxes * (product.boxWeight ?? (size.boxWeight || 0));
 
         return { sqm: calculatedSqm, amount: calculatedAmount, netWeight: calculatedNetWeight };
     }, [productId, boxes, rate, allProducts, allSizes]);
@@ -377,9 +377,7 @@ const ContainerProductManager: React.FC<ItemManagerProps> = ({ containerIndex, c
         const product = allProducts.find(p => p.id === productId);
         if (product) {
             const size = allSizes.find(s => s.id === product.sizeId);
-            if (size) {
-                setValue(`containerItems.${containerIndex}.productItems.${productIndex}.rate`, size.salesPrice);
-            }
+            setValue(`containerItems.${containerIndex}.productItems.${productIndex}.rate`, product.salesPrice ?? (size?.salesPrice || 0));
         }
     };
     
@@ -445,11 +443,8 @@ const ContainerSampleManager: React.FC<ItemManagerProps> = ({ containerIndex, co
     const handleProductChange = (productIndex: number, productId: string) => {
         const product = allProducts.find(p => p.id === productId);
         if (product) {
-            const size = allSizes.find(s => s.id === product.sizeId);
-            if (size) {
-                // Samples have no rate
-                setValue(`containerItems.${containerIndex}.sampleItems.${productIndex}.rate`, 0);
-            }
+            // Samples have no rate
+            setValue(`containerItems.${containerIndex}.sampleItems.${productIndex}.rate`, 0);
         }
     };
     
