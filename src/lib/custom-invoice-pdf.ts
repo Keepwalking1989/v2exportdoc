@@ -1,6 +1,4 @@
 
-'use client';
-
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { format } from 'date-fns';
@@ -227,16 +225,15 @@ export function generateCustomInvoicePdf(
         return items.reduce((acc, item) => {
             const product = allProducts.find(p => p.id === item.productId);
             const size = product ? allSizes.find(s => s.id === product.sizeId) : undefined;
-            if (!size) return acc; // Skip if size info is missing
+            if (!size) return acc;
 
-            // Group by size and rate
             const key = `${size.id}-${item.rate}`;
 
             if (!acc[key]) {
-                const hsnCode = size.hsnCode || 'N/A';
-                const description = hsnCode === '69072100'
+                 const hsnCode = size.hsnCode || 'N/A';
+                 const description = hsnCode === '69072100'
                     ? `Polished Glazed Vitrified Tiles ( PGVT ) (${size.size})`
-                    : `Vitrified Tiles (${size.size})`; // Generic for grouping
+                    : `Vitrified Tiles (${size.size})`;
 
                 acc[key] = {
                     hsnCode: hsnCode,
