@@ -123,7 +123,7 @@ export function generateCustomInvoicePdf(
             ],
             // Row 2: Data (Class 2)
             [
-                { content: `${exporter.companyName}\n${exporter.address || ''}`, styles: { ...classTwoStyles, halign: 'left' } },
+                { content: `${exporter.companyName}\n${exporter.address || ''}`, styles: { ...classTwoStyles, halign: 'left', cellPadding: 2 } },
                 { content: `${docData.exportInvoiceNumber}\n${format(new Date(docData.exportInvoiceDate), 'dd/MM/yyyy')}`, styles: { ...classTwoStyles, halign: 'center' } },
                 { content: `IEC Code: ${exporter.iecNumber || 'N/A'}`, styles: { ...classTwoStyles, halign: 'left' } },
             ]
@@ -338,38 +338,38 @@ export function generateCustomInvoicePdf(
         ],
         [
             { content: '', colSpan: 3, styles: { ...classTwoStyles, cellPadding: 2 } },
-            { content: docData.exchangeNotification || 'N/A', colSpan: 2, styles: { ...classTwoStyles, halign: 'left', cellPadding: 2 } },
-            { content: docData.exchangeDate ? format(new Date(docData.exchangeDate), 'dd/MM/yyyy') : 'N/A', colSpan: 2, styles: { ...classTwoStyles, halign: 'right', cellPadding: 2 } }
+            { content: docData.exchangeNotification || 'N/A', colSpan: 2, styles: { ...classTwoStyles, halign: 'center', cellPadding: 2 } },
+            { content: docData.exchangeDate ? format(new Date(docData.exchangeDate), 'dd/MM/yyyy') : 'N/A', colSpan: 2, styles: { ...classTwoStyles, halign: 'center', cellPadding: 2 } }
         ],
         [
             { content: '', colSpan: 3, styles: { ...classTwoStyles, cellPadding: 2 } },
             { content: 'EXCHANGE RATE', styles: { ...classOneStyles, cellPadding: 2, fontSize: FONT_CAT3_SIZE } },
-            { content: '1 USD', styles: { ...classTwoStyles, cellPadding: 2 } },
-            { content: conversationRate.toFixed(2), colSpan: 2, styles: { ...classTwoStyles, halign: 'right', cellPadding: 2 } }
+            { content: '1 USD', styles: { ...classTwoStyles, halign: 'center', cellPadding: 2 } },
+            { content: conversationRate.toFixed(2), colSpan: 2, styles: { ...classTwoStyles, halign: 'center', cellPadding: 2 } }
         ],
         [
             { content: '', colSpan: 3, styles: { ...classTwoStyles, cellPadding: 2 } },
-            { content: 'FOB', styles: { ...classOneStyles, cellPadding: 2 } },
-            { content: 'INR', styles: { ...classTwoStyles, cellPadding: 2 } },
-            { content: totalAmountInr.toFixed(2), colSpan: 2, styles: { ...classTwoStyles, halign: 'right', cellPadding: 2 } }
+            { content: 'FOB', styles: { ...classOneStyles, cellPadding: 2, fontSize: FONT_CAT3_SIZE } },
+            { content: 'INR', styles: { ...classTwoStyles, halign: 'center', cellPadding: 2 } },
+            { content: totalAmountInr.toFixed(2), colSpan: 2, styles: { ...classTwoStyles, halign: 'center', cellPadding: 2 } }
         ],
         [
             { content: '', colSpan: 3, styles: { ...classTwoStyles, cellPadding: 2 } },
-            { content: 'IGST %', styles: { ...classOneStyles, cellPadding: 2 } },
-            { content: docData.gst || '0%', styles: { ...classTwoStyles, cellPadding: 2 } },
-            { content: gstAmount.toFixed(2), colSpan: 2, styles: { ...classTwoStyles, halign: 'right', cellPadding: 2 } }
+            { content: 'IGST %', styles: { ...classOneStyles, cellPadding: 2, fontSize: FONT_CAT3_SIZE } },
+            { content: docData.gst || '0%', styles: { ...classTwoStyles, halign: 'center', cellPadding: 2 } },
+            { content: gstAmount.toFixed(2), colSpan: 2, styles: { ...classTwoStyles, halign: 'center', cellPadding: 2 } }
         ],
         [
             { content: '', colSpan: 3, styles: { ...classTwoStyles, cellPadding: 2 } },
             { content: 'TOTAL', styles: { ...classOneStyles, cellPadding: 2 } },
-            { content: 'INR', styles: { ...classTwoStyles, cellPadding: 2 } },
-            { content: finalTotalInr.toFixed(2), colSpan: 2, styles: { ...classTwoStyles, halign: 'right', cellPadding: 2 } }
+            { content: 'INR', styles: { ...classTwoStyles, halign: 'center', cellPadding: 2 } },
+            { content: finalTotalInr.toFixed(2), colSpan: 2, styles: { ...classTwoStyles, halign: 'center', cellPadding: 2 } }
         ],
     ];
 
     autoTable(doc, {
         startY: yPos,
-        head: [['HSN Code', 'Sr.\nNo', 'Description Of Goods', 'Boxes', 'Sq.Mtr', 'Rate in\n$', 'Total Amount\nIn USD $']],
+        head: [['HSN Code', 'Sr.\nNo', 'Description Of Goods', 'Boxes', 'Sq.Mtr', 'Rate Per SQM\nin $', 'Total Amount\nIn USD $']],
         body: tableBody,
         foot: tableFooter,
         theme: 'grid',
@@ -396,8 +396,8 @@ export function generateCustomInvoicePdf(
         theme: 'grid',
         body: [
             [
-                { content: 'Total No. Of Pkgs.', styles: {...classOneStyles, halign: 'left', cellPadding: 2} },
-                { content: 'Amount In Words', styles: {...classOneStyles, halign: 'left', cellPadding: 2} },
+                { content: 'Total No. Of Pkgs.', styles: {...classOneStyles, halign: 'center', cellPadding: 2} },
+                { content: 'Amount In Words', styles: {...classOneStyles, halign: 'center', cellPadding: 2} },
             ],
              [
                 { content: grandTotalBoxes.toString(), styles: {...classTwoStyles, halign: 'center', cellPadding: 2 } },
@@ -441,13 +441,13 @@ export function generateCustomInvoicePdf(
             theme: 'grid',
             body: [
                 [
-                    { content: 'Name', styles: { ...classOneStyles, cellPadding: 1 } },
+                    { content: 'Name', styles: { ...classOneStyles, cellPadding: 1, halign: 'left' } },
                     { content: manu.companyName, styles: { ...classTwoStyles, halign: 'left', cellPadding: 1 } },
                     { content: 'GST NO', styles: { ...classOneStyles, cellPadding: 1 } },
                     { content: manu.gstNumber, styles: { ...classTwoStyles, halign: 'left', cellPadding: 1 } },
                 ],
                 [
-                    { content: 'Tax Invoice No & Date', styles: { ...classOneStyles, cellPadding: 1 } },
+                    { content: 'Tax Invoice No & Date', styles: { ...classOneStyles, cellPadding: 1, halign: 'left' } },
                     { content: taxInvoiceText, styles: { ...classTwoStyles, halign: 'left', cellPadding: 1 }, colSpan: 3 },
                 ]
             ],
