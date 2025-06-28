@@ -19,7 +19,7 @@ import {
 } from "@/components/ui/chart"
 import { format } from 'date-fns';
 import type { DateRange } from 'react-day-picker';
-import { Calendar as CalendarIcon, IndianRupee, HandCoins, Handshake, Ship, TrendingUp, TrendingDown, ArrowLeftRight } from 'lucide-react';
+import { Calendar as CalendarIcon, IndianRupee, HandCoins, Handshake, Ship, TrendingUp, TrendingDown, ArrowLeftRight, Percent } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 // Import all required types
@@ -30,6 +30,11 @@ import type { TransBill } from '@/types/trans-bill';
 import type { SupplyBill } from '@/types/supply-bill';
 import type { Product } from '@/types/product';
 import type { Size } from '@/types/size';
+import type { Manufacturer } from '@/types/manufacturer';
+import type { Transporter } from '@/types/transporter';
+import type { Supplier } from '@/types/supplier';
+import type { Pallet } from '@/types/pallet';
+
 
 const LOCAL_STORAGE_KEYS = {
     TRANSACTIONS: "bizform_transactions",
@@ -39,6 +44,10 @@ const LOCAL_STORAGE_KEYS = {
     SUPPLY_BILLS: "bizform_supply_bills",
     PRODUCTS: "bizform_products",
     SIZES: "bizform_sizes",
+    MANUFACTURERS: "bizform_manufacturers",
+    TRANSPORTERS: "bizform_transporters",
+    SUPPLIERS: "bizform_suppliers",
+    PALLETS: "bizform_pallets",
 };
 
 const StatCard = ({ title, value, icon, description, colorClass, onClick }: { title: string; value: string; icon: React.ReactNode; description: string; colorClass?: string, onClick?: () => void }) => (
@@ -72,6 +81,11 @@ export default function DashboardPage() {
     const [supplyBills, setSupplyBills] = useState<SupplyBill[]>([]);
     const [products, setProducts] = useState<Product[]>([]);
     const [sizes, setSizes] = useState<Size[]>([]);
+    const [manufacturers, setManufacturers] = useState<Manufacturer[]>([]);
+    const [transporters, setTransporters] = useState<Transporter[]>([]);
+    const [suppliers, setSuppliers] = useState<Supplier[]>([]);
+    const [pallets, setPallets] = useState<Pallet[]>([]);
+
 
     useEffect(() => {
         setIsClient(true);
@@ -84,6 +98,10 @@ export default function DashboardPage() {
                 setSupplyBills(JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEYS.SUPPLY_BILLS) || '[]'));
                 setProducts(JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEYS.PRODUCTS) || '[]'));
                 setSizes(JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEYS.SIZES) || '[]'));
+                setManufacturers(JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEYS.MANUFACTURERS) || '[]'));
+                setTransporters(JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEYS.TRANSPORTERS) || '[]'));
+                setSuppliers(JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEYS.SUPPLIERS) || '[]'));
+                setPallets(JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEYS.PALLETS) || '[]'));
             } catch (error) {
                 console.error("Failed to load dashboard data from localStorage", error);
             } finally {
@@ -102,9 +120,10 @@ export default function DashboardPage() {
             return d >= fromDate && d <= toDate;
         };
         
+        // --- RECEIVABLES (USD) ---
         const relevantExportDocs = exportDocuments.filter(doc => !doc.isDeleted && isWithinRange(doc.exportInvoiceDate));
         const clientPayments = transactions.filter(t => !t.isDeleted && t.partyType === 'client' && t.type === 'debit' && isWithinRange(t.date));
-
+        
         const calculateDocTotal = (doc: ExportDocument): number => {
             let total = 0;
             doc.containerItems?.forEach(container => {
@@ -120,37 +139,55 @@ export default function DashboardPage() {
             return total + (doc.freight || 0);
         };
         
-        const totalInvoiced = relevantExportDocs.reduce((sum, doc) => sum + calculateDocTotal(doc), 0);
-        const totalReceived = clientPayments.reduce((sum, t) => sum + t.amount, 0);
-        const totalReceivables = totalInvoiced - totalReceived;
+        const totalInvoicedUsd = relevantExportDocs.reduce((sum, doc) => sum + calculateDocTotal(doc), 0);
+        const totalReceivedUsd = clientPayments.reduce((sum, t) => sum + t.amount, 0);
+        const totalReceivablesUsd = totalInvoicedUsd - totalReceivedUsd;
 
+        // --- PAYABLES (INR) ---
         const relevantManuBills = manuBills.filter(b => !b.isDeleted && isWithinRange(b.invoiceDate));
         const relevantTransBills = transBills.filter(b => !b.isDeleted && isWithinRange(b.invoiceDate));
         const relevantSupplyBills = supplyBills.filter(b => !b.isDeleted && isWithinRange(b.invoiceDate));
         const supplierPayments = transactions.filter(t => !t.isDeleted && ['manufacturer', 'transporter', 'supplier', 'pallet'].includes(t.partyType) && t.type === 'credit' && isWithinRange(t.date));
         
-        const totalBilled = 
+        const totalBilledInr = 
             relevantManuBills.reduce((sum, b) => sum + b.grandTotal, 0) +
             relevantTransBills.reduce((sum, b) => sum + b.totalPayable, 0) +
             relevantSupplyBills.reduce((sum, b) => sum + b.grandTotal, 0);
-        const totalPaid = supplierPayments.reduce((sum, t) => sum + t.amount, 0);
-        const totalPayables = totalBilled - totalPaid;
+        const totalPaidInr = supplierPayments.reduce((sum, t) => sum + t.amount, 0);
+        const totalPayablesInr = totalBilledInr - totalPaidInr;
+
+        // --- GST (INR) ---
+        const allSupplierLike = [...suppliers, ...pallets];
+        const gstPaidOnManu = relevantManuBills.reduce((sum, bill) => sum + (bill.centralTaxAmount || 0) + (bill.stateTaxAmount || 0), 0);
+        const gstPaidOnTrans = relevantTransBills.reduce((sum, bill) => sum + bill.totalTax, 0);
+        const gstPaidOnSupply = relevantSupplyBills.reduce((sum, bill) => sum + (bill.centralTaxAmount || 0) + (bill.stateTaxAmount || 0), 0);
+        const totalGstPaid = gstPaidOnManu + gstPaidOnTrans + gstPaidOnSupply;
+        
+        const gstReceivedTransactions = transactions.filter(t => !t.isDeleted && t.partyType === 'gst' && t.type === 'credit' && isWithinRange(t.date));
+        const totalGstReceived = gstReceivedTransactions.reduce((sum, t) => sum + t.amount, 0);
+        const netGstReceivable = totalGstPaid - totalGstReceived;
+
+        // --- CONVERSIONS & NET POSITION (INR) ---
+        const CONVERSION_RATE = 84;
+        const totalReceivablesInr = totalReceivablesUsd * CONVERSION_RATE;
 
         const totalContainers = relevantExportDocs.reduce((sum, doc) => sum + (doc.containerItems?.length || 0), 0);
 
         return {
-            totalReceivables,
-            totalPayables,
-            netPosition: totalReceivables - totalPayables,
-            totalExportValue: totalInvoiced,
+            totalReceivables: totalReceivablesUsd,
+            totalPayables: totalPayablesInr,
+            netPosition: totalReceivablesInr - totalPayablesInr,
+            totalExportValue: totalInvoicedUsd,
             totalContainers,
+            netGstReceivable,
+            receivablesForChart: totalReceivablesInr,
         };
-    }, [date, exportDocuments, transactions, manuBills, transBills, supplyBills, products, sizes]);
+    }, [date, exportDocuments, transactions, manuBills, transBills, supplyBills, products, sizes, suppliers, pallets]);
     
-    const chartData = [{ name: 'Financials', receivables: dashboardData.totalReceivables, payables: dashboardData.totalPayables }];
+    const chartData = [{ name: 'Financials', receivables: dashboardData.receivablesForChart, payables: dashboardData.totalPayables }];
     const chartConfig = {
-        receivables: { label: "Receivables", color: "hsl(var(--chart-2))" },
-        payables: { label: "Payables", color: "hsl(var(--destructive))" },
+        receivables: { label: "Receivables (INR)", color: "hsl(var(--chart-2))" },
+        payables: { label: "Payables (INR)", color: "hsl(var(--destructive))" },
     } satisfies ChartConfig
 
     if (!isClient || isLoading) {
@@ -190,12 +227,12 @@ export default function DashboardPage() {
                     </Popover>
                 </div>
 
-                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
+                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
                     <StatCard 
                         title="Total Receivables"
                         value={`$ ${dashboardData.totalReceivables.toFixed(2)}`}
                         icon={<TrendingUp className="h-4 w-4 text-green-600" />}
-                        description="Money to be collected from clients."
+                        description="Money to be collected (in USD)."
                         colorClass="text-green-600"
                         onClick={() => router.push('/client')}
                     />
@@ -203,22 +240,22 @@ export default function DashboardPage() {
                         title="Total Payables"
                         value={`₹ ${dashboardData.totalPayables.toFixed(2)}`}
                         icon={<TrendingDown className="h-4 w-4 text-destructive" />}
-                        description="Money owed to suppliers."
+                        description="Money owed to suppliers (in INR)."
                         colorClass="text-destructive"
                         onClick={() => router.push('/transaction')}
                     />
                      <StatCard 
                         title="Net Position"
-                        value={`${dashboardData.netPosition >= 0 ? '$' : '-$'} ${Math.abs(dashboardData.netPosition).toFixed(2)}`}
+                        value={`₹ ${dashboardData.netPosition.toFixed(2)}`}
                         icon={<ArrowLeftRight className="h-4 w-4 text-primary" />}
-                        description="Receivables minus Payables."
-                        colorClass="text-primary"
+                        description="Receivables - Payables (in INR)."
+                        colorClass={dashboardData.netPosition >= 0 ? "text-primary" : "text-destructive"}
                     />
                      <StatCard 
                         title="Total Export Value"
                         value={`$ ${dashboardData.totalExportValue.toFixed(2)}`}
                         icon={<Handshake className="h-4 w-4 text-blue-500" />}
-                        description="Total value of invoices generated."
+                        description="Total value of invoices (in USD)."
                         onClick={() => router.push('/export-document')}
                     />
                      <StatCard 
@@ -228,12 +265,20 @@ export default function DashboardPage() {
                         description="Total containers in export docs."
                         onClick={() => router.push('/export-document')}
                     />
+                     <StatCard 
+                        title="GST Receivable"
+                        value={`₹ ${dashboardData.netGstReceivable.toFixed(2)}`}
+                        icon={<Percent className="h-4 w-4 text-indigo-500" />}
+                        description="GST Paid minus GST Received."
+                        colorClass="text-indigo-500"
+                        onClick={() => router.push('/gst')}
+                    />
                 </div>
 
                 <div className="grid gap-8 md:grid-cols-1">
                     <Card>
                         <CardHeader>
-                            <CardTitle>Financial Overview</CardTitle>
+                            <CardTitle>Financial Overview (in INR)</CardTitle>
                             <CardDescription>A visual comparison of your receivables and payables for the selected period.</CardDescription>
                         </CardHeader>
                         <CardContent className="h-[350px]">
@@ -241,7 +286,7 @@ export default function DashboardPage() {
                                 <BarChart accessibilityLayer data={chartData}>
                                     <CartesianGrid vertical={false} />
                                     <XAxis dataKey="name" tickLine={false} tickMargin={10} axisLine={false} stroke="" />
-                                    <YAxis stroke="" tickFormatter={(value) => `$${Number(value) / 1000}k`} />
+                                    <YAxis stroke="" tickFormatter={(value) => `₹${Number(value) / 1000}k`} />
                                     <RechartsTooltip cursor={false} content={<ChartTooltipContent indicator="dot" />} />
                                     <ChartLegend content={<ChartLegendContent />} />
                                     <Bar dataKey="receivables" fill="var(--color-receivables)" radius={4} />

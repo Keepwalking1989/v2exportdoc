@@ -1,3 +1,4 @@
+
 "use client";
 
 import Link from "next/link";
@@ -12,14 +13,15 @@ import {
 } from "@/components/ui/menubar";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
-import { Menu as MenuIcon, X as XIcon, Building, PlusCircle, ShoppingCart, Receipt, Palette, Package, Landmark, Briefcase, FileText, ArrowLeftRight } from "lucide-react";
+import { Separator } from "@/components/ui/separator";
+import { Menu as MenuIcon, X as XIcon, Building, PlusCircle, ShoppingCart, Receipt, Palette, Package, Landmark, Briefcase, FileText, ArrowLeftRight, LayoutDashboard } from "lucide-react";
 
 export function Header() {
   const [isMobile, setIsMobile] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   useEffect(() => {
-    const checkMobile = () => setIsMobile(window.innerWidth < 768);
+    const checkMobile = () => setIsMobile(window.innerWidth < 1024); // Adjusted breakpoint
     checkMobile();
     window.addEventListener("resize", checkMobile);
     return () => window.removeEventListener("resize", checkMobile);
@@ -112,7 +114,11 @@ export function Header() {
 
   const mobileMenuItems = (
     <nav className="flex flex-col space-y-1 p-4">
-      <Button variant="ghost" className="justify-start font-headline text-lg" onClick={() => setIsMobileMenuOpen(false)}>
+      <Button variant="ghost" className="justify-start font-headline text-lg" asChild onClick={() => setIsMobileMenuOpen(false)}>
+        <Link href="/"><LayoutDashboard className="mr-2 h-5 w-5" />DASHBOARD</Link>
+      </Button>
+      <Separator />
+      <Button variant="ghost" className="justify-start font-headline text-lg" onClick={() => {}}>
         <PlusCircle className="mr-2 h-5 w-5" /> ADD
       </Button>
       <div className="pl-6">
@@ -186,7 +192,12 @@ export function Header() {
             </SheetContent>
           </Sheet>
         ) : (
-          <Menubar className="border-none bg-transparent shadow-none">{menuItems}</Menubar>
+          <div className="flex items-center gap-1">
+            <Button asChild variant="ghost" className="font-headline">
+              <Link href="/"><LayoutDashboard className="mr-2 h-4 w-4"/>DASHBOARD</Link>
+            </Button>
+            <Menubar className="border-none bg-transparent shadow-none">{menuItems}</Menubar>
+          </div>
         )}
       </div>
     </header>
