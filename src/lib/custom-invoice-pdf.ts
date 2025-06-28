@@ -222,39 +222,52 @@ export function generateCustomInvoicePdf(
     });
 
     const groupItems = (items: ExportDocumentProductItem[]) => {
-        return items.reduce((acc, item) => {
+        const grouped = new Map<string, any>();
+
+        items.forEach(item => {
             const product = allProducts.find(p => p.id === item.productId);
             const size = product ? allSizes.find(s => s.id === product.sizeId) : undefined;
-            if (!size) return acc;
+            if (!size) return;
 
-            const key = `${size.id}-${item.rate}`;
+            const key = size.id; // Group by size only
 
-            if (!acc[key]) {
-                 const hsnCode = size.hsnCode || 'N/A';
-                 const description = hsnCode === '69072100'
+            if (!grouped.has(key)) {
+                const hsnCode = size.hsnCode || 'N/A';
+                const description = hsnCode === '69072100'
                     ? `Polished Glazed Vitrified Tiles ( PGVT ) (${size.size})`
                     : `Vitrified Tiles (${size.size})`;
 
-                acc[key] = {
+                grouped.set(key, {
                     hsnCode: hsnCode,
                     description: description,
                     boxes: 0,
                     sqm: 0,
-                    rate: item.rate || 0,
                     total: 0,
-                };
+                });
             }
             
+            const existing = grouped.get(key);
             const sqmForThisItem = (item.boxes || 0) * (size.sqmPerBox || 0);
-            acc[key].boxes += item.boxes || 0;
-            acc[key].sqm += sqmForThisItem;
-            acc[key].total += sqmForThisItem * (item.rate || 0);
-            return acc;
-        }, {} as Record<string, any>);
+
+            existing.boxes += item.boxes || 0;
+            existing.sqm += sqmForThisItem;
+            existing.total += sqmForThisItem * (item.rate || 0);
+        });
+        
+        // Calculate weighted average rate after grouping
+        grouped.forEach(group => {
+            if (group.sqm > 0) {
+                group.rate = group.total / group.sqm;
+            } else {
+                group.rate = 0;
+            }
+        });
+
+        return Array.from(grouped.values());
     };
 
-    const groupedProducts = Object.values(groupItems(allProductItems));
-    const groupedSamples = Object.values(groupItems(allSampleItems));
+    const groupedProducts = groupItems(allProductItems);
+    const groupedSamples = groupItems(allSampleItems);
 
     let grandTotalBoxes = 0;
     let grandTotalSqm = 0;
@@ -291,7 +304,7 @@ export function generateCustomInvoicePdf(
         groupedSamples.forEach(item => {
             grandTotalBoxes += item.boxes;
             grandTotalSqm += item.sqm;
-            grandTotalAmount += item.total;
+            // Samples have 0 value, do not add to grandTotalAmount
             
             tableBody.push([
                 item.hsnCode,
@@ -299,8 +312,8 @@ export function generateCustomInvoicePdf(
                 item.description,
                 item.boxes.toString(),
                 item.sqm.toFixed(2),
-                item.rate.toFixed(2),
-                item.total.toFixed(2)
+                (0).toFixed(2), // Rate is 0
+                (0).toFixed(2)  // Total is 0
             ]);
         });
     }

@@ -153,39 +153,44 @@ export function generatePackingListPdf(
     });
 
     const groupItems = (items: ExportDocumentProductItem[]) => {
-        return items.reduce((acc, item) => {
+        const grouped = new Map<string, any>();
+
+        items.forEach(item => {
             const product = allProducts.find(p => p.id === item.productId);
             const size = product ? allSizes.find(s => s.id === product.sizeId) : undefined;
-            if (!size) return acc;
+            if (!size) return;
 
-            const key = size.id;
+            const key = size.id; // Group by size only
 
-            if (!acc[key]) {
+            if (!grouped.has(key)) {
                 const hsnCode = size.hsnCode || 'N/A';
                 const description = hsnCode === '69072100'
                     ? `Polished Glazed Vitrified Tiles ( PGVT ) (${size.size})`
                     : `Vitrified Tiles (${size.size})`;
 
-                acc[key] = {
+                grouped.set(key, {
                     hsnCode: hsnCode,
                     description: description,
                     boxes: 0,
                     sqm: 0,
                     netWt: 0,
                     grossWt: 0,
-                };
+                });
             }
-            
+
+            const existing = grouped.get(key);
             const sqmForThisItem = (item.boxes || 0) * (size.sqmPerBox || 0);
-            acc[key].boxes += item.boxes || 0;
-            acc[key].sqm += sqmForThisItem;
-            acc[key].netWt += item.netWeight || 0;
-            acc[key].grossWt += item.grossWeight || 0;
-            return acc;
-        }, {} as Record<string, any>);
+
+            existing.boxes += item.boxes || 0;
+            existing.sqm += sqmForThisItem;
+            existing.netWt += item.netWeight || 0;
+            existing.grossWt += item.grossWeight || 0;
+        });
+        
+        return Array.from(grouped.values());
     };
 
-    const groupedProducts = Object.values(groupItems(allProductItems));
+    const groupedProducts = groupItems(allProductItems);
     groupedProducts.forEach(item => {
         grandTotalBoxes += item.boxes;
         grandTotalSqm += item.sqm;
@@ -212,7 +217,7 @@ export function generatePackingListPdf(
             }
         ]);
 
-        const groupedSamples = Object.values(groupItems(allSampleItems));
+        const groupedSamples = groupItems(allSampleItems);
         groupedSamples.forEach(item => {
             grandTotalBoxes += item.boxes;
             grandTotalSqm += item.sqm;
