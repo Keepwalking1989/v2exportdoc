@@ -59,8 +59,6 @@ function amountToWordsUSD(amount: number): string {
     return result.replace(/\s\s+/g, ' ').trim() + " only";
 }
 
-const signatureImageBase64 = "data:image/png;base64,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";
-
 // --- Main PDF Generation Function ---
 export function generateCustomInvoicePdf(
     docData: ExportDocument,
@@ -156,8 +154,8 @@ export function generateCustomInvoicePdf(
             ],
              // Row 2: Data (Class 2)
             [
-                { content: 'TO THE\nORDER', styles: { ...classTwoStyles, halign: 'center' } },
-                { content: 'TO THE\nORDER', styles: { ...classTwoStyles, halign: 'center' } }
+                { content: 'TO THE\nORDER', styles: { ...classTwoStyles, halign: 'center', minCellHeight: 20 } },
+                { content: 'TO THE\nORDER', styles: { ...classTwoStyles, halign: 'center', minCellHeight: 20 } }
             ]
         ],
         margin: { left: pageMargin, right: pageMargin },
@@ -339,7 +337,7 @@ export function generateCustomInvoicePdf(
         ],
         [
             { content: '', colSpan: 3, styles: { ...classTwoStyles, cellPadding: 2 } },
-            { content: 'EXCHANGE RATE NOFICATION NUMBER AND DATE', colSpan: 4, styles: { ...classOneStyles, cellPadding: 2, fontSize: FONT_SMALL_FOOTER_LABEL_SIZE } }
+            { content: 'EXCHANGE RATE NOFICATION NUMBER AND DATE', colSpan: 4, styles: { ...classOneStyles, cellPadding: 2, fontSize: FONT_SMALL_FOOTER_LABEL_SIZE, halign: 'center' } }
         ],
         [
             { content: '', colSpan: 3, styles: { ...classTwoStyles, cellPadding: 2 } },
@@ -348,25 +346,25 @@ export function generateCustomInvoicePdf(
         ],
         [
             { content: '', colSpan: 3, styles: { ...classTwoStyles, cellPadding: 2 } },
-            { content: 'EXCHANGE RATE', styles: { ...classOneStyles, cellPadding: 2, fontSize: FONT_SMALL_FOOTER_LABEL_SIZE } },
+            { content: 'EXCHANGE RATE', styles: { ...classOneStyles, cellPadding: 2, fontSize: FONT_SMALL_FOOTER_LABEL_SIZE, halign: 'center' } },
             { content: '1 USD', styles: { ...classTwoStyles, halign: 'center', cellPadding: 2 } },
             { content: conversationRate.toFixed(2), colSpan: 2, styles: { ...classTwoStyles, halign: 'center', cellPadding: 2 } }
         ],
         [
             { content: '', colSpan: 3, styles: { ...classTwoStyles, cellPadding: 2 } },
-            { content: 'FOB', styles: { ...classOneStyles, cellPadding: 2, fontSize: FONT_SMALL_FOOTER_LABEL_SIZE } },
+            { content: 'FOB', styles: { ...classOneStyles, cellPadding: 2, fontSize: FONT_SMALL_FOOTER_LABEL_SIZE, halign: 'center' } },
             { content: 'INR', styles: { ...classTwoStyles, halign: 'center', cellPadding: 2 } },
             { content: totalAmountInr.toFixed(2), colSpan: 2, styles: { ...classTwoStyles, halign: 'center', cellPadding: 2 } }
         ],
         [
             { content: '', colSpan: 3, styles: { ...classTwoStyles, cellPadding: 2 } },
-            { content: 'IGST %', styles: { ...classOneStyles, cellPadding: 2, fontSize: FONT_SMALL_FOOTER_LABEL_SIZE } },
+            { content: 'IGST %', styles: { ...classOneStyles, cellPadding: 2, fontSize: FONT_SMALL_FOOTER_LABEL_SIZE, halign: 'center' } },
             { content: docData.gst || '0%', styles: { ...classTwoStyles, halign: 'center', cellPadding: 2 } },
             { content: gstAmount.toFixed(2), colSpan: 2, styles: { ...classTwoStyles, halign: 'center', cellPadding: 2 } }
         ],
         [
             { content: '', colSpan: 3, styles: { ...classTwoStyles, cellPadding: 2 } },
-            { content: 'TOTAL', styles: { ...classOneStyles, cellPadding: 2 } },
+            { content: 'TOTAL', styles: { ...classOneStyles, cellPadding: 2, halign: 'center' } },
             { content: 'INR', styles: { ...classTwoStyles, halign: 'center', cellPadding: 2 } },
             { content: finalTotalInr.toFixed(2), colSpan: 2, styles: { ...classTwoStyles, halign: 'center', cellPadding: 2 } }
         ],
@@ -541,19 +539,6 @@ export function generateCustomInvoicePdf(
             2: { cellWidth: 'auto' },
         },
         margin: { left: pageMargin, right: pageMargin },
-        didDrawCell: (data) => {
-            if (data.section === 'body' && data.row.index === 2 && data.column.index === 1) {
-                // This is the empty cell for the signature
-                const imgWidth = 120;
-                const imgHeight = 65;
-                const cell = data.cell;
-
-                const x = cell.x + (cell.width - imgWidth) / 2;
-                const y = cell.y + (cell.height - imgHeight) / 2 - 10; // Adjust y a bit up
-
-                doc.addImage(signatureImageBase64, 'PNG', x, y, imgWidth, imgHeight);
-            }
-        },
         didDrawPage: data => { yPos = data.cursor?.y ?? yPos; }
     });
 
