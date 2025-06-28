@@ -283,7 +283,7 @@ export default function DocumentDataPage() {
     };
   }, [document, allManufacturers, allTransporters, allProducts, allSizes]);
 
-  const handleDownloadCustomInvoice = () => {
+  const handleDownloadCustomInvoice = async () => {
     if (!document) {
       toast({ variant: "destructive", title: "Error", description: "Document data not loaded." });
       return;
@@ -303,7 +303,7 @@ export default function DocumentDataPage() {
        toast({ variant: "destructive", title: "Error", description: "No valid manufacturers found for this document. They may have been deleted." });
        return;
     }
-    generateCustomInvoicePdf(document, exporter, manufacturersWithDetails, allProducts, allSizes);
+    await generateCustomInvoicePdf(document, exporter, manufacturersWithDetails, allProducts, allSizes);
   };
   
   const handleDownloadPackingList = () => {

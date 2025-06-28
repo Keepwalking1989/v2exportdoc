@@ -10,8 +10,9 @@ import type { Product } from '@/types/product';
 
 const FONT_CAT1_SIZE = 14;
 const FONT_CAT2_SIZE = 10;
-const FONT_CAT3_SIZE = 8;
 const FONT_SMALL_FOOTER_LABEL_SIZE = 7;
+const FONT_CAT3_SIZE = 8;
+
 
 // --- Helper for amount in words ---
 function amountToWordsUSD(amount: number): string {
@@ -60,7 +61,7 @@ function amountToWordsUSD(amount: number): string {
 }
 
 // --- Main PDF Generation Function ---
-export function generateCustomInvoicePdf(
+export async function generateCustomInvoicePdf(
     docData: ExportDocument,
     exporter: Company,
     manufacturersWithDetails: (Manufacturer & { invoiceNumber: string, invoiceDate?: Date })[],
@@ -92,6 +93,23 @@ export function generateCustomInvoicePdf(
         lineColor: '#000000',
         cellPadding: 2,
     };
+
+    // Fetch signature image and convert to data URI
+    let signatureImageData: string | null = null;
+    try {
+        const response = await fetch('/signature.png');
+        if (response.ok) {
+            const blob = await response.blob();
+            signatureImageData = await new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onloadend = () => resolve(reader.result as string);
+                reader.onerror = reject;
+                reader.readAsDataURL(blob);
+            });
+        }
+    } catch (error) {
+        console.error("Signature image could not be loaded from /signature.png. It will be skipped.", error);
+    }
     
     // --- Document Header ---
     doc.setFontSize(20);
@@ -154,8 +172,8 @@ export function generateCustomInvoicePdf(
             ],
              // Row 2: Data (Class 2)
             [
-                { content: 'TO THE\nORDER', styles: { ...classTwoStyles, halign: 'center', minCellHeight: 20 } },
-                { content: 'TO THE\nORDER', styles: { ...classTwoStyles, halign: 'center', minCellHeight: 20 } }
+                { content: 'TO THE\nORDER', styles: { ...classTwoStyles, halign: 'center' } },
+                { content: 'TO THE\nORDER', styles: { ...classTwoStyles, halign: 'center' } }
             ]
         ],
         margin: { left: pageMargin, right: pageMargin },
@@ -336,37 +354,38 @@ export function generateCustomInvoicePdf(
             { content: `$ ${grandTotalAmount.toFixed(2)}`, styles: {...classTwoStyles, halign: 'right'} },
         ],
         [
-            { content: '', colSpan: 3, styles: { ...classTwoStyles, cellPadding: 2 } },
+            { content: 'Total No. Of Pkgs.', colSpan: 3, styles: { ...classOneStyles, cellPadding: 2, halign: 'center' } },
             { content: 'EXCHANGE RATE NOFICATION NUMBER AND DATE', colSpan: 4, styles: { ...classOneStyles, cellPadding: 2, fontSize: FONT_SMALL_FOOTER_LABEL_SIZE, halign: 'center' } }
         ],
         [
-            { content: '', colSpan: 3, styles: { ...classTwoStyles, cellPadding: 2 } },
+            { content: grandTotalBoxes.toString(), colSpan: 3, styles: { ...classTwoStyles, halign: 'center', cellPadding: 2 } },
             { content: docData.exchangeNotification || 'N/A', colSpan: 2, styles: { ...classTwoStyles, halign: 'center', cellPadding: 2 } },
             { content: docData.exchangeDate ? format(new Date(docData.exchangeDate), 'dd/MM/yyyy') : 'N/A', colSpan: 2, styles: { ...classTwoStyles, halign: 'center', cellPadding: 2 } }
         ],
         [
-            { content: '', colSpan: 3, styles: { ...classTwoStyles, cellPadding: 2 } },
+            { content: 'Amount In Words', colSpan: 3, styles: { ...classOneStyles, cellPadding: 2, halign: 'center' } },
             { content: 'EXCHANGE RATE', styles: { ...classOneStyles, cellPadding: 2, fontSize: FONT_SMALL_FOOTER_LABEL_SIZE, halign: 'center' } },
             { content: '1 USD', styles: { ...classTwoStyles, halign: 'center', cellPadding: 2 } },
             { content: conversationRate.toFixed(2), colSpan: 2, styles: { ...classTwoStyles, halign: 'center', cellPadding: 2 } }
         ],
         [
-            { content: '', colSpan: 3, styles: { ...classTwoStyles, cellPadding: 2 } },
+            { content: amountToWordsUSD(grandTotalAmount), rowSpan: 4, colSpan: 3, styles: { ...classTwoStyles, halign: 'left' } },
             { content: 'FOB', styles: { ...classOneStyles, cellPadding: 2, fontSize: FONT_SMALL_FOOTER_LABEL_SIZE, halign: 'center' } },
             { content: 'INR', styles: { ...classTwoStyles, halign: 'center', cellPadding: 2 } },
             { content: totalAmountInr.toFixed(2), colSpan: 2, styles: { ...classTwoStyles, halign: 'center', cellPadding: 2 } }
         ],
         [
-            { content: '', colSpan: 3, styles: { ...classTwoStyles, cellPadding: 2 } },
             { content: 'IGST %', styles: { ...classOneStyles, cellPadding: 2, fontSize: FONT_SMALL_FOOTER_LABEL_SIZE, halign: 'center' } },
             { content: docData.gst || '0%', styles: { ...classTwoStyles, halign: 'center', cellPadding: 2 } },
             { content: gstAmount.toFixed(2), colSpan: 2, styles: { ...classTwoStyles, halign: 'center', cellPadding: 2 } }
         ],
         [
-            { content: '', colSpan: 3, styles: { ...classTwoStyles, cellPadding: 2 } },
             { content: 'TOTAL', styles: { ...classOneStyles, cellPadding: 2, halign: 'center' } },
             { content: 'INR', styles: { ...classTwoStyles, halign: 'center', cellPadding: 2 } },
             { content: finalTotalInr.toFixed(2), colSpan: 2, styles: { ...classTwoStyles, halign: 'center', cellPadding: 2 } }
+        ],
+         [
+            { content: '', styles: { ...classTwoStyles, cellPadding: 2, minCellHeight: 10 }, colSpan: 4 } // Empty row for spacing
         ],
     ];
 
@@ -378,44 +397,23 @@ export function generateCustomInvoicePdf(
         theme: 'grid',
         margin: { left: pageMargin, right: pageMargin },
         headStyles: classOneStyles,
-        bodyStyles: {...classTwoStyles, halign: 'left', cellPadding: 1 },
-        footStyles: { ...classOneStyles, cellPadding: 2 },
+        bodyStyles: {...classTwoStyles, halign: 'left', cellPadding: 1, fontSize: FONT_CAT3_SIZE },
+        footStyles: { ...classOneStyles, cellPadding: 2, lineWidth: 0.5 },
         columnStyles: {
-            0: { cellWidth: 55, halign: 'center' },   // HSN Code
-            1: { cellWidth: 25, halign: 'center' },   // Sr. No
-            2: { cellWidth: 'auto' },                 // Description Of Goods
-            3: { cellWidth: 40, halign: 'right' },    // Boxes
-            4: { cellWidth: 45, halign: 'right' },    // Sq.Mtr
-            5: { cellWidth: 60, halign: 'right' },    // Rate
-            6: { cellWidth: 70, halign: 'right' },    // Total Amount
+            0: { cellWidth: 55, halign: 'center' },
+            1: { cellWidth: 25, halign: 'center' },
+            2: { cellWidth: 'auto' },
+            3: { cellWidth: 40, halign: 'right' },
+            4: { cellWidth: 45, halign: 'right' },
+            5: { cellWidth: 60, halign: 'right' },
+            6: { cellWidth: 70, halign: 'right' },
         },
         didDrawPage: data => { yPos = data.cursor?.y ?? yPos; }
     });
     // @ts-ignore
     yPos = doc.lastAutoTable.finalY;
 
-    autoTable(doc, {
-        startY: yPos,
-        theme: 'grid',
-        body: [
-            [
-                { content: 'Total No. Of Pkgs.', styles: {...classOneStyles, halign: 'center', cellPadding: 2} },
-                { content: 'Amount In Words', styles: {...classOneStyles, halign: 'center', cellPadding: 2} },
-            ],
-             [
-                { content: grandTotalBoxes.toString(), styles: {...classTwoStyles, halign: 'center', cellPadding: 2 } },
-                { content: amountToWordsUSD(grandTotalAmount), styles: {...classTwoStyles, halign: 'left', cellPadding: 2 } },
-            ],
-        ],
-        margin: { left: pageMargin, right: pageMargin },
-        didDrawPage: data => { yPos = data.cursor?.y ?? yPos; }
-    });
-    // @ts-ignore
-    yPos = doc.lastAutoTable.finalY;
-
-    const footerText = 'Export Under Duty Drawback Scheme, We shall claim the benefit as admissible under , RoDTEP , DBK';
-    const declarationText = 'We declare that this Invoice shows the actual price of the goods described and that all particulars are true and correct.';
-    
+    const footerText = 'Export Under GST Circular No. 26/2017 Custom Dt. 01/07/2017';
     autoTable(doc, {
         startY: yPos,
         theme: 'grid',
@@ -461,33 +459,13 @@ export function generateCustomInvoicePdf(
         yPos = doc.lastAutoTable.finalY;
     });
 
-    autoTable(doc, {
-        startY: yPos,
-        theme: 'grid',
-        body: [[{ content: 'Export Under GST Circular No. 26/2017 Custom Dt. 01/07/2017', styles: { ...classOneStyles, halign: 'center', cellPadding: 1 }}]],
-        margin: { left: pageMargin, right: pageMargin },
-        styles: { cellPadding: 1 },
-        didDrawPage: data => { yPos = data.cursor?.y ?? yPos; }
-    });
-    // @ts-ignore
-    yPos = doc.lastAutoTable.finalY;
-
-    autoTable(doc, {
-        startY: yPos,
-        theme: 'grid',
-        body: [[{ content: 'We claim Duty rebate file.', styles: { ...classOneStyles, halign: 'center', cellPadding: 1 }}]],
-        margin: { left: pageMargin, right: pageMargin },
-        styles: { cellPadding: 1 },
-        didDrawPage: data => { yPos = data.cursor?.y ?? yPos; }
-    });
-    // @ts-ignore
-    yPos = doc.lastAutoTable.finalY;
-
+    const declarationText = 'We declare that this Invoice shows the actual price of the goods described and that all particulars are true and correct.';
+    
     autoTable(doc, {
         startY: yPos,
         theme: 'plain',
         body: [
-            [ // Row 1 of the whole block
+            [
                 {
                     content: `Declaration:\n${declarationText}`,
                     rowSpan: 4, 
@@ -511,21 +489,21 @@ export function generateCustomInvoicePdf(
                     styles: {lineWidth: 0.5, lineColor: [0,0,0], ...classTwoStyles, halign: 'center'}
                 }
             ],
-            [ // Row 2 of the signature block (declaration cell is spanned)
+            [
                 {
                     content: `FOR, ${exporter.companyName.toUpperCase()}`,
                     colSpan: 2,
                     styles: {lineWidth: 0.5, lineColor: [0,0,0], ...classOneStyles}
                 }
             ],
-            [ // Row 3 (empty for signature)
+            [
                  {
                     content: '',
                     colSpan: 2,
                     styles: {lineWidth: 0.5, lineColor: [0,0,0], minCellHeight: 60}
                 }
             ],
-            [ // Row 4
+            [
                 {
                     content: 'AUTHORISED SIGNATURE',
                     colSpan: 2,
@@ -539,7 +517,23 @@ export function generateCustomInvoicePdf(
             2: { cellWidth: 'auto' },
         },
         margin: { left: pageMargin, right: pageMargin },
-        didDrawPage: data => { yPos = data.cursor?.y ?? yPos; }
+        didDrawCell: (data) => {
+            if (signatureImageData && data.section === 'body' && data.row.index === 2 && data.column.index === 1) {
+                try {
+                    const imageProps = doc.getImageProperties(signatureImageData);
+                    
+                    const imgWidth = 80; 
+                    const imgHeight = (imageProps.height * imgWidth) / imageProps.width;
+
+                    const imgX = data.cell.x + (data.cell.width - imgWidth) / 2;
+                    const imgY = data.cell.y + (data.cell.height - imgHeight) / 2 - 10;
+                    
+                    doc.addImage(signatureImageData, 'PNG', imgX, imgY, imgWidth, imgHeight);
+                } catch (e) {
+                    console.error("Error adding signature image to PDF:", e);
+                }
+            }
+        },
     });
 
     doc.save(`Custom_Invoice_${docData.exportInvoiceNumber.replace(/[\\/:*?"<>|]/g, '_')}.pdf`);
