@@ -334,37 +334,37 @@ export function generateCustomInvoicePdf(
             { content: `$ ${grandTotalAmount.toFixed(2)}`, styles: {...classTwoStyles, halign: 'right'} },
         ],
         [
-            { content: '', colSpan: 3, styles: { ...classTwoStyles } },
-            { content: 'EXCHANGE RATE NOFICATION NUMBER AND DATE', colSpan: 4, styles: { ...classOneStyles } }
+            { content: '', colSpan: 3, styles: { ...classTwoStyles, cellPadding: 2 } },
+            { content: 'EXCHANGE RATE NOFICATION NUMBER AND DATE', colSpan: 4, styles: { ...classOneStyles, cellPadding: 2, fontSize: 8 } }
         ],
         [
-            { content: '', colSpan: 3, styles: { ...classTwoStyles } },
-            { content: docData.exchangeNotification || 'N/A', colSpan: 2, styles: { ...classTwoStyles, halign: 'left' } },
-            { content: docData.exchangeDate ? format(new Date(docData.exchangeDate), 'dd/MM/yyyy') : 'N/A', colSpan: 2, styles: { ...classTwoStyles, halign: 'right' } }
+            { content: '', colSpan: 3, styles: { ...classTwoStyles, cellPadding: 2 } },
+            { content: docData.exchangeNotification || 'N/A', colSpan: 2, styles: { ...classTwoStyles, halign: 'left', cellPadding: 2 } },
+            { content: docData.exchangeDate ? format(new Date(docData.exchangeDate), 'dd/MM/yyyy') : 'N/A', colSpan: 2, styles: { ...classTwoStyles, halign: 'right', cellPadding: 2 } }
         ],
         [
-            { content: '', colSpan: 3, styles: { ...classTwoStyles } },
-            { content: 'EXCHANGE RATE', styles: { ...classOneStyles } },
-            { content: '1 USD', styles: { ...classTwoStyles } },
-            { content: conversationRate.toFixed(2), colSpan: 2, styles: { ...classTwoStyles, halign: 'right' } }
+            { content: '', colSpan: 3, styles: { ...classTwoStyles, cellPadding: 2 } },
+            { content: 'EXCHANGE RATE', styles: { ...classOneStyles, cellPadding: 2, fontSize: 8 } },
+            { content: '1 USD', styles: { ...classTwoStyles, cellPadding: 2 } },
+            { content: conversationRate.toFixed(2), colSpan: 2, styles: { ...classTwoStyles, halign: 'right', cellPadding: 2 } }
         ],
         [
-            { content: '', colSpan: 3, styles: { ...classTwoStyles } },
-            { content: 'FOB', styles: { ...classOneStyles } },
-            { content: 'INR', styles: { ...classTwoStyles } },
-            { content: totalAmountInr.toFixed(2), colSpan: 2, styles: { ...classTwoStyles, halign: 'right' } }
+            { content: '', colSpan: 3, styles: { ...classTwoStyles, cellPadding: 2 } },
+            { content: 'FOB', styles: { ...classOneStyles, cellPadding: 2 } },
+            { content: 'INR', styles: { ...classTwoStyles, cellPadding: 2 } },
+            { content: totalAmountInr.toFixed(2), colSpan: 2, styles: { ...classTwoStyles, halign: 'right', cellPadding: 2 } }
         ],
         [
-            { content: '', colSpan: 3, styles: { ...classTwoStyles } },
-            { content: 'IGST %', styles: { ...classOneStyles } },
-            { content: docData.gst || '0%', styles: { ...classTwoStyles } },
-            { content: gstAmount.toFixed(2), colSpan: 2, styles: { ...classTwoStyles, halign: 'right' } }
+            { content: '', colSpan: 3, styles: { ...classTwoStyles, cellPadding: 2 } },
+            { content: 'IGST %', styles: { ...classOneStyles, cellPadding: 2 } },
+            { content: docData.gst || '0%', styles: { ...classTwoStyles, cellPadding: 2 } },
+            { content: gstAmount.toFixed(2), colSpan: 2, styles: { ...classTwoStyles, halign: 'right', cellPadding: 2 } }
         ],
         [
-            { content: '', colSpan: 3, styles: { ...classTwoStyles } },
-            { content: 'TOTAL', styles: { ...classOneStyles } },
-            { content: 'INR', styles: { ...classTwoStyles } },
-            { content: finalTotalInr.toFixed(2), colSpan: 2, styles: { ...classTwoStyles, halign: 'right' } }
+            { content: '', colSpan: 3, styles: { ...classTwoStyles, cellPadding: 2 } },
+            { content: 'TOTAL', styles: { ...classOneStyles, cellPadding: 2 } },
+            { content: 'INR', styles: { ...classTwoStyles, cellPadding: 2 } },
+            { content: finalTotalInr.toFixed(2), colSpan: 2, styles: { ...classTwoStyles, halign: 'right', cellPadding: 2 } }
         ],
     ];
 
@@ -377,7 +377,7 @@ export function generateCustomInvoicePdf(
         margin: { left: pageMargin, right: pageMargin },
         headStyles: classOneStyles,
         bodyStyles: {...classTwoStyles, halign: 'left', cellPadding: 1 },
-        footStyles: { ...classOneStyles, cellPadding: 1 },
+        footStyles: { ...classOneStyles, cellPadding: 2 },
         columnStyles: {
             0: { cellWidth: 70, halign: 'center' },
             1: { cellWidth: 40, halign: 'center' },
@@ -397,12 +397,12 @@ export function generateCustomInvoicePdf(
         theme: 'grid',
         body: [
             [
-                { content: 'Total No. Of Pkgs.', styles: {...classOneStyles, halign: 'left', cellPadding: 1} },
-                { content: 'Amount In Words', styles: {...classOneStyles, halign: 'left', cellPadding: 1} },
+                { content: 'Total No. Of Pkgs.', styles: {...classOneStyles, halign: 'left', cellPadding: 2} },
+                { content: 'Amount In Words', styles: {...classOneStyles, halign: 'left', cellPadding: 2} },
             ],
              [
-                { content: grandTotalBoxes.toString(), styles: {...classTwoStyles, halign: 'center', cellPadding: 1 } },
-                { content: amountToWordsUSD(grandTotalAmount), styles: {...classTwoStyles, halign: 'left', cellPadding: 1 } },
+                { content: grandTotalBoxes.toString(), styles: {...classTwoStyles, halign: 'center', cellPadding: 2 } },
+                { content: amountToWordsUSD(grandTotalAmount), styles: {...classTwoStyles, halign: 'left', cellPadding: 2 } },
             ],
         ],
         margin: { left: pageMargin, right: pageMargin },
