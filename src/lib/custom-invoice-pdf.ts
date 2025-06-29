@@ -419,7 +419,7 @@ export async function generateCustomInvoicePdf(
         columnStyles: {
             0: { cellWidth: 55 },   // HSN Code
             1: { cellWidth: 25 },   // Sr. No
-            2: { cellWidth: 'auto' }, // Description Of Goods
+            2: { cellWidth: 260.28 }, // Description Of Goods
             3: { cellWidth: 40, halign: 'right' },    // Boxes
             4: { cellWidth: 45, halign: 'right' },    // Sq.Mtr
             5: { cellWidth: 60, halign: 'right' },    // Rate Per SQM in $
@@ -461,7 +461,7 @@ export async function generateCustomInvoicePdf(
                 [
                     { content: 'Name', styles: { ...classOneStyles, cellPadding: 1, halign: 'left' } },
                     { content: manu.companyName, styles: { ...classTwoStyles, halign: 'left', cellPadding: 1 } },
-                    { content: 'GST NO', styles: { ...classOneStyles, cellPadding: 1, fontSize: 9 } },
+                    { content: 'GST NO', styles: { ...classOneStyles, cellPadding: 1, fontSize: 8 } },
                     { content: manu.gstNumber, styles: { ...classTwoStyles, halign: 'left', cellPadding: 1 } },
                 ],
                 [
@@ -519,8 +519,8 @@ export async function generateCustomInvoicePdf(
         ],
         columnStyles: {
             0: { cellWidth: contentWidth * 0.65 },
-            1: { cellWidth: 'auto' },
-            2: { cellWidth: 'auto' },
+            1: { cellWidth: contentWidth * 0.175 },
+            2: { cellWidth: contentWidth * 0.175 },
         },
         margin: { left: pageMargin, right: pageMargin },
         didDrawCell: (data) => {
@@ -550,4 +550,5 @@ export async function generateCustomInvoicePdf(
 
     doc.save(`Custom_Invoice_${docData.exportInvoiceNumber.replace(/[\\/:*?"<>|]/g, '_')}.pdf`);
 }
+
 
