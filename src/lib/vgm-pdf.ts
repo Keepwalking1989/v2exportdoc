@@ -34,7 +34,7 @@ export async function generateVgmPdf(
         if (footerResponse.ok) {
             footerImage = new Uint8Array(await footerResponse.arrayBuffer());
             // Set fixed height for layout consistency
-            footerHeight = 50; 
+            footerHeight = 80; 
         } else {
             console.warn('Footer image not found at /Latter-pad-bottom.png');
         }
