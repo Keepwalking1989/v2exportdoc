@@ -249,8 +249,8 @@ export function generatePerformaInvoicePdf(
     ];
   });
 
-  const minTableRows = 3; // Ensure at least some empty rows if data is less
-  const emptyRowsNeeded = Math.max(0, minTableRows - tableBodyContent.length);
+  const actualItemCount = tableBodyContent.length;
+  const emptyRowsNeeded = actualItemCount < 6 ? 5 : 3;
   for (let i = 0; i < emptyRowsNeeded; i++) {
     tableBodyContent.push([' ', ' ', ' ', ' ', ' ', ' ', ' ']);
   }
