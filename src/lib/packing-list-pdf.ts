@@ -30,9 +30,10 @@ const classThreeStyles = {
     textColor: '#000000',
     fontSize: 8,
 };
+const FONT_CAT2_SIZE = 10;
 
 // --- Main PDF Generation Function ---
-export function generatePackingListPdf(
+export async function generatePackingListPdf(
     docData: ExportDocument,
     exporter: Company,
     manufacturer: Manufacturer | undefined, // Though not directly displayed, might be useful in future
@@ -42,6 +43,22 @@ export function generatePackingListPdf(
     const doc = new jsPDF({ unit: 'pt', format: 'a4' });
     let yPos = 20;
     const pageMargin = 20;
+    const contentWidth = doc.internal.pageSize.getWidth() - (2 * pageMargin);
+
+    let signatureImage: Uint8Array | null = null;
+    let roundSealImage: Uint8Array | null = null;
+
+    try {
+        const signatureResponse = await fetch('/signature.png');
+        if (signatureResponse.ok) { signatureImage = new Uint8Array(await signatureResponse.arrayBuffer()); } 
+        else { console.warn('Signature image not found at /signature.png'); }
+
+        const roundSealResponse = await fetch('/Hemith-Round.png');
+        if (roundSealResponse.ok) { roundSealImage = new Uint8Array(await roundSealResponse.arrayBuffer()); } 
+        else { console.warn('Hemith-Round.png not found at /public/Hemith-Round.png'); }
+    } catch (error) {
+        console.error("Error fetching images for PDF:", error);
+    }
     
     // --- Document Header ---
     doc.setFontSize(20);
@@ -306,87 +323,80 @@ export function generatePackingListPdf(
     yPos = doc.lastAutoTable.finalY;
     
     // --- Final Declarations & Signature ---
-    const dutyDrawbackText = `Export Under Duty Drawback Scheme, We shall claim the benefit as admissible under "MEIS" Scheme , RoDTEP , DBK ,LUT Application Reference Number (ARN) AD240324138081L`;
-    autoTable(doc, {
-        startY: yPos,
-        theme: 'grid',
-        body: [[{ content: dutyDrawbackText, styles: { ...classTwoStyles, ...classThreeStyles, halign: 'left'} }]],
-        margin: { left: pageMargin, right: pageMargin },
-        didDrawPage: data => { yPos = data.cursor?.y ?? yPos; }
-    });
-    // @ts-ignore
-    yPos = doc.lastAutoTable.finalY;
-
-    autoTable(doc, {
-        startY: yPos,
-        theme: 'grid',
-        body: [[
-            { content: 'Certified That Goods Are Of Indian Origin', styles: {...classTwoStyles, ...classThreeStyles, halign: 'center'} }
-        ]],
-        margin: { left: pageMargin, right: pageMargin },
-        didDrawPage: data => { yPos = data.cursor?.y ?? yPos; }
-    });
-    // @ts-ignore
-    yPos = doc.lastAutoTable.finalY;
-
-    const declarationText = 'We declare that this Invoice shows the actual price of the goods described and that all particulars are true and correct.';
+    const declarationText = 'We declare that this Invoice shows the actual price of the goods described \nand that all particulars are true and correct.';
+    
     autoTable(doc, {
         startY: yPos,
         theme: 'plain',
         body: [
-            [ // Row 1 of the whole block
-                {
-                    content: `Declaration:\n${declarationText}`,
-                    rowSpan: 4, 
-                    styles: {
-                        fontStyle: 'normal',
-                        textColor: [0, 0, 0],
-                        fontSize: 8,
-                        lineWidth: 0.5,
-                        lineColor: [0, 0, 0],
-                        valign: 'top',
-                        halign: 'left',
+            [ // Row 0
+                { 
+                    content: `Declaration:\n${declarationText}`, 
+                    rowSpan: 3, 
+                    styles: { 
+                        fontStyle: 'normal', 
+                        textColor: [0, 0, 0], 
+                        fontSize: 8, 
+                        lineWidth: 0.5, 
+                        lineColor: [0, 0, 0], 
+                        valign: 'top', 
+                        halign: 'left', 
                         cellPadding: 2,
-                    }
+                    } 
                 },
-                {
-                    content: 'Signature & Date:',
-                    styles: {lineWidth: 0.5, lineColor: [0,0,0], ...classTwoStyles, fontStyle: 'bold', halign: 'left'}
-                },
-                {
-                    content: format(new Date(), 'dd/MM/yyyy'),
-                    styles: {lineWidth: 0.5, lineColor: [0,0,0], ...classTwoStyles, halign: 'center'}
+                { 
+                    content: `FOR, ${exporter.companyName.toUpperCase()}`, 
+                    colSpan: 2, 
+                    styles: {
+                        lineWidth: 0.5, 
+                        lineColor: [0,0,0], 
+                        ...classOneStyles, 
+                        halign: 'center', 
+                        fontSize: FONT_CAT2_SIZE,
+                        cellPadding: 2,
+                    } 
                 }
             ],
-            [ // Row 2 of the signature block (declaration cell is spanned)
-                {
-                    content: `FOR, ${exporter.companyName.toUpperCase()}`,
-                    colSpan: 2,
-                    styles: {lineWidth: 0.5, lineColor: [0,0,0], ...classOneStyles}
-                }
+            [ // Row 1 (New) - for signature image
+                { content: '', colSpan: 2, styles: {lineWidth: 0.5, lineColor: [0,0,0], minCellHeight: 40} }
             ],
-            [ // Row 3 (empty for signature)
-                 {
-                    content: '',
-                    colSpan: 2,
-                    styles: {lineWidth: 0.5, lineColor: [0,0,0], minCellHeight: 40}
-                }
-            ],
-            [ // Row 4
-                {
-                    content: 'AUTHORISED SIGNATURE',
-                    colSpan: 2,
-                    styles: {lineWidth: 0.5, lineColor: [0,0,0], ...classTwoStyles, fontStyle: 'bold', halign: 'center'}
+            [ // Row 2
+                { 
+                    content: 'AUTHORISED SIGNATURE', 
+                    colSpan: 2, 
+                    styles: {
+                        lineWidth: 0.5, 
+                        lineColor: [0,0,0], 
+                        ...classTwoStyles, 
+                        fontStyle: 'bold', 
+                        halign: 'center',
+                        cellPadding: 2,
+                    } 
                 }
             ]
         ],
-        columnStyles: {
-            0: { cellWidth: 350 },
-            1: { cellWidth: 'auto' },
-            2: { cellWidth: 'auto' },
-        },
+        columnStyles: { 0: { cellWidth: contentWidth * 0.65 }, 1: { cellWidth: 'auto' }, 2: { cellWidth: 'auto' } },
         margin: { left: pageMargin, right: pageMargin },
+        didDrawCell: (data) => {
+             // Round Seal in Declaration box
+            if (data.section === 'body' && data.row.index === 0 && data.column.index === 0) {
+                if (roundSealImage) { doc.addImage(roundSealImage, 'PNG', data.cell.x + data.cell.width - 50, data.cell.y + 10, 40, 40); }
+            }
+            // Signature in its own empty box
+            if (data.section === 'body' && data.row.index === 1 && data.column.index === 1) {
+                if (signatureImage) {
+                    const cell = data.cell;
+                    const imgWidth = 80;
+                    const imgHeight = 40;
+                    // Center the image in the cell
+                    const imgX = cell.x + (cell.width - imgWidth) / 2;
+                    const imgY = cell.y + (cell.height - imgHeight) / 2;
+                    doc.addImage(signatureImage, 'PNG', imgX, imgY, imgWidth, imgHeight);
+                }
+            }
+        }
     });
+
 
     // --- Save the PDF ---
     doc.save(`Packing_List_${docData.exportInvoiceNumber.replace(/[\\/:*?"<>|]/g, '_')}.pdf`);
