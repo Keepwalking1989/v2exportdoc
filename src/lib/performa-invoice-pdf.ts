@@ -29,6 +29,15 @@ const FONT_BODY_SMALL = 7;
 // --- Cell Padding (pt) ---
 const CELL_PADDING = 4;
 
+// Helper function to calculate the height a block of text will occupy
+const calculateTextHeight = (doc: jsPDF, text: string, width: number, fontSize: number, fontStyle: 'normal' | 'bold') => {
+    doc.setFont('helvetica', fontStyle);
+    doc.setFontSize(fontSize);
+    const lines = doc.splitTextToSize(text, width - (2 * CELL_PADDING));
+    return lines.length * fontSize * 1.15; // 1.15 is a line height factor
+};
+
+
 export function generatePerformaInvoicePdf(
   invoice: PerformaInvoice,
   exporter: Company,
@@ -118,7 +127,7 @@ export function generatePerformaInvoicePdf(
       (item.amount || 0).toFixed(2),
     ];
   });
-
+  
   const actualItemCount = tableBodyContent.length;
   const emptyRowsNeeded = actualItemCount < 6 ? 5 : 3;
   for (let i = 0; i < emptyRowsNeeded; i++) {
@@ -158,11 +167,6 @@ export function generatePerformaInvoicePdf(
         }
       }
     },
-    didDrawCell: (data) => {
-      doc.setDrawColor(COLOR_BORDER_RGB[0], COLOR_BORDER_RGB[1], COLOR_BORDER_RGB[2]);
-      doc.setLineWidth(0.5);
-      doc.rect(data.cell.x, data.cell.y, data.cell.width, data.cell.height, 'S');
-    },
   });
   // @ts-ignore
   yPos = doc.lastAutoTable.finalY;
@@ -170,12 +174,13 @@ export function generatePerformaInvoicePdf(
   // --- TOTAL SQM and AMOUNT IN WORDS ---
   const totalSqmText = (invoice.items.reduce((sum, item) => sum + (item.quantitySqmt || 0), 0)).toFixed(2);
   const amountInWordsStr = amountToWords(invoice.grandTotal || 0, invoice.currencyType);
-  const amountInWordsHeight = calculateNaturalCellHeight(doc, amountInWordsStr.toUpperCase(), halfContentWidth, 3);
+  const amountInWordsHeight = calculateTextHeight(doc, amountInWordsStr.toUpperCase(), halfContentWidth, FONT_BODY_SMALL, 'normal');
+
   autoTable(doc, {
     startY: yPos,
     body: [
-      [{ content: "TOTAL SQM", styles: headerStyle }, { content: totalSqmText, styles: { ...headerStyle, halign: 'center' } }],
-      [{ content: "TOTAL INVOICE AMOUNT IN WORDS:", styles: { ...headerStyle, minCellHeight: amountInWordsHeight } }, { content: amountInWordsStr.toUpperCase(), styles: { ...bodyStyle, fontSize: FONT_BODY_SMALL, minCellHeight: amountInWordsHeight, halign: 'center' } }]
+      [{ content: "TOTAL SQM", styles: headerStyle }, { content: totalSqmText, styles: { ...bodyStyle, halign: 'center' } }],
+      [{ content: "TOTAL INVOICE AMOUNT IN WORDS:", styles: { ...headerStyle, minCellHeight: amountInWordsHeight } }, { content: amountInWordsStr.toUpperCase(), styles: { ...bodyStyle, fontSize: FONT_BODY_SMALL, minCellHeight: amountInWordsHeight, halign: 'center', fillColor: COLOR_WHITE_RGB } }]
     ],
     columnStyles: { 0: { cellWidth: halfContentWidth }, 1: { cellWidth: halfContentWidth } },
     margin: { left: PAGE_MARGIN_X, right: PAGE_MARGIN_X },
@@ -183,38 +188,68 @@ export function generatePerformaInvoicePdf(
   // @ts-ignore
   yPos = doc.lastAutoTable.finalY;
 
-  // --- Note and Bank Details ---
-  autoTable(doc, {
-    startY: yPos,
-    body: [
-      [{
-        content: `Note:\n${invoice.note || 'N/A'}`,
-        styles: { ...bodyStyle, halign: 'left', valign: 'top' }
-      }],
-      [{
-        content: `Bank Details`,
-        styles: { ...headerStyle, halign: 'left' }
-      }],
-      [{
-        content: `BENEFICIARY NAME: ${exporter.companyName.toUpperCase()}\nBENEFICIARY BANK: ${selectedBank?.bankName.toUpperCase() || ''}, BRANCH: ${selectedBank?.bankAddress.toUpperCase() || ''}\nBENEFICIARY A/C NO: ${selectedBank?.accountNumber || ''}, SWIFT CODE: ${selectedBank?.swiftCode.toUpperCase() || ''}, IFSC CODE: ${selectedBank?.ifscCode.toUpperCase() || ''}`,
-        styles: { ...bodyStyle, halign: 'left', valign: 'top', lineWidth: { top: 0 } }
-      }]
-    ],
-    margin: { left: PAGE_MARGIN_X, right: PAGE_MARGIN_X },
-    didDrawCell: (data) => {
-      if (data.row.index === 0 && data.section === 'body') {
-        const cell = data.cell;
-        doc.setFont('helvetica', 'bold');
-        doc.setFontSize(FONT_HEADER);
-        doc.text("Note:", cell.x + cell.padding('left'), cell.y + cell.padding('top') + FONT_HEADER);
+  // --- Note Box ---
+  const noteHeader = "Note:";
+  const noteBody = invoice.note || 'N/A';
+  const noteHeaderHeight = calculateTextHeight(doc, noteHeader, contentWidth, FONT_HEADER, 'bold');
+  const noteBodyHeight = calculateTextHeight(doc, noteBody, contentWidth, FONT_BODY, 'normal');
+  const noteCellHeight = noteHeaderHeight + noteBodyHeight + (CELL_PADDING * 2);
 
-        doc.setFont('helvetica', 'normal');
-        doc.setFontSize(FONT_BODY);
-        const noteContent = invoice.note || 'N/A';
-        const contentLines = doc.splitTextToSize(noteContent, cell.width - cell.padding('left') - cell.padding('right'));
-        doc.text(contentLines, cell.x + cell.padding('left'), cell.y + cell.padding('top') + FONT_HEADER + FONT_BODY + 2);
-      }
-    }
+  autoTable(doc, {
+      startY: yPos,
+      body: [[{ content: '', styles: { minCellHeight: noteCellHeight } }]],
+      theme: 'grid',
+      styles: { ...bodyStyle, halign: 'left', valign: 'top' },
+      margin: { left: PAGE_MARGIN_X, right: PAGE_MARGIN_X },
+      didDrawCell: (data) => {
+          if (data.section === 'body' && data.row.index === 0) {
+              const cell = data.cell;
+              let cursorY = cell.y + cell.padding('top');
+              
+              doc.setFont('helvetica', 'bold');
+              doc.setFontSize(FONT_HEADER);
+              doc.text(noteHeader, cell.x + cell.padding('left'), cursorY + FONT_HEADER);
+              cursorY += noteHeaderHeight + 2;
+
+              doc.setFont('helvetica', 'normal');
+              doc.setFontSize(FONT_BODY);
+              const contentLines = doc.splitTextToSize(noteBody, cell.width - cell.padding('left') - cell.padding('right'));
+              doc.text(contentLines, cell.x + cell.padding('left'), cursorY);
+          }
+      },
+  });
+  // @ts-ignore
+  yPos = doc.lastAutoTable.finalY;
+
+  // --- Bank Details Box ---
+  const bankHeader = "Bank Details";
+  const bankBody = `BENEFICIARY NAME: ${exporter.companyName.toUpperCase()}\nBENEFICIARY BANK: ${selectedBank?.bankName.toUpperCase() || ''}, BRANCH: ${selectedBank?.bankAddress.toUpperCase() || ''}\nBENEFICIARY A/C NO: ${selectedBank?.accountNumber || ''}, SWIFT CODE: ${selectedBank?.swiftCode.toUpperCase() || ''}, IFSC CODE: ${selectedBank?.ifscCode.toUpperCase() || ''}`;
+  const bankHeaderHeight = calculateTextHeight(doc, bankHeader, contentWidth, FONT_HEADER, 'bold');
+  const bankBodyHeight = calculateTextHeight(doc, bankBody, contentWidth, FONT_BODY, 'normal');
+  const bankCellHeight = bankHeaderHeight + bankBodyHeight + (CELL_PADDING * 2);
+
+  autoTable(doc, {
+      startY: yPos,
+      body: [[{ content: '', styles: { minCellHeight: bankCellHeight } }]],
+      theme: 'grid',
+      styles: { ...bodyStyle, halign: 'left', valign: 'top' },
+      margin: { left: PAGE_MARGIN_X, right: PAGE_MARGIN_X },
+      didDrawCell: (data) => {
+          if (data.section === 'body' && data.row.index === 0) {
+              const cell = data.cell;
+              let cursorY = cell.y + cell.padding('top');
+
+              doc.setFont('helvetica', 'bold');
+              doc.setFontSize(FONT_HEADER);
+              doc.text(bankHeader, cell.x + cell.padding('left'), cursorY + FONT_HEADER);
+              cursorY += bankHeaderHeight + 2; 
+
+              doc.setFont('helvetica', 'normal');
+              doc.setFontSize(FONT_BODY);
+              const contentLines = doc.splitTextToSize(bankBody, cell.width - cell.padding('left') - cell.padding('right'));
+              doc.text(contentLines, cell.x + cell.padding('left'), cursorY);
+          }
+      },
   });
   // @ts-ignore
   yPos = doc.lastAutoTable.finalY;
@@ -247,22 +282,4 @@ export function generatePerformaInvoicePdf(
   });
 
   doc.save(`Performa_Invoice_${invoice.invoiceNumber.replace(/[\\/]/g, '_')}.pdf`);
-}
-
-
-// Helper function to calculate natural height of text in a cell
-function calculateNaturalCellHeight(doc: jsPDF, text: string, width: number, category: 1 | 2 | 3 | 'manufacturerName', overrideFontStyle?: Partial<any>): number {
-  // Simplified version, a more robust solution would be needed for complex cases
-  const style = getPdfCellStyle(category).fontStyle;
-  doc.setFontSize(overrideFontStyle?.size || style.size);
-  const lines = doc.splitTextToSize(text, width - 2 * CELL_PADDING);
-  return lines.length * (overrideFontStyle?.size || style.size) + (lines.length * 2) + (CELL_PADDING * 2);
-}
-
-// Simplified styles, autoTable's own styles are more robust
-function getPdfCellStyle(category: 1 | 2 | 3 | 'manufacturerName') {
-    return {
-        fontStyle: { size: category === 1 ? FONT_TITLE : FONT_HEADER, weight: 'bold', style: 'normal', lineHeightAddition: 2 },
-        // ... other styles
-    };
 }
