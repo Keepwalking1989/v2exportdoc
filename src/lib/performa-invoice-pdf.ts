@@ -135,9 +135,13 @@ export function generatePerformaInvoicePdf(
     tableBodyContent.push(['', '', '', '', '', '', '']);
   }
 
-  const tableFooterContent = [
-    ['SUB TOTAL', `${currencySymbol} ${(invoice.subTotal || 0).toFixed(2)}`],
-  ];
+  const tableFooterContent = [];
+
+  const showSubTotal = (invoice.freight && invoice.freight > 0.5) || (invoice.discount && invoice.discount > 0.5);
+
+  if (showSubTotal) {
+    tableFooterContent.push(['SUB TOTAL', `${currencySymbol} ${(invoice.subTotal || 0).toFixed(2)}`]);
+  }
 
   if (invoice.freight && invoice.freight > 0.5) {
     tableFooterContent.push([`FREIGHT CHARGES`, `${currencySymbol} ${invoice.freight.toFixed(2)}`]);
@@ -201,6 +205,8 @@ export function generatePerformaInvoicePdf(
         yPos = data.cursor?.y ?? yPos;
       }
   });
+  // @ts-ignore
+  yPos = doc.lastAutoTable.finalY;
 
   autoTable(doc, {
       body: [[
@@ -240,7 +246,7 @@ export function generatePerformaInvoicePdf(
   // @ts-ignore
   yPos = doc.lastAutoTable.finalY;
 
-    autoTable(doc, {
+  autoTable(doc, {
     startY: yPos,
     body: [[
         { content: `Note:\n${invoice.note || 'N/A'}`, styles: { ...bodyStyle, halign: 'left' } }
@@ -250,10 +256,10 @@ export function generatePerformaInvoicePdf(
             const rawContent = data.cell.raw.toString();
             const noteIndex = rawContent.indexOf("Note:");
             if (noteIndex !== -1) {
-                const noteText = rawContent.substring(0, noteIndex + 5);
+                const headerText = rawContent.substring(0, noteIndex + 5);
                 const restOfText = rawContent.substring(noteIndex + 5);
                 data.cell.text = [
-                    {text: noteText, styles: {fontStyle: 'bold', fontSize: FONT_HEADER}},
+                    {text: headerText, styles: {fontStyle: 'bold', fontSize: FONT_HEADER}},
                     {text: restOfText, styles: {fontStyle: 'normal', fontSize: FONT_BODY}}
                 ];
             }
@@ -308,12 +314,9 @@ export function generatePerformaInvoicePdf(
       [
         {
           content: `Declaration:\nCERTIFIED THAT THE PARTICULARS GIVEN ABOVE ARE TRUE AND CORRECT.`,
-          rowSpan: 3,
+          rowSpan: 2,
           styles: { ...bodyStyle, valign: 'top' }
         },
-        { content: `Signature & Date ${format(new Date(), 'dd-MM-yyyy')}`, styles: { ...bodyStyle, valign: 'bottom' } }
-      ],
-      [
         { content: `FOR, ${exporter.companyName.toUpperCase()}`, styles: { ...headerStyle, valign: 'bottom' } }
       ],
       [
