@@ -177,8 +177,6 @@ function drawDocument(doc: jsPDF, docData: ExportDocument, exporter: Company, ma
 
     const combinedFooterText = "Examined the export goods covered under this invoice description of the goods with reference to DBK & MEIS Scheme Value cap p/kg.Net Weight of Ceramic Glazed Wall Tiles are as under. Certified that the description and value of the goods covered by this invoice have been checked by me and the goods have been packed and sealed with lead seal one time lock seal checked by me and the goods have been packed and sealed with lead seal/ one time lock seal.";
     drawCenteredWrappedText(combinedFooterText);
-    
-    yPos += 5;
 
     // --- Signature ---
     const signatureBlockHeight = 40; // Reduced height
@@ -188,8 +186,7 @@ function drawDocument(doc: jsPDF, docData: ExportDocument, exporter: Company, ma
     }
 
     const signatureTableBody = [
-        [{ content: `For, ${exporter.companyName.toUpperCase()}`, styles: { halign: 'center', fontStyle: 'bold' } }],
-        [{ content: '', styles: { minCellHeight: 20 } }] // Reduced height for image box
+        [{ content: `For, ${exporter.companyName.toUpperCase()}`, styles: { halign: 'center', fontStyle: 'bold' } }]
     ];
 
     autoTable(doc, {
