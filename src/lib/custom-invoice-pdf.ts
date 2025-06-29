@@ -509,8 +509,6 @@ export async function generateCustomInvoicePdf(
         ],
         columnStyles: {
             0: { cellWidth: contentWidth * 0.65 },
-            1: { cellWidth: contentWidth * 0.175 },
-            2: { cellWidth: contentWidth * 0.175 },
         },
         margin: { left: pageMargin, right: pageMargin },
         didDrawCell: (data) => {
