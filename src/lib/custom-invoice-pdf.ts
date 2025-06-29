@@ -309,7 +309,6 @@ export async function generateCustomInvoicePdf(
         grandTotalSqm += item.sqm;
         grandTotalAmount += item.total;
         
-        // After grouping, the effective rate is the total value divided by total sqm for that group
         const effectiveRate = item.sqm > 0 ? item.total / item.sqm : 0;
 
         tableBody.push([
@@ -324,27 +323,21 @@ export async function generateCustomInvoicePdf(
     });
 
     if (groupedSamples.length > 0) {
-        tableBody.push([
-            { 
-                content: 'Free Of Cost Samples', 
-                colSpan: 7,
-                styles: { fontStyle: 'bold', halign: 'center' } 
-            }
-        ]);
-
         groupedSamples.forEach(item => {
             grandTotalBoxes += item.boxes;
             grandTotalSqm += item.sqm;
-            // Samples have 0 value, do not add to grandTotalAmount
+            grandTotalAmount += item.total; // Include sample amount in total
             
+            const effectiveRate = item.sqm > 0 ? item.total / item.sqm : 0;
+
             tableBody.push([
                 item.hsnCode,
                 srNoCounter++,
-                item.description,
+                `${item.description} (Sample)`, // Add (Sample) to description for clarity
                 item.boxes.toString(),
                 item.sqm.toFixed(2),
-                `$ ${(0).toFixed(2)}`, // Rate is 0
-                `$ ${(0).toFixed(2)}`  // Total is 0
+                `$ ${effectiveRate.toFixed(2)}`,
+                `$ ${item.total.toFixed(2)}`
             ]);
         });
     }
@@ -386,7 +379,7 @@ export async function generateCustomInvoicePdf(
             { content: conversationRate.toFixed(2), colSpan: 2, styles: { ...classTwoStyles, halign: 'center', cellPadding: 2 } }
         ],
         [
-            { content: amountToWordsUSD(grandTotalAmount), rowSpan: 4, colSpan: 3, styles: { ...classTwoStyles, halign: 'left' } },
+            { content: amountToWordsUSD(grandTotalAmount), rowSpan: 4, colSpan: 3, styles: { ...classTwoStyles, halign: 'left', minCellHeight: 60 } },
             { content: 'FOB', styles: { ...classOneStyles, cellPadding: 2, fontSize: 9, halign: 'center' } },
             { content: 'INR', styles: { ...classTwoStyles, halign: 'center', cellPadding: 2 } },
             { content: totalAmountInr.toFixed(2), colSpan: 2, styles: { ...classTwoStyles, halign: 'center', cellPadding: 2 } }
@@ -501,6 +494,7 @@ export async function generateCustomInvoicePdf(
                         valign: 'top',
                         halign: 'left',
                         cellPadding: 2,
+                        minCellHeight: 60
                     }
                 },
                 {
