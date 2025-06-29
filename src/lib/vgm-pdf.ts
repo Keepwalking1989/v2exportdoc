@@ -202,7 +202,7 @@ export async function generateVgmPdf(
         body: signatureTableBody,
         theme: 'plain',
         tableWidth: 'wrap',
-        margin: { left: contentWidth / 2 + pageMargin + 30 },
+        margin: { left: contentWidth / 2 + pageMargin + 40 },
         styles: { fontSize: 9 },
         didDrawCell: (data) => {
             if (data.section === 'body' && data.row.index === 1) {
