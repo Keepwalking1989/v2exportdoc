@@ -175,6 +175,7 @@ export function generatePerformaInvoicePdf(
   // --- TOTAL SQM and AMOUNT IN WORDS ---
   const totalSqmText = (invoice.items.reduce((sum, item) => sum + (item.quantitySqmt || 0), 0)).toFixed(2);
   const amountInWordsStr = amountToWords(invoice.grandTotal || 0, invoice.currencyType);
+  const sqmValsWidth = 100;
 
   autoTable(doc, {
       startY: yPos,
@@ -184,8 +185,8 @@ export function generatePerformaInvoicePdf(
       ]],
       margin: { left: PAGE_MARGIN_X, right: PAGE_MARGIN_X },
       columnStyles: {
-          0: { cellWidth: contentWidth - 50 },
-          1: { cellWidth: 50 }
+          0: { cellWidth: contentWidth - sqmValsWidth },
+          1: { cellWidth: sqmValsWidth }
       },
   });
   // @ts-ignore
@@ -208,12 +209,12 @@ export function generatePerformaInvoicePdf(
       theme: 'grid',
       margin: { left: PAGE_MARGIN_X, right: PAGE_MARGIN_X },
       columnStyles: {
-          0: { cellWidth: contentWidth - 50 },
-          1: { cellWidth: 50 }
+          0: { cellWidth: contentWidth - sqmValsWidth },
+          1: { cellWidth: sqmValsWidth }
       },
       willDrawCell: (data) => {
           // Calculate max height before drawing to ensure consistency
-          const amountCellWidth = contentWidth - 50;
+          const amountCellWidth = contentWidth - sqmValsWidth;
           const amountLines = doc.splitTextToSize(amountInWordsStr.toUpperCase(), amountCellWidth - data.cell.padding('horizontal'));
           const amountHeight = (amountLines.length * FONT_BODY_SMALL) + data.cell.padding('vertical') + (amountLines.length > 1 ? (amountLines.length - 1) * 2 : 0);
           
@@ -227,11 +228,11 @@ export function generatePerformaInvoicePdf(
         yPos = data.cursor?.y ?? yPos;
       }
   });
-
+  
   // @ts-ignore
   yPos = doc.lastAutoTable.finalY;
 
-  autoTable(doc, {
+    autoTable(doc, {
     startY: yPos,
     body: [[
         { content: `Note:\n${invoice.note || 'N/A'}`, styles: { ...bodyStyle, halign: 'left' } }
