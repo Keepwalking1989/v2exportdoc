@@ -1,7 +1,6 @@
 
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
-import { format } from 'date-fns';
 import type { ExportDocument } from '@/types/export-document';
 import type { Company } from '@/types/company'; // Exporter
 import type { Manufacturer } from '@/types/manufacturer';
@@ -17,6 +16,7 @@ export async function generateVgmPdf(
 
     let headerImage: Uint8Array | null = null;
     let footerImage: Uint8Array | null = null;
+    let signatureImage: Uint8Array | null = null;
     let headerHeight = 0;
     let footerHeight = 0;
 
@@ -38,8 +38,15 @@ export async function generateVgmPdf(
         } else {
             console.warn('Footer image not found at /Latter-pad-bottom.png');
         }
+
+        const signatureResponse = await fetch('/signature.png');
+        if (signatureResponse.ok) {
+            signatureImage = new Uint8Array(await signatureResponse.arrayBuffer());
+        } else {
+            console.warn('Signature image not found at /signature.png');
+        }
     } catch (error) {
-        console.error("Error fetching letterhead images for PDF:", error);
+        console.error("Error fetching letterhead or signature images for PDF:", error);
     }
     
     const addHeaderFooter = () => {
@@ -54,6 +61,8 @@ export async function generateVgmPdf(
     let yPos = headerHeight + 20;
     const pageMargin = 30;
     const contentWidth = pageWidth - 2 * pageMargin;
+    
+    addHeaderFooter(); // Add to the first page
 
     // Title
     doc.setFontSize(14);
@@ -167,6 +176,45 @@ export async function generateVgmPdf(
         margin: { left: pageMargin, right: pageMargin, top: headerHeight, bottom: footerHeight },
         didDrawPage: (data) => {
              addHeaderFooter();
+        }
+    });
+
+    // @ts-ignore
+    let lastTableY = doc.lastAutoTable.finalY;
+
+    yPos = lastTableY + 40;
+
+    const signatureBlockHeight = 80;
+    if (yPos + signatureBlockHeight > pageHeight - footerHeight) {
+        doc.addPage();
+        addHeaderFooter();
+        yPos = headerHeight + 20;
+    }
+
+    const signatureTableBody = [
+        [{ content: `FOR, ${exporter.companyName.toUpperCase()}`, styles: { halign: 'center', fontStyle: 'bold' } }],
+        [{ content: '', styles: { minCellHeight: 40 } }],
+        [{ content: 'AUTHORISED SIGNATURE', styles: { halign: 'center', fontStyle: 'bold' } }]
+    ];
+
+    autoTable(doc, {
+        startY: yPos,
+        body: signatureTableBody,
+        theme: 'plain',
+        tableWidth: 'wrap',
+        margin: { left: contentWidth / 2 + pageMargin },
+        styles: { fontSize: 9 },
+        didDrawCell: (data) => {
+            if (data.section === 'body' && data.row.index === 1) {
+                if (signatureImage) {
+                    const cell = data.cell;
+                    const imgWidth = 80;
+                    const imgHeight = 40;
+                    const imgX = cell.x + (cell.width - imgWidth) / 2;
+                    const imgY = cell.y + (cell.height - imgHeight) / 2;
+                    doc.addImage(signatureImage, 'PNG', imgX, imgY, imgWidth, imgHeight);
+                }
+            }
         }
     });
 
