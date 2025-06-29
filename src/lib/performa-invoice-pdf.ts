@@ -13,6 +13,7 @@ import { amountToWords } from '@/lib/utils';
 // --- Page & General Layout (Using Points) ---
 const PAGE_MARGIN_X = 28.34; // pt (approx 10mm)
 const PAGE_MARGIN_Y_TOP = 28.34; // pt (approx 10mm)
+const contentWidth = 595.28 - 2 * PAGE_MARGIN_X;
 
 // --- Colors ---
 const COLOR_BLUE_RGB = [217, 234, 247]; // Light blue for backgrounds
@@ -39,7 +40,6 @@ export function generatePerformaInvoicePdf(
 ) {
   const doc = new jsPDF({ unit: 'pt', format: 'a4' });
   let yPos = PAGE_MARGIN_Y_TOP;
-  const contentWidth = doc.internal.pageSize.getWidth() - 2 * PAGE_MARGIN_X;
   const halfContentWidth = contentWidth / 2;
 
   // --- Reusable Style Definitions for autoTable ---
@@ -183,6 +183,10 @@ export function generatePerformaInvoicePdf(
           { content: "TOTAL SQM", styles: headerStyle }
       ]],
       margin: { left: PAGE_MARGIN_X, right: PAGE_MARGIN_X },
+      columnStyles: {
+          0: { cellWidth: contentWidth - 35 },
+          1: { cellWidth: 35 }
+      },
   });
   // @ts-ignore
   const headerHeight = doc.lastAutoTable.finalY - yPos;
@@ -190,7 +194,7 @@ export function generatePerformaInvoicePdf(
   const valueBody = [[
       {
           content: amountInWordsStr.toUpperCase(),
-          styles: { ...bodyStyle, fontSize: FONT_BODY_SMALL, halign: 'left', valign: 'top' }
+          styles: { ...bodyStyle, fontSize: FONT_BODY_SMALL, halign: 'left', valign: 'top', fillColor: COLOR_WHITE_RGB }
       },
       {
           content: totalSqmText,
@@ -198,21 +202,25 @@ export function generatePerformaInvoicePdf(
       }
   ]];
   
-  let valueHeight = 0;
   autoTable(doc, {
       body: valueBody,
       startY: yPos + headerHeight,
       theme: 'grid',
       margin: { left: PAGE_MARGIN_X, right: PAGE_MARGIN_X },
+      columnStyles: {
+          0: { cellWidth: contentWidth - 35 },
+          1: { cellWidth: 35 }
+      },
       willDrawCell: (data) => {
           // Calculate max height before drawing to ensure consistency
-          const amountLines = doc.splitTextToSize(amountInWordsStr.toUpperCase(), data.cell.width - data.cell.padding('horizontal'));
-          const amountHeight = (amountLines.length * FONT_BODY_SMALL) + data.cell.padding('vertical');
+          const amountCellWidth = contentWidth - 35;
+          const amountLines = doc.splitTextToSize(amountInWordsStr.toUpperCase(), amountCellWidth - data.cell.padding('horizontal'));
+          const amountHeight = (amountLines.length * FONT_BODY_SMALL) + data.cell.padding('vertical') + (amountLines.length > 1 ? (amountLines.length - 1) * 2 : 0);
           
           const sqmHeight = (1 * FONT_BODY) + data.cell.padding('vertical');
           
-          valueHeight = Math.max(amountHeight, sqmHeight, data.row.height);
-          data.row.height = valueHeight;
+          const maxHeight = Math.max(amountHeight, sqmHeight);
+          data.row.height = maxHeight;
       },
       didDrawPage: (data) => {
         // @ts-ignore
