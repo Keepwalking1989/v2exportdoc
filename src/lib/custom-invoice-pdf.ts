@@ -10,7 +10,7 @@ import type { Product } from '@/types/product';
 
 const FONT_CAT1_SIZE = 14;
 const FONT_CAT2_SIZE = 10;
-const FONT_SMALL_FOOTER_LABEL_SIZE = 6; // Adjusted from 7 to 6
+const FONT_SMALL_FOOTER_LABEL_SIZE = 6;
 const FONT_CAT3_SIZE = 9;
 const FONT_BODY_SIZE = 9;
 
@@ -62,7 +62,7 @@ function amountToWordsUSD(amount: number): string {
 }
 
 // --- Main PDF Generation Function ---
-export function generateCustomInvoicePdf(
+export async function generateCustomInvoicePdf(
     docData: ExportDocument,
     exporter: Company,
     manufacturersWithDetails: (Manufacturer & { invoiceNumber: string, invoiceDate?: Date })[],
@@ -72,6 +72,27 @@ export function generateCustomInvoicePdf(
     const doc = new jsPDF({ unit: 'pt', format: 'a4' });
     let yPos = 20;
     const pageMargin = 20;
+
+    let signatureImage: Uint8Array | null = null;
+    let roundSealImage: Uint8Array | null = null;
+
+    try {
+        const signatureResponse = await fetch('/signature.png');
+        if (signatureResponse.ok) {
+            signatureImage = new Uint8Array(await signatureResponse.arrayBuffer());
+        } else {
+            console.warn('Signature image not found at /signature.png');
+        }
+
+        const roundSealResponse = await fetch('/Hemith-Round.png');
+        if (roundSealResponse.ok) {
+            roundSealImage = new Uint8Array(await roundSealResponse.arrayBuffer());
+        } else {
+            console.warn('Hemith-Round.png not found at /public/Hemith-Round.png');
+        }
+    } catch (error) {
+        console.error("Error fetching images for PDF:", error);
+    }
     
     const COLOR_BLUE_RGB = [217, 234, 247]; // Light Blue
 
@@ -347,7 +368,7 @@ export function generateCustomInvoicePdf(
             { content: docData.exchangeDate ? format(new Date(docData.exchangeDate), 'dd/MM/yyyy') : 'N/A', colSpan: 2, styles: { ...classTwoStyles, halign: 'center', cellPadding: 2 } }
         ],
         [
-            { content: 'Amount In Words', colSpan: 3, styles: { ...classOneStyles, cellPadding: 2, halign: 'center', fontSize: 6 } },
+            { content: 'Amount In Words', colSpan: 3, styles: { ...classOneStyles, cellPadding: 2, halign: 'center', fontSize: FONT_SMALL_FOOTER_LABEL_SIZE } },
             { content: 'EXCHANGE RATE', styles: { ...classOneStyles, cellPadding: 2, fontSize: FONT_SMALL_FOOTER_LABEL_SIZE, halign: 'center' } },
             { content: '1 USD', styles: { ...classTwoStyles, halign: 'center', cellPadding: 2 } },
             { content: conversationRate.toFixed(2), colSpan: 2, styles: { ...classTwoStyles, halign: 'center', cellPadding: 2 } }
@@ -364,7 +385,7 @@ export function generateCustomInvoicePdf(
             { content: gstAmount.toFixed(2), colSpan: 2, styles: { ...classTwoStyles, halign: 'center', cellPadding: 2 } }
         ],
         [
-            { content: 'TOTAL', styles: { ...classOneStyles, cellPadding: 2, fontSize: 6, halign: 'center' } },
+            { content: 'TOTAL', styles: { ...classOneStyles, cellPadding: 2, fontSize: FONT_SMALL_FOOTER_LABEL_SIZE, halign: 'center' } },
             { content: 'INR', styles: { ...classTwoStyles, halign: 'center', cellPadding: 2 } },
             { content: finalTotalInr.toFixed(2), colSpan: 2, styles: { ...classTwoStyles, halign: 'center', cellPadding: 2 } }
         ],
@@ -440,7 +461,7 @@ export function generateCustomInvoicePdf(
                 0: { cellWidth: 120 },
                 1: { cellWidth: 'auto' },
                 2: { cellWidth: 60 },
-                3: { cellWidth: 120 },
+                3: { cellWidth: 'auto' },
             },
             margin: { left: pageMargin, right: pageMargin },
             didDrawPage: data => { yPos = data.cursor?.y ?? yPos; }
@@ -471,19 +492,16 @@ export function generateCustomInvoicePdf(
                     }
                 },
                 {
-                    content: 'Signature & Date:',
-                    styles: {lineWidth: 0.5, lineColor: [0,0,0], ...classTwoStyles, fontStyle: 'bold', halign: 'left'}
-                },
-                {
-                    content: format(new Date(), 'dd/MM/yyyy'),
-                    styles: {lineWidth: 0.5, lineColor: [0,0,0], ...classTwoStyles, halign: 'center'}
-                }
-            ],
-            [
-                {
                     content: `FOR, ${exporter.companyName.toUpperCase()}`,
                     colSpan: 2,
-                    styles: {lineWidth: 0.5, lineColor: [0,0,0], ...classOneStyles}
+                    styles: {lineWidth: 0.5, lineColor: [0,0,0], ...classOneStyles, halign: 'center', fontSize: 6}
+                }
+            ],
+            [ // This is the new row for the signature image
+                { 
+                    content: '', // Empty cell for the image
+                    colSpan: 2,
+                    styles: { minCellHeight: 40, lineWidth: 0.5, lineColor: [0,0,0] }
                 }
             ],
             [
@@ -499,7 +517,29 @@ export function generateCustomInvoicePdf(
             1: { cellWidth: 'auto' },
             2: { cellWidth: 'auto' },
         },
-        margin: { left: pageMargin, right: pageMargin },
+        didDrawCell: (data) => {
+            // Draw round seal in declaration box
+            if (data.section === 'body' && data.row.index === 0 && data.column.index === 0) {
+                if (roundSealImage) {
+                    const imgWidth = 40;
+                    const imgHeight = 40;
+                    // Position at top-right of the declaration cell
+                    const imgX = data.cell.x + data.cell.width - imgWidth - 5; // 5pt padding from right
+                    const imgY = data.cell.y + 5; // 5pt padding from top
+                    doc.addImage(roundSealImage, 'PNG', imgX, imgY, imgWidth, imgHeight);
+                }
+            }
+            // Draw signature image in its cell
+            if (data.section === 'body' && data.row.index === 1 && data.column.index === 1) {
+                if (signatureImage) {
+                    const imgWidth = 80;
+                    const imgHeight = 40;
+                    const imgX = data.cell.x + (data.cell.width - imgWidth) / 2;
+                    const imgY = data.cell.y + (data.cell.height - imgHeight) / 2;
+                    doc.addImage(signatureImage, 'PNG', imgX, imgY, imgWidth, imgHeight);
+                }
+            }
+        }
     });
 
     doc.save(`Custom_Invoice_${docData.exportInvoiceNumber.replace(/[\\/:*?"<>|]/g, '_')}.pdf`);
