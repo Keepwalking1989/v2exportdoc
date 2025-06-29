@@ -318,8 +318,8 @@ export async function generateCustomInvoicePdf(
             item.description,
             item.boxes.toString(),
             item.sqm.toFixed(2),
-            effectiveRate.toFixed(2),
-            item.total.toFixed(2)
+            `$ ${effectiveRate.toFixed(2)}`,
+            `$ ${item.total.toFixed(2)}`
         ]);
     });
 
@@ -343,8 +343,8 @@ export async function generateCustomInvoicePdf(
                 item.description,
                 item.boxes.toString(),
                 item.sqm.toFixed(2),
-                (0).toFixed(2), // Rate is 0
-                (0).toFixed(2)  // Total is 0
+                `$ ${(0).toFixed(2)}`, // Rate is 0
+                `$ ${(0).toFixed(2)}`  // Total is 0
             ]);
         });
     }
@@ -408,7 +408,7 @@ export async function generateCustomInvoicePdf(
 
     autoTable(doc, {
         startY: yPos,
-        head: [['HSN Code', 'Sr.\nNo', 'Description Of Goods', 'Boxes', 'Sq.Mtr', 'Rate Per SQM in $', 'Total Amount\nIn USD $']],
+        head: [['HSN Code', 'Sr.\nNo', 'Description Of Goods', 'Boxes', 'Sq.Mtr', 'Rate Per SQM', 'Total Amount']],
         body: tableBody,
         foot: tableFooter,
         theme: 'grid',
@@ -422,7 +422,7 @@ export async function generateCustomInvoicePdf(
             2: { cellWidth: 260.28 }, // Description Of Goods
             3: { cellWidth: 40, halign: 'right' },    // Boxes
             4: { cellWidth: 45, halign: 'right' },    // Sq.Mtr
-            5: { cellWidth: 60, halign: 'right' },    // Rate Per SQM in $
+            5: { cellWidth: 60, halign: 'right' },    // Rate Per SQM
             6: { cellWidth: 70, halign: 'right' },    // Total Amount
         },
         didDrawPage: data => { yPos = data.cursor?.y ?? yPos; }
@@ -513,7 +513,7 @@ export async function generateCustomInvoicePdf(
                 {
                     content: 'AUTHORISED SIGNATURE',
                     colSpan: 2,
-                    styles: {lineWidth: 0.5, lineColor: [0,0,0], ...classTwoStyles, fontStyle: 'bold', halign: 'center', minCellHeight: 40}
+                    styles: {lineWidth: 0.5, lineColor: [0,0,0], ...classTwoStyles, fontStyle: 'bold', halign: 'center', minCellHeight: 60}
                 }
             ]
         ],
@@ -550,5 +550,3 @@ export async function generateCustomInvoicePdf(
 
     doc.save(`Custom_Invoice_${docData.exportInvoiceNumber.replace(/[\\/:*?"<>|]/g, '_')}.pdf`);
 }
-
-
