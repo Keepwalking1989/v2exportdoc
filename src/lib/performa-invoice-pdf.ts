@@ -84,6 +84,25 @@ function getCellStyle(category: 1 | 2 | 3): CellStyle {
   }
 }
 
+function calculateCellHeight(
+  doc: jsPDF,
+  text: string,
+  width: number,
+  category: 1 | 2 | 3,
+  overrideFontStyle?: Partial<FontStyle>
+): number {
+    const baseStyle = getCellStyle(category);
+    const effectiveFontStyle = overrideFontStyle ? { ...baseStyle.fontStyle, ...overrideFontStyle } : baseStyle.fontStyle;
+
+    doc.setFont('helvetica', `${effectiveFontStyle.weight === 'bold' ? 'bold' : ''}${effectiveFontStyle.style === 'italic' ? 'italic' : ''}`.replace(/^$/, 'normal') as any);
+    doc.setFontSize(effectiveFontStyle.size);
+
+    const lines = doc.splitTextToSize(text || ' ', width - 2 * CELL_PADDING);
+    const textHeight = lines.length * (effectiveFontStyle.size + LINE_HEIGHT_ADDITION) - LINE_HEIGHT_ADDITION;
+    return textHeight + 2 * CELL_PADDING;
+}
+
+
 /**
  * Draws a cell with text, border, and optional background.
  * Returns the Y-coordinate of the bottom of the drawn cell.
@@ -96,12 +115,22 @@ function drawCell(
   width: number,
   category: 1 | 2 | 3,
   fixedHeight: number | null = null,
-  overrideTextAlign: 'left' | 'center' | 'right' | null = null
+  overrideTextAlign: 'left' | 'center' | 'right' | null = null,
+  overrideFontStyle?: Partial<FontStyle>,
+  forceNoBackground?: boolean
 ): number {
-  const cellStyle = getCellStyle(category);
+  const baseStyle = getCellStyle(category);
+   const cellStyle: CellStyle = {
+    ...baseStyle,
+    fontStyle: overrideFontStyle ? { ...baseStyle.fontStyle, ...overrideFontStyle } : baseStyle.fontStyle,
+  };
   if (overrideTextAlign) {
     cellStyle.textAlign = overrideTextAlign;
   }
+  if (forceNoBackground) {
+      cellStyle.backgroundColor = null;
+  }
+
 
   doc.setFont( 'helvetica', `${cellStyle.fontStyle.weight === 'bold' ? 'bold' : ''}${cellStyle.fontStyle.style === 'italic' ? 'italic' : ''}`.replace(/^$/, 'normal') as any);
   doc.setFontSize(cellStyle.fontStyle.size);
@@ -236,63 +265,58 @@ export function generatePerformaInvoicePdf(
   autoTable(doc, {
     head: [tableHeadContent],
     body: tableBodyContent,
-    foot: tableFooterContent.map(row => [{ content: row[0], colSpan: 6 }, row[1]]),
+    foot: tableFooterContent.map(row => [
+        { content: row[0], colSpan: 6, styles: { halign: 'right' } },
+        { content: row[1], styles: { halign: 'right' } }
+    ]),
     startY: yPos,
-    theme: 'plain', // Use plain theme and draw borders/backgrounds manually
+    theme: 'plain', 
     margin: { left: PAGE_MARGIN_X, right: PAGE_MARGIN_X },
-    styles: { lineWidth: 0.5, lineColor: COLOR_BORDER_RGB }, // Default border for all cells
+    styles: { lineWidth: 0.5, lineColor: COLOR_BORDER_RGB, cellPadding: CELL_PADDING, },
     headStyles: {
       halign: 'center',
       valign: 'middle',
-      fillColor: COLOR_BLUE_RGB, // Category 2
+      fillColor: COLOR_BLUE_RGB,
       textColor: COLOR_BLACK_RGB,
       fontStyle: 'bold',
       fontSize: FONT_CAT2_SIZE,
-      cellPadding: CELL_PADDING,
     },
     bodyStyles: {
-      halign: 'left', // Category 3 default
+      halign: 'left',
       valign: 'middle',
-      fillColor: COLOR_WHITE_RGB, // Category 3
+      fillColor: COLOR_WHITE_RGB,
       textColor: COLOR_BLACK_RGB,
       fontStyle: 'normal',
       fontSize: FONT_CAT3_SIZE,
-      cellPadding: CELL_PADDING,
-    },
-    footStyles: {
-      halign: 'center', // Category 2 for labels and values
-      valign: 'middle',
-      fillColor: COLOR_BLUE_RGB, // Category 2
-      textColor: COLOR_BLACK_RGB,
-      fontStyle: 'bold',
-      fontSize: FONT_CAT2_SIZE,
-      cellPadding: CELL_PADDING,
     },
     columnStyles: {
-      0: { halign: 'center' }, // SR NO
-      1: { halign: 'center' }, // HSN
-      3: { halign: 'center' }, // Boxes
-      4: { halign: 'right' }, // SQMT
-      5: { halign: 'right' }, // Rate
-      6: { halign: 'right' }, // Amount
+      0: { halign: 'center' },
+      1: { halign: 'center' },
+      3: { halign: 'center' },
+      4: { halign: 'right' },
+      5: { halign: 'right' },
+      6: { halign: 'right' },
+    },
+    didParseCell: (data) => {
+        if (data.section === 'foot') {
+            if (data.column.index === 0) { // The label cell
+                data.cell.styles.fillColor = COLOR_BLUE_RGB;
+                data.cell.styles.fontStyle = 'bold';
+                data.cell.styles.fontSize = FONT_CAT2_SIZE;
+            }
+             if (data.column.index === 6) { // The value cell
+                data.cell.styles.fillColor = COLOR_WHITE_RGB;
+                data.cell.styles.textColor = COLOR_BLACK_RGB; // Explicitly set font color to black
+                data.cell.styles.fontStyle = 'normal';
+                data.cell.styles.fontSize = FONT_CAT3_SIZE;
+            }
+        }
     },
     didDrawCell: (data) => {
-      // Ensure all cells have borders as per "plain" theme might not draw all
+      // Manually draw borders for all cells for a consistent grid look
       doc.setDrawColor(COLOR_BORDER_RGB[0], COLOR_BORDER_RGB[1], COLOR_BORDER_RGB[2]);
       doc.setLineWidth(0.5);
       doc.rect(data.cell.x, data.cell.y, data.cell.width, data.cell.height, 'S');
-
-      // Override background for foot label cells if needed (colSpan makes it tricky)
-      if (data.section === 'foot' && data.column.index === 0) {
-        doc.setFillColor(COLOR_BLUE_RGB[0], COLOR_BLUE_RGB[1], COLOR_BLUE_RGB[2]);
-        doc.rect(data.cell.x, data.cell.y, data.cell.width, data.cell.height, 'F');
-        doc.setTextColor(COLOR_BLACK_RGB[0], COLOR_BLACK_RGB[1], COLOR_BLACK_RGB[2]);
-         // Redraw text because fill covers it
-        autoTableText(data.cell.text, data.cell.x + data.cell.padding('left'), data.cell.y + data.cell.height / 2, {
-            halign: data.cell.styles.halign,
-            valign: data.cell.styles.valign
-        });
-      }
     },
     didDrawPage: (data) => {
       // @ts-ignore
@@ -306,29 +330,32 @@ export function generatePerformaInvoicePdf(
   // --- Row after table: TOTAL SQM Label | TOTAL SQM Value ---
   const totalSqmText = (invoice.items.reduce((sum, item) => sum + (item.quantitySqmt || 0), 0)).toFixed(2);
   const yAfterSqmLbl = drawCell(doc, "TOTAL SQM", leftColX, yPos, halfContentWidth, 2);
-  const yAfterSqmVal = drawCell(doc, totalSqmText, rightColX, yPos, halfContentWidth, 2); // Value for Cat 2 label is also Cat 2
+  const yAfterSqmVal = drawCell(doc, totalSqmText, rightColX, yPos, halfContentWidth, 2, null, 'center');
   yPos = Math.max(yAfterSqmLbl, yAfterSqmVal);
 
   // --- Row: TOTAL INVOICE AMOUNT IN WORDS Label | Amount in Words Value ---
   const amountInWordsStr = amountToWords(invoice.grandTotal || 0, invoice.currencyType);
-  const yAfterAmtWordsLbl = drawCell(doc, "TOTAL INVOICE AMOUNT IN WORDS:", leftColX, yPos, halfContentWidth, 2);
-  // Value for Cat 2 label is Cat 2, and should be centered
-  const yAfterAmtWordsVal = drawCell(doc, amountInWordsStr.toUpperCase(), rightColX, yPos, halfContentWidth, 2, null, 'center');
-  yPos = Math.max(yAfterAmtWordsLbl, yAfterAmtWordsVal);
+  const amtInWordsValueCellStyleOverride = { size: FONT_CAT3_SIZE }; // smaller font size
+  const amountInWordsHeight = calculateCellHeight(doc, amountInWordsStr.toUpperCase(), halfContentWidth, 2, amtInWordsValueCellStyleOverride);
 
-  // --- Row: Note Label | Note Content ---
-  const yAfterNoteLbl = drawCell(doc, "Note:", leftColX, yPos, halfContentWidth, 2);
-  const yAfterNoteVal = drawCell(doc, invoice.note || 'N/A', rightColX, yPos, halfContentWidth, 3);
-  yPos = Math.max(yAfterNoteLbl, yAfterNoteVal);
+  const yAfterAmtWordsLbl = drawCell(doc, "TOTAL INVOICE AMOUNT IN WORDS:", leftColX, yPos, halfContentWidth, 2, amountInWordsHeight);
+  const yAfterAmtWordsVal = drawCell(doc, amountInWordsStr.toUpperCase(), rightColX, yPos, halfContentWidth, 2, amountInWordsHeight, 'center', amtInWordsValueCellStyleOverride, true);
+  yPos = Math.max(yAfterAmtWordsLbl, yAfterAmtWordsVal);
+  
+
+  // --- Merged Note box ---
+  const noteText = `Note:\n${invoice.note || 'N/A'}`;
+  const noteHeight = calculateCellHeight(doc, noteText, contentWidth, 3);
+  yPos = drawCell(doc, noteText, leftColX, yPos, contentWidth, 3, noteHeight, 'left');
 
   // --- Row: BENEFICIARY DETAILS Label | Beneficiary Content ---
   let beneficiaryText = 'N/A';
   if (selectedBank) {
     beneficiaryText = `BENEFICIARY NAME: ${exporter.companyName.toUpperCase()}\nBENEFICIARY BANK: ${selectedBank.bankName.toUpperCase()}, BRANCH: ${selectedBank.bankAddress.toUpperCase()}\nBENEFICIARY A/C NO: ${selectedBank.accountNumber}, SWIFT CODE: ${selectedBank.swiftCode.toUpperCase()}, IFSC CODE: ${selectedBank.ifscCode.toUpperCase()}`;
   }
-  const yAfterBenLbl = drawCell(doc, "BENEFICIARY DETAILS:", leftColX, yPos, halfContentWidth, 2);
-  const yAfterBenVal = drawCell(doc, beneficiaryText, rightColX, yPos, halfContentWidth, 3);
-  yPos = Math.max(yAfterBenLbl, yAfterBenVal);
+  const beneficiaryTextHeight = calculateCellHeight(doc, beneficiaryText, contentWidth, 3);
+  yPos = drawCell(doc, beneficiaryText, leftColX, yPos, contentWidth, 3, beneficiaryTextHeight, 'left');
+
 
   // --- Declaration & Signature Block ---
   const declarationContent = "CERTIFIED THAT THE PARTICULARS GIVEN ABOVE ARE TRUE AND CORRECT.";
@@ -390,21 +417,9 @@ export function generatePerformaInvoicePdf(
   });
 
 
-  // Ensure yPos does not exceed page bottom margin before saving
   if (yPos > doc.internal.pageSize.getHeight() - PAGE_MARGIN_Y_BOTTOM) {
-      // This is a fallback, ideally page breaks are handled by autoTable or manual checks before drawing cells
       console.warn("Content might exceed page limits.");
   }
 
   doc.save(`Performa_Invoice_${invoice.invoiceNumber.replace(/\//g, '_')}.pdf`);
-}
-
-// Helper function for autoTable to redraw text (since fill covers it)
-// This is a simplified version, jsPDF's autoTable has its own internal text drawing.
-// For robust solution, explore autoTable's `didParseCell` or `willDrawCell` for styling hooks.
-function autoTableText(text: string | string[], x: number, y: number, styles: any) {
-    // This is a placeholder. Actual text redrawing in autoTable is complex.
-    // The `didDrawCell` hook with fill and then trying to redraw text is problematic.
-    // It's better to rely on autoTable's native styling capabilities in `headStyles`, `bodyStyles`, `footStyles`.
-    // The issue with foot label cells might require restructuring the foot data or using advanced autoTable features.
 }
