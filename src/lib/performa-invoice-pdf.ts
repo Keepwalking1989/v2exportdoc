@@ -101,8 +101,30 @@ export function generatePerformaInvoicePdf(
       [{ content: 'EXPORTER', styles: headerStyle }, { content: 'CONSIGNEE / BUYER:', styles: headerStyle }],
       [{ content: exporter.companyName.toUpperCase(), styles: { ...headerStyle, fontSize: FONT_BODY } }, { content: client.companyName.toUpperCase(), styles: { ...headerStyle, fontSize: FONT_BODY } }],
       [{ content: exporter.address, styles: {...bodyStyle, halign: 'center'} }, { content: client.address, styles: {...bodyStyle, halign: 'center'} }],
-      [{ content: 'INVOICE NO & DATE:', styles: headerStyle }, { content: 'FINAL DESTINATION:', styles: headerStyle }],
-      [{ content: `${invoice.invoiceNumber || 'N/A'} / ${format(new Date(invoice.invoiceDate), 'dd-MM-yyyy')}`, styles: {...bodyStyle, halign: 'center'} }, { content: invoice.finalDestination || 'N/A', styles: {...bodyStyle, halign: 'center'} }],
+    ],
+    columnStyles: { 0: { cellWidth: halfContentWidth }, 1: { cellWidth: halfContentWidth } },
+    margin: { left: PAGE_MARGIN_X, right: PAGE_MARGIN_X },
+  });
+  // @ts-ignore
+  yPos = doc.lastAutoTable.finalY;
+
+  // --- Invoice Details Table ---
+  autoTable(doc, {
+    startY: yPos,
+    body: [
+      [{ content: 'INVOICE NO:', styles: headerStyle }, { content: 'INVOICE DATE:', styles: headerStyle }, { content: 'FINAL DESTINATION:', styles: headerStyle }],
+      [{ content: invoice.invoiceNumber || 'N/A', styles: {...bodyStyle, halign: 'center'} }, { content: format(new Date(invoice.invoiceDate), 'dd-MM-yyyy'), styles: {...bodyStyle, halign: 'center'} }, { content: invoice.finalDestination || 'N/A', styles: {...bodyStyle, halign: 'center'} }],
+    ],
+    columnStyles: { 0: { cellWidth: '33.33%' }, 1: { cellWidth: '33.33%' }, 2: { cellWidth: '33.33%' } },
+    margin: { left: PAGE_MARGIN_X, right: PAGE_MARGIN_X },
+  });
+  // @ts-ignore
+  yPos = doc.lastAutoTable.finalY;
+
+  // --- IEC & Terms Table ---
+  autoTable(doc, {
+    startY: yPos,
+    body: [
       [{ content: 'IEC. CODE:', styles: headerStyle }, { content: 'TERMS AND CONDITIONS OF DELIVERY & PAYMENT:', styles: headerStyle }],
       [{ content: exporter.iecNumber || 'N/A', styles: {...bodyStyle, halign: 'center'} }, { content: invoice.termsAndConditions || 'N/A', styles: { ...bodyStyle, valign: 'top', halign: 'center' } }],
     ],
@@ -317,10 +339,13 @@ export function generatePerformaInvoicePdf(
           rowSpan: 2,
           styles: { ...bodyStyle, valign: 'top' }
         },
-        { content: `FOR, ${exporter.companyName.toUpperCase()}`, styles: { ...headerStyle, valign: 'bottom' } }
+        {
+            content: `Signature & Date: ${format(new Date(invoice.invoiceDate), 'dd-MM-yyyy')}`,
+            styles: { ...headerStyle, valign: 'bottom' }
+        },
       ],
       [
-        { content: 'AUTHORISED SIGNATURE', styles: { ...headerStyle, halign: 'right', valign: 'bottom' } }
+        { content: `FOR, ${exporter.companyName.toUpperCase()}`, styles: { ...headerStyle, valign: 'bottom', minCellHeight: 40 } }
       ]
     ],
     columnStyles: { 0: { cellWidth: contentWidth * 0.60 }, 1: { cellWidth: contentWidth * 0.40 } },
