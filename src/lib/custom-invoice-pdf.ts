@@ -323,6 +323,13 @@ export async function generateCustomInvoicePdf(
     });
 
     if (groupedSamples.length > 0) {
+        tableBody.push([
+            { 
+                content: 'Free Of Cost Samples', 
+                colSpan: 7,
+                styles: { fontStyle: 'bold', halign: 'center' } 
+            }
+        ]);
         groupedSamples.forEach(item => {
             grandTotalBoxes += item.boxes;
             grandTotalSqm += item.sqm;
@@ -507,7 +514,7 @@ export async function generateCustomInvoicePdf(
                 {
                     content: 'AUTHORISED SIGNATURE',
                     colSpan: 2,
-                    styles: {lineWidth: 0.5, lineColor: [0,0,0], ...classTwoStyles, fontStyle: 'bold', halign: 'center', minCellHeight: 60}
+                    styles: {lineWidth: 0.5, lineColor: [0,0,0], ...classTwoStyles, fontStyle: 'bold', halign: 'center', minCellHeight: 40}
                 }
             ]
         ],
