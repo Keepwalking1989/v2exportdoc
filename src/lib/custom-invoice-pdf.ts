@@ -386,22 +386,35 @@ function drawCustomInvoice(
         startY: yPos,
         theme: 'plain',
         body: [
-            [
-                { content: `Declaration:\n${declarationText}`, rowSpan: 2, styles: { fontStyle: 'normal', textColor: [0, 0, 0], fontSize: 8, lineWidth: 0.5, lineColor: [0, 0, 0], valign: 'top', halign: 'left', cellPadding: padding, minCellHeight: 60 } },
+            [ // Row 0
+                { content: `Declaration:\n${declarationText}`, rowSpan: 3, styles: { fontStyle: 'normal', textColor: [0, 0, 0], fontSize: 8, lineWidth: 0.5, lineColor: [0, 0, 0], valign: 'top', halign: 'left', cellPadding: padding, minCellHeight: 80 } },
                 { content: `FOR, ${exporter.companyName.toUpperCase()}`, colSpan: 2, styles: {lineWidth: 0.5, lineColor: [0,0,0], ...classOneStyles, halign: 'center', fontSize: FONT_CAT2_SIZE} }
             ],
-            [
-                { content: 'AUTHORISED SIGNATURE', colSpan: 2, styles: {lineWidth: 0.5, lineColor: [0,0,0], ...classTwoStyles, fontStyle: 'bold', halign: 'center', minCellHeight: 40} }
+            [ // Row 1 (New) - for signature image
+                { content: '', colSpan: 2, styles: {lineWidth: 0.5, lineColor: [0,0,0], minCellHeight: 40} }
+            ],
+            [ // Row 2
+                { content: 'AUTHORISED SIGNATURE', colSpan: 2, styles: {lineWidth: 0.5, lineColor: [0,0,0], ...classTwoStyles, fontStyle: 'bold', halign: 'center' } }
             ]
         ],
-        columnStyles: { 0: { cellWidth: contentWidth * 0.65 }, 1: { cellWidth: contentWidth * 0.175 }, 2: { cellWidth: contentWidth * 0.175 } },
+        columnStyles: { 0: { cellWidth: contentWidth * 0.65 }, 1: { cellWidth: 'auto' }, 2: { cellWidth: 'auto' } },
         margin: { left: pageMargin, right: pageMargin },
         didDrawCell: (data) => {
+             // Round Seal in Declaration box
             if (data.section === 'body' && data.row.index === 0 && data.column.index === 0) {
                 if (roundSealImage) { doc.addImage(roundSealImage, 'PNG', data.cell.x + data.cell.width - 45, data.cell.y + 10, 40, 40); }
             }
+            // Signature in its own empty box
             if (data.section === 'body' && data.row.index === 1 && data.column.index === 1) {
-                if (signatureImage) { doc.addImage(signatureImage, 'PNG', data.cell.x + (data.cell.width - 80) / 2, data.cell.y, 80, 40); }
+                if (signatureImage) {
+                    const cell = data.cell;
+                    const imgWidth = 80;
+                    const imgHeight = 40;
+                    // Center the image in the cell
+                    const imgX = cell.x + (cell.width - imgWidth) / 2;
+                    const imgY = cell.y + (cell.height - imgHeight) / 2;
+                    doc.addImage(signatureImage, 'PNG', imgX, imgY, imgWidth, imgHeight);
+                }
             }
         }
     });
