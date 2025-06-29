@@ -380,7 +380,7 @@ function drawCustomInvoice(
         yPos = doc.lastAutoTable.finalY;
     });
 
-    const declarationText = 'We declare that this Invoice shows the actual price of the goods described and that all particulars are true and correct.';
+    const declarationText = 'We declare that this Invoice shows the actual price of the goods described\nand that all particulars are true and correct.';
     
     autoTable(doc, {
         startY: yPos,
