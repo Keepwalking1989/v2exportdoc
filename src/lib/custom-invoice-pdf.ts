@@ -72,6 +72,7 @@ export async function generateCustomInvoicePdf(
     const doc = new jsPDF({ unit: 'pt', format: 'a4' });
     let yPos = 20;
     const pageMargin = 20;
+    const contentWidth = doc.internal.pageSize.getWidth() - (2 * pageMargin);
 
     let signatureImage: Uint8Array | null = null;
     let roundSealImage: Uint8Array | null = null;
@@ -368,7 +369,7 @@ export async function generateCustomInvoicePdf(
             { content: docData.exchangeDate ? format(new Date(docData.exchangeDate), 'dd/MM/yyyy') : 'N/A', colSpan: 2, styles: { ...classTwoStyles, halign: 'center', cellPadding: 2 } }
         ],
         [
-            { content: 'Amount In Words', colSpan: 3, styles: { ...classOneStyles, cellPadding: 2, halign: 'center', fontSize: FONT_SMALL_FOOTER_LABEL_SIZE } },
+            { content: 'Amount In Words', colSpan: 3, styles: { ...classOneStyles, cellPadding: 2, fontSize: FONT_SMALL_FOOTER_LABEL_SIZE, halign: 'center' } },
             { content: 'EXCHANGE RATE', styles: { ...classOneStyles, cellPadding: 2, fontSize: FONT_SMALL_FOOTER_LABEL_SIZE, halign: 'center' } },
             { content: '1 USD', styles: { ...classTwoStyles, halign: 'center', cellPadding: 2 } },
             { content: conversationRate.toFixed(2), colSpan: 2, styles: { ...classTwoStyles, halign: 'center', cellPadding: 2 } }
@@ -402,7 +403,7 @@ export async function generateCustomInvoicePdf(
         theme: 'grid',
         margin: { left: pageMargin, right: pageMargin },
         headStyles: classOneStyles,
-        bodyStyles: {...classTwoStyles, halign: 'left', cellPadding: 1, fontSize: 9 },
+        bodyStyles: {...classTwoStyles, halign: 'left', cellPadding: 1, fontSize: 10 },
         footStyles: { ...classOneStyles, cellPadding: 2, lineWidth: 0.5 },
         columnStyles: {
             0: { cellWidth: 55 },   // HSN Code
@@ -449,7 +450,7 @@ export async function generateCustomInvoicePdf(
                 [
                     { content: 'Name', styles: { ...classOneStyles, cellPadding: 1, halign: 'left' } },
                     { content: manu.companyName, styles: { ...classTwoStyles, halign: 'left', cellPadding: 1 } },
-                    { content: 'GST NO', styles: { ...classOneStyles, cellPadding: 1, fontSize: 6 } },
+                    { content: 'GST NO', styles: { ...classOneStyles, cellPadding: 1, fontSize: FONT_SMALL_FOOTER_LABEL_SIZE } },
                     { content: manu.gstNumber, styles: { ...classTwoStyles, halign: 'left', cellPadding: 1 } },
                 ],
                 [
@@ -460,7 +461,7 @@ export async function generateCustomInvoicePdf(
             columnStyles: {
                 0: { cellWidth: 120 },
                 1: { cellWidth: 'auto' },
-                2: { cellWidth: 60 },
+                2: { cellWidth: 60, fontSize: FONT_SMALL_FOOTER_LABEL_SIZE },
                 3: { cellWidth: 'auto' },
             },
             margin: { left: pageMargin, right: pageMargin },
@@ -513,10 +514,11 @@ export async function generateCustomInvoicePdf(
             ]
         ],
         columnStyles: {
-            0: { cellWidth: 350 },
-            1: { cellWidth: 'auto' },
-            2: { cellWidth: 'auto' },
+            0: { cellWidth: contentWidth * 0.65 },
+            1: { cellWidth: contentWidth * 0.175 },
+            2: { cellWidth: contentWidth * 0.175 },
         },
+        margin: { left: pageMargin, right: pageMargin },
         didDrawCell: (data) => {
             // Draw round seal in declaration box
             if (data.section === 'body' && data.row.index === 0 && data.column.index === 0) {
