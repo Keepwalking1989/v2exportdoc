@@ -6,12 +6,7 @@ import type { ExportDocument, ManufacturerInfo } from '@/types/export-document';
 import type { Company } from '@/types/company'; // Exporter
 import type { Manufacturer } from '@/types/manufacturer';
 
-export function generateAnnexurePdf(
-    docData: ExportDocument,
-    exporter: Company,
-    manufacturersWithDetails: (Manufacturer & { invoiceNumber: string, invoiceDate?: Date })[]
-) {
-    const doc = new jsPDF({ unit: 'pt', format: 'a4' });
+function drawDocument(doc: jsPDF, docData: ExportDocument, exporter: Company, manufacturersWithDetails: (Manufacturer & { invoiceNumber: string, invoiceDate?: Date })[], padding: number): number {
     let yPos = 20;
     const pageMargin = 30;
     const contentWidth = doc.internal.pageSize.getWidth() - 2 * pageMargin;
@@ -67,7 +62,7 @@ export function generateAnnexurePdf(
             lineWidth: 0.5,
             lineColor: [0,0,0],
             valign: 'top',
-            cellPadding: 2,
+            cellPadding: padding,
         },
         columnStyles: {
             0: { cellWidth: contentWidth * 0.45, fontStyle: 'bold', fontSize: 9 },
@@ -99,8 +94,8 @@ export function generateAnnexurePdf(
         body: containerTableBody,
         startY: yPos,
         theme: 'grid',
-        headStyles: { fontStyle: 'bold', halign: 'center', fontSize: 9, fillColor: COLOR_BLUE_RGB, textColor: [0, 0, 0], lineColor: [0, 0, 0], cellPadding: 2 },
-        bodyStyles: { fontSize: 9, halign: 'center', lineColor: [0, 0, 0], cellPadding: 2 },
+        headStyles: { fontStyle: 'bold', halign: 'center', fontSize: 9, fillColor: COLOR_BLUE_RGB, textColor: [0, 0, 0], lineColor: [0, 0, 0], cellPadding: padding },
+        bodyStyles: { fontSize: 9, halign: 'center', lineColor: [0, 0, 0], cellPadding: padding },
         margin: { left: pageMargin, right: pageMargin },
         didDrawPage: data => { yPos = data.cursor?.y ?? yPos; }
     });
@@ -132,7 +127,7 @@ export function generateAnnexurePdf(
         body: totalsTableBody,
         startY: yPos,
         theme: 'grid',
-        styles: { fontSize: 9, valign: 'middle', lineColor: [0, 0, 0], cellPadding: 2 },
+        styles: { fontSize: 9, valign: 'middle', lineColor: [0, 0, 0], cellPadding: padding },
         margin: { left: pageMargin, right: pageMargin },
         didDrawPage: data => { yPos = data.cursor?.y ?? yPos; }
     });
@@ -159,7 +154,6 @@ export function generateAnnexurePdf(
         yPos += textHeight;
 
         if (isUnderlined) {
-            // Underline each line individually
             let currentLineY = textYStart;
             wrappedLines.forEach((line: string) => {
                 const textWidth = doc.getTextWidth(line);
@@ -197,7 +191,30 @@ export function generateAnnexurePdf(
     doc.text('AUTHORISED SIGN', pageMargin, yPos);
     yPos += 12;
     doc.text('SIGNATURE OF EXPORTER', pageMargin, yPos);
+    
+    return doc.internal.getNumberOfPages();
+}
 
-    // --- Save the PDF ---
-    doc.save(`ANNEXURE_${docData.exportInvoiceNumber.replace(/[\\/:*?"<>|]/g, '_')}.pdf`);
+
+export function generateAnnexurePdf(
+    docData: ExportDocument,
+    exporter: Company,
+    manufacturersWithDetails: (Manufacturer & { invoiceNumber: string, invoiceDate?: Date })[]
+) {
+    const largePadding = 4;
+    const smallPadding = 2;
+
+    // 1. Dry run with large padding to check page count
+    const tempDoc = new jsPDF({ unit: 'pt', format: 'a4' });
+    const pageCountWithLargePadding = drawDocument(tempDoc, docData, exporter, manufacturersWithDetails, largePadding);
+    
+    // 2. Decide final padding
+    const finalPadding = pageCountWithLargePadding > 1 ? smallPadding : largePadding;
+
+    // 3. Draw the final document with the chosen padding
+    const finalDoc = new jsPDF({ unit: 'pt', format: 'a4' });
+    drawDocument(finalDoc, docData, exporter, manufacturersWithDetails, finalPadding);
+
+    // 4. Save the final PDF
+    finalDoc.save(`ANNEXURE_${docData.exportInvoiceNumber.replace(/[\\/:*?"<>|]/g, '_')}.pdf`);
 }
