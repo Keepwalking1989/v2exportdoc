@@ -10,7 +10,6 @@ import type { Product } from '@/types/product';
 
 const FONT_CAT1_SIZE = 14;
 const FONT_CAT2_SIZE = 10;
-const FONT_SMALL_FOOTER_LABEL_SIZE = 6;
 const FONT_CAT3_SIZE = 9;
 const FONT_BODY_SIZE = 9;
 
@@ -107,6 +106,7 @@ export async function generateCustomInvoicePdf(
         lineColor: '#000000',
         fillColor: COLOR_BLUE_RGB,
         cellPadding: 2,
+        fontSize: FONT_CAT2_SIZE,
     };
     const classTwoStyles = { 
         fontStyle: 'normal',
@@ -115,6 +115,7 @@ export async function generateCustomInvoicePdf(
         lineWidth: 0.5,
         lineColor: '#000000',
         cellPadding: 2,
+        fontSize: FONT_CAT3_SIZE,
     };
     
     // --- Document Header ---
@@ -353,15 +354,15 @@ export async function generateCustomInvoicePdf(
 
     const tableFooter = [
         [
-            { content: 'TOTAL', colSpan: 3, styles: {...classOneStyles, halign: 'left'} },
+            { content: 'TOTAL', colSpan: 3, styles: {...classOneStyles, halign: 'left', fontSize: FONT_CAT2_SIZE} },
             { content: grandTotalBoxes.toString(), styles: {...classTwoStyles, halign: 'right'} },
             { content: grandTotalSqm.toFixed(2), styles: {...classTwoStyles, halign: 'right'} },
             { content: '', styles: {...classTwoStyles} },
             { content: `$ ${grandTotalAmount.toFixed(2)}`, styles: {...classTwoStyles, halign: 'right'} },
         ],
         [
-            { content: 'Total No. Of Pkgs.', colSpan: 3, styles: { ...classOneStyles, cellPadding: 2, halign: 'center', fontSize: FONT_SMALL_FOOTER_LABEL_SIZE } },
-            { content: 'EXCHANGE RATE NOFICATION NUMBER AND DATE', colSpan: 4, styles: { ...classOneStyles, cellPadding: 2, fontSize: FONT_SMALL_FOOTER_LABEL_SIZE, halign: 'center' } }
+            { content: 'Total No. Of Pkgs.', colSpan: 3, styles: { ...classOneStyles, cellPadding: 2, halign: 'center', fontSize: FONT_CAT3_SIZE } },
+            { content: 'EXCHANGE RATE NOFICATION NUMBER AND DATE', colSpan: 4, styles: { ...classOneStyles, cellPadding: 2, fontSize: FONT_CAT3_SIZE, halign: 'center' } }
         ],
         [
             { content: grandTotalBoxes.toString(), colSpan: 3, styles: { ...classTwoStyles, halign: 'center', cellPadding: 2 } },
@@ -369,24 +370,24 @@ export async function generateCustomInvoicePdf(
             { content: docData.exchangeDate ? format(new Date(docData.exchangeDate), 'dd/MM/yyyy') : 'N/A', colSpan: 2, styles: { ...classTwoStyles, halign: 'center', cellPadding: 2 } }
         ],
         [
-            { content: 'Amount In Words', colSpan: 3, styles: { ...classOneStyles, cellPadding: 2, fontSize: FONT_SMALL_FOOTER_LABEL_SIZE, halign: 'center' } },
-            { content: 'EXCHANGE RATE', styles: { ...classOneStyles, cellPadding: 2, fontSize: FONT_SMALL_FOOTER_LABEL_SIZE, halign: 'center' } },
+            { content: 'Amount In Words', colSpan: 3, styles: { ...classOneStyles, cellPadding: 2, fontSize: FONT_CAT3_SIZE, halign: 'center' } },
+            { content: 'EXCHANGE RATE', styles: { ...classOneStyles, cellPadding: 2, fontSize: FONT_CAT3_SIZE, halign: 'center' } },
             { content: '1 USD', styles: { ...classTwoStyles, halign: 'center', cellPadding: 2 } },
             { content: conversationRate.toFixed(2), colSpan: 2, styles: { ...classTwoStyles, halign: 'center', cellPadding: 2 } }
         ],
         [
             { content: amountToWordsUSD(grandTotalAmount), rowSpan: 4, colSpan: 3, styles: { ...classTwoStyles, halign: 'left' } },
-            { content: 'FOB', styles: { ...classOneStyles, cellPadding: 2, fontSize: FONT_SMALL_FOOTER_LABEL_SIZE, halign: 'center' } },
+            { content: 'FOB', styles: { ...classOneStyles, cellPadding: 2, fontSize: FONT_CAT3_SIZE, halign: 'center' } },
             { content: 'INR', styles: { ...classTwoStyles, halign: 'center', cellPadding: 2 } },
             { content: totalAmountInr.toFixed(2), colSpan: 2, styles: { ...classTwoStyles, halign: 'center', cellPadding: 2 } }
         ],
         [
-            { content: 'IGST %', styles: { ...classOneStyles, cellPadding: 2, fontSize: FONT_SMALL_FOOTER_LABEL_SIZE, halign: 'center' } },
+            { content: 'IGST %', styles: { ...classOneStyles, cellPadding: 2, fontSize: FONT_CAT3_SIZE, halign: 'center' } },
             { content: docData.gst || '0%', styles: { ...classTwoStyles, halign: 'center', cellPadding: 2 } },
             { content: gstAmount.toFixed(2), colSpan: 2, styles: { ...classTwoStyles, halign: 'center', cellPadding: 2 } }
         ],
         [
-            { content: 'TOTAL', styles: { ...classOneStyles, cellPadding: 2, fontSize: FONT_SMALL_FOOTER_LABEL_SIZE, halign: 'center' } },
+            { content: 'TOTAL', styles: { ...classOneStyles, cellPadding: 2, fontSize: FONT_CAT3_SIZE, halign: 'center' } },
             { content: 'INR', styles: { ...classTwoStyles, halign: 'center', cellPadding: 2 } },
             { content: finalTotalInr.toFixed(2), colSpan: 2, styles: { ...classTwoStyles, halign: 'center', cellPadding: 2 } }
         ],
@@ -450,7 +451,7 @@ export async function generateCustomInvoicePdf(
                 [
                     { content: 'Name', styles: { ...classOneStyles, cellPadding: 1, halign: 'left' } },
                     { content: manu.companyName, styles: { ...classTwoStyles, halign: 'left', cellPadding: 1 } },
-                    { content: 'GST NO', styles: { ...classOneStyles, cellPadding: 1, fontSize: FONT_SMALL_FOOTER_LABEL_SIZE } },
+                    { content: 'GST NO', styles: { ...classOneStyles, cellPadding: 1, fontSize: FONT_CAT3_SIZE } },
                     { content: manu.gstNumber, styles: { ...classTwoStyles, halign: 'left', cellPadding: 1 } },
                 ],
                 [
@@ -461,7 +462,7 @@ export async function generateCustomInvoicePdf(
             columnStyles: {
                 0: { cellWidth: 120 },
                 1: { cellWidth: 'auto' },
-                2: { cellWidth: 60, fontSize: FONT_SMALL_FOOTER_LABEL_SIZE },
+                2: { cellWidth: 60 },
                 3: { cellWidth: 'auto' },
             },
             margin: { left: pageMargin, right: pageMargin },
@@ -480,7 +481,7 @@ export async function generateCustomInvoicePdf(
             [
                 {
                     content: `Declaration:\n${declarationText}`,
-                    rowSpan: 3, 
+                    rowSpan: 2, 
                     styles: {
                         fontStyle: 'normal',
                         textColor: [0, 0, 0],
@@ -495,21 +496,14 @@ export async function generateCustomInvoicePdf(
                 {
                     content: `FOR, ${exporter.companyName.toUpperCase()}`,
                     colSpan: 2,
-                    styles: {lineWidth: 0.5, lineColor: [0,0,0], ...classOneStyles, halign: 'center', fontSize: 6}
-                }
-            ],
-            [ // This is the new row for the signature image
-                { 
-                    content: '', // Empty cell for the image
-                    colSpan: 2,
-                    styles: { minCellHeight: 40, lineWidth: 0.5, lineColor: [0,0,0] }
+                    styles: {lineWidth: 0.5, lineColor: [0,0,0], ...classOneStyles, halign: 'center', fontSize: FONT_CAT2_SIZE}
                 }
             ],
             [
                 {
                     content: 'AUTHORISED SIGNATURE',
                     colSpan: 2,
-                    styles: {lineWidth: 0.5, lineColor: [0,0,0], ...classTwoStyles, fontStyle: 'bold', halign: 'center'}
+                    styles: {lineWidth: 0.5, lineColor: [0,0,0], ...classTwoStyles, fontStyle: 'bold', halign: 'center', minCellHeight: 40}
                 }
             ]
         ],
@@ -527,7 +521,7 @@ export async function generateCustomInvoicePdf(
                     const imgHeight = 40;
                     // Position at top-right of the declaration cell
                     const imgX = data.cell.x + data.cell.width - imgWidth - 5; // 5pt padding from right
-                    const imgY = data.cell.y + 5; // 5pt padding from top
+                    const imgY = data.cell.y + 10; // 10pt padding from top
                     doc.addImage(roundSealImage, 'PNG', imgX, imgY, imgWidth, imgHeight);
                 }
             }
@@ -537,7 +531,7 @@ export async function generateCustomInvoicePdf(
                     const imgWidth = 80;
                     const imgHeight = 40;
                     const imgX = data.cell.x + (data.cell.width - imgWidth) / 2;
-                    const imgY = data.cell.y + (data.cell.height - imgHeight) / 2;
+                    const imgY = data.cell.y; // Align to top of cell
                     doc.addImage(signatureImage, 'PNG', imgX, imgY, imgWidth, imgHeight);
                 }
             }
