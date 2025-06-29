@@ -332,7 +332,7 @@ export function generatePerformaInvoicePdf(
         },
       ],
       [
-        { content: `FOR, ${exporter.companyName.toUpperCase()}`, styles: { ...headerStyle, minCellHeight: 40, valign: 'bottom' } }
+        { content: `FOR, ${exporter.companyName.toUpperCase()}`, styles: { ...headerStyle, valign: 'bottom' } }
       ],
       [
         { content: `AUTHORISED SIGNATURE`, styles: { ...headerStyle, valign: 'bottom' } }
