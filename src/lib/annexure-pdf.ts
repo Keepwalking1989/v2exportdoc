@@ -49,12 +49,12 @@ export function generateAnnexurePdf(
         const sampleBoxes = (container.sampleItems || []).reduce((sum, item) => sum + (item.boxes || 0), 0);
         return acc + productBoxes + sampleBoxes;
     }, 0);
-    bodyData.push({ label: '8a  Particulars Of Export Invoice:\n b  Export Invoice No.:\n c  Total No.Of Packages:', value: `\n${docData.exportInvoiceNumber}\n${totalBoxes}` });
+    bodyData.push({ label: '8a  Particulars Of Export Invoice: b  Export Invoice No.: c  Total No.Of Packages:', value: `${docData.exportInvoiceNumber}\n${totalBoxes}` });
     const consigneeDetails = `Davare Floors, Inc.\n19 E 60 TH ST, Hialeah,FL.33013 . USA`; // Hardcoded as per image
     bodyData.push({ label: ' d  Name & Address Of The Conignee', value: consigneeDetails });
-    bodyData.push({ label: '9a  Is The Discription Of The Good, The Quality & Their Value As Per Particulars Furnished In The Export Invoice :', value: 'Yes' });
-    bodyData.push({ label: ' b  Whether Sample Is Drawn For Forwarded To Port Of Export:', value: 'No' });
-    bodyData.push({ label: ' c  If Yes The Number Of The Seal Of The Packge Containing The Sample:', value: 'N/A' });
+    bodyData.push({ label: '9a Is The Discription Of The Good, The Quality & Their Value As Per Particulars Furnished In The Export Invoice :', value: 'Yes' });
+    bodyData.push({ label: ' b Whether Sample Is Drawn For Forwarded To Port Of Export:', value: 'No' });
+    bodyData.push({ label: ' c If Yes The Number Of The Seal Of The Packge Containing The Sample:', value: 'N/A' });
     bodyData.push({ label: '10  Central GST/ CUSTOMS SEAL NOS.:\n  a For Non-Containerised Cargo No.Of Packages:\n  b For Containerised Cargo', value: '\nSELF SEALNG\nSELF SEALNG' });
 
     autoTable(doc, {
@@ -67,6 +67,7 @@ export function generateAnnexurePdf(
             lineWidth: 0.5,
             lineColor: [0,0,0],
             valign: 'top',
+            cellPadding: 2,
         },
         columnStyles: {
             0: { cellWidth: contentWidth * 0.45, fontStyle: 'bold', fontSize: 9 },
@@ -98,8 +99,8 @@ export function generateAnnexurePdf(
         body: containerTableBody,
         startY: yPos,
         theme: 'grid',
-        headStyles: { fontStyle: 'bold', halign: 'center', fontSize: 9, fillColor: COLOR_BLUE_RGB, textColor: [0, 0, 0], lineColor: [0, 0, 0] },
-        bodyStyles: { fontSize: 9, halign: 'center', lineColor: [0, 0, 0] },
+        headStyles: { fontStyle: 'bold', halign: 'center', fontSize: 9, fillColor: COLOR_BLUE_RGB, textColor: [0, 0, 0], lineColor: [0, 0, 0], cellPadding: 2 },
+        bodyStyles: { fontSize: 9, halign: 'center', lineColor: [0, 0, 0], cellPadding: 2 },
         margin: { left: pageMargin, right: pageMargin },
         didDrawPage: data => { yPos = data.cursor?.y ?? yPos; }
     });
@@ -131,7 +132,7 @@ export function generateAnnexurePdf(
         body: totalsTableBody,
         startY: yPos,
         theme: 'grid',
-        styles: { fontSize: 9, valign: 'middle', lineColor: [0, 0, 0] },
+        styles: { fontSize: 9, valign: 'middle', lineColor: [0, 0, 0], cellPadding: 2 },
         margin: { left: pageMargin, right: pageMargin },
         didDrawPage: data => { yPos = data.cursor?.y ?? yPos; }
     });
