@@ -189,8 +189,7 @@ function drawDocument(doc: jsPDF, docData: ExportDocument, exporter: Company, ma
 
     const signatureTableBody = [
         [{ content: `For, ${exporter.companyName.toUpperCase()}`, styles: { halign: 'center', fontStyle: 'bold' } }],
-        [{ content: '', styles: { minCellHeight: 40 } }],
-        [{ content: 'AUTHORISED SIGNATURE', styles: { halign: 'center', fontStyle: 'bold' } }]
+        [{ content: '', styles: { minCellHeight: 40 } }]
     ];
 
     autoTable(doc, {
