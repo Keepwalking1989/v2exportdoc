@@ -304,8 +304,17 @@ function drawCustomInvoice(
             { content: '1 USD', styles: { ...classTwoStyles, halign: 'center' } },
             { content: conversationRate.toFixed(2), colSpan: 2, styles: { ...classTwoStyles, halign: 'center' } }
         ],
+    ];
+    
+    // Dynamically calculate the height of the amount-in-words row
+    const amountInWordsStr = amountToWordsUSD(grandTotalAmount);
+    const amountInWordsLines = doc.splitTextToSize(amountInWordsStr, (contentWidth * 0.65) - (2 * padding)); // Width of the first cell
+    const amountInWordsHeight = (FONT_CAT3_SIZE + 2) * amountInWordsLines.length + (2 * padding);
+    
+    // Add the final two rows for the footer
+    tableFooter.push(
         [
-            { content: amountToWordsUSD(grandTotalAmount), rowSpan: 2, colSpan: 3, styles: { ...classTwoStyles, halign: 'left', valign: 'top', cellPadding: padding } },
+            { content: amountInWordsStr, rowSpan: 2, colSpan: 3, styles: { ...classTwoStyles, halign: 'left', valign: 'top', cellPadding: padding, minCellHeight: amountInWordsHeight } },
             { content: 'FOB', styles: { ...classOneStyles, fontSize: 9, halign: 'center', cellPadding: padding } },
             { content: 'INR', styles: { ...classTwoStyles, halign: 'center', cellPadding: padding } },
             { content: totalAmountInr.toFixed(2), colSpan: 2, styles: { ...classTwoStyles, halign: 'right', cellPadding: padding } }
@@ -314,8 +323,8 @@ function drawCustomInvoice(
             { content: 'IGST %', styles: { ...classOneStyles, fontSize: 9, halign: 'center', cellPadding: padding } },
             { content: docData.gst || '0%', styles: { ...classTwoStyles, halign: 'center', cellPadding: padding } },
             { content: gstAmount.toFixed(2), colSpan: 2, styles: { ...classTwoStyles, halign: 'right', cellPadding: padding } }
-        ],
-    ];
+        ]
+    );
 
     autoTable(doc, {
         startY: yPos,
@@ -387,14 +396,49 @@ function drawCustomInvoice(
         theme: 'plain',
         body: [
             [ // Row 0
-                { content: `Declaration:\n${declarationText}`, rowSpan: 3, styles: { fontStyle: 'normal', textColor: [0, 0, 0], fontSize: 8, lineWidth: 0.5, lineColor: [0, 0, 0], valign: 'top', halign: 'left', cellPadding: padding, minCellHeight: 80 } },
-                { content: `FOR, ${exporter.companyName.toUpperCase()}`, colSpan: 2, styles: {lineWidth: 0.5, lineColor: [0,0,0], ...classOneStyles, halign: 'center', fontSize: FONT_CAT2_SIZE} }
+                { 
+                    content: `Declaration:\n${declarationText}`, 
+                    rowSpan: 3, 
+                    styles: { 
+                        fontStyle: 'normal', 
+                        textColor: [0, 0, 0], 
+                        fontSize: 8, 
+                        lineWidth: 0.5, 
+                        lineColor: [0, 0, 0], 
+                        valign: 'top', 
+                        halign: 'left', 
+                        cellPadding: 2,
+                    } 
+                },
+                { 
+                    content: `FOR, ${exporter.companyName.toUpperCase()}`, 
+                    colSpan: 2, 
+                    styles: {
+                        lineWidth: 0.5, 
+                        lineColor: [0,0,0], 
+                        ...classOneStyles, 
+                        halign: 'center', 
+                        fontSize: FONT_CAT2_SIZE,
+                        cellPadding: 2,
+                    } 
+                }
             ],
             [ // Row 1 (New) - for signature image
                 { content: '', colSpan: 2, styles: {lineWidth: 0.5, lineColor: [0,0,0], minCellHeight: 40} }
             ],
             [ // Row 2
-                { content: 'AUTHORISED SIGNATURE', colSpan: 2, styles: {lineWidth: 0.5, lineColor: [0,0,0], ...classTwoStyles, fontStyle: 'bold', halign: 'center' } }
+                { 
+                    content: 'AUTHORISED SIGNATURE', 
+                    colSpan: 2, 
+                    styles: {
+                        lineWidth: 0.5, 
+                        lineColor: [0,0,0], 
+                        ...classTwoStyles, 
+                        fontStyle: 'bold', 
+                        halign: 'center',
+                        cellPadding: 2,
+                    } 
+                }
             ]
         ],
         columnStyles: { 0: { cellWidth: contentWidth * 0.65 }, 1: { cellWidth: 'auto' }, 2: { cellWidth: 'auto' } },
