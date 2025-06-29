@@ -64,6 +64,16 @@ export function generatePerformaInvoicePdf(
     lineColor: COLOR_BORDER_RGB,
     cellPadding: CELL_PADDING,
   };
+  
+  const getCurrencySymbol = (currency: 'INR' | 'USD' | 'Euro'): string => {
+    switch (currency) {
+      case 'USD': return '$';
+      case 'EUR': return '€';
+      case 'INR': return '₹';
+      default: return '';
+    }
+  };
+  const currencySymbol = getCurrencySymbol(invoice.currencyType);
 
   // --- Row 1: PROFORMA INVOICE ---
   autoTable(doc, {
@@ -103,7 +113,7 @@ export function generatePerformaInvoicePdf(
   yPos = doc.lastAutoTable.finalY;
 
   // --- PRODUCT TABLE ---
-  const tableHeadContent = ['SR.\nNO.', 'HSN\nCODE', 'DESCRIPTION OF GOODS', 'TOTAL\nBOXES', 'TOTAL\nSQMT', `RATE\n${invoice.currencyType}`, `AMOUNT\n${invoice.currencyType}`];
+  const tableHeadContent = ['SR.\nNO.', 'HSN\nCODE', 'DESCRIPTION OF GOODS', 'TOTAL\nBOXES', 'TOTAL\nSQMT', 'RATE', 'AMOUNT'];
   const tableBodyContent = invoice.items.map((item, index) => {
     const product = allProducts.find(p => p.id === item.productId);
     const size = allSizes.find(s => s.id === item.sizeId);
@@ -114,8 +124,8 @@ export function generatePerformaInvoicePdf(
       goodsDesc,
       item.boxes.toString(),
       (item.quantitySqmt || 0).toFixed(2),
-      item.ratePerSqmt.toFixed(2),
-      (item.amount || 0).toFixed(2),
+      `${currencySymbol} ${item.ratePerSqmt.toFixed(2)}`,
+      `${currencySymbol} ${(item.amount || 0).toFixed(2)}`,
     ];
   });
   
@@ -126,10 +136,10 @@ export function generatePerformaInvoicePdf(
   }
 
   const tableFooterContent = [
-    ['SUB TOTAL', (invoice.subTotal || 0).toFixed(2)],
-    [`FREIGHT CHARGES ${invoice.currencyType}`, (invoice.freight || 0).toFixed(2)],
-    [`DISCOUNT ${invoice.currencyType}`, (invoice.discount || 0).toFixed(2)],
-    [`GRAND TOTAL ${invoice.currencyType}`, (invoice.grandTotal || 0).toFixed(2)],
+    ['SUB TOTAL', `${currencySymbol} ${(invoice.subTotal || 0).toFixed(2)}`],
+    [`FREIGHT CHARGES`, `${currencySymbol} ${(invoice.freight || 0).toFixed(2)}`],
+    [`DISCOUNT`, `${currencySymbol} ${(invoice.discount || 0).toFixed(2)}`],
+    [`GRAND TOTAL`, `${currencySymbol} ${(invoice.grandTotal || 0).toFixed(2)}`],
   ];
 
   autoTable(doc, {
@@ -167,27 +177,52 @@ export function generatePerformaInvoicePdf(
   const amountInWordsStr = amountToWords(invoice.grandTotal || 0, invoice.currencyType);
 
   autoTable(doc, {
-    startY: yPos,
-    body: [
-        [{ content: "TOTAL SQM", styles: headerStyle }],
-        [{ content: totalSqmText, styles: { ...bodyStyle, halign: 'center' } }]
-    ],
-    columnStyles: { 0: { cellWidth: halfContentWidth } },
-    margin: { left: PAGE_MARGIN_X, right: PAGE_MARGIN_X },
+      startY: yPos,
+      body: [[
+          { content: "TOTAL INVOICE AMOUNT IN WORDS:", styles: { ...headerStyle, halign: 'left' } },
+          { content: "TOTAL SQM", styles: headerStyle }
+      ]],
+      margin: { left: PAGE_MARGIN_X, right: PAGE_MARGIN_X },
   });
+  // @ts-ignore
+  const headerHeight = doc.lastAutoTable.finalY - yPos;
   
+  const valueBody = [[
+      {
+          content: amountInWordsStr.toUpperCase(),
+          styles: { ...bodyStyle, fontSize: FONT_BODY_SMALL, halign: 'left', valign: 'top' }
+      },
+      {
+          content: totalSqmText,
+          styles: { ...bodyStyle, halign: 'center' }
+      }
+  ]];
+  
+  let valueHeight = 0;
   autoTable(doc, {
-    startY: yPos,
-    body: [
-      [{ content: "TOTAL INVOICE AMOUNT IN WORDS:", styles: headerStyle }],
-      [{ content: amountInWordsStr.toUpperCase(), styles: { ...bodyStyle, fontSize: FONT_BODY_SMALL, halign: 'center' } }]
-    ],
-    columnStyles: { 0: { cellWidth: halfContentWidth } },
-    margin: { left: PAGE_MARGIN_X + halfContentWidth, right: PAGE_MARGIN_X },
+      body: valueBody,
+      startY: yPos + headerHeight,
+      theme: 'grid',
+      margin: { left: PAGE_MARGIN_X, right: PAGE_MARGIN_X },
+      willDrawCell: (data) => {
+          // Calculate max height before drawing to ensure consistency
+          const amountLines = doc.splitTextToSize(amountInWordsStr.toUpperCase(), data.cell.width - data.cell.padding('horizontal'));
+          const amountHeight = (amountLines.length * FONT_BODY_SMALL) + data.cell.padding('vertical');
+          
+          const sqmHeight = (1 * FONT_BODY) + data.cell.padding('vertical');
+          
+          valueHeight = Math.max(amountHeight, sqmHeight, data.row.height);
+          data.row.height = valueHeight;
+      },
+      didDrawPage: (data) => {
+        // @ts-ignore
+        yPos = data.cursor?.y ?? yPos;
+      }
   });
 
   // @ts-ignore
   yPos = doc.lastAutoTable.finalY;
+
 
   // Note and Bank Details
   autoTable(doc, {
