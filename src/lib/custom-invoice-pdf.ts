@@ -12,7 +12,7 @@ const FONT_CAT1_SIZE = 14;
 const FONT_CAT2_SIZE = 10;
 const FONT_SMALL_FOOTER_LABEL_SIZE = 7;
 const FONT_CAT3_SIZE = 8;
-const FONT_BODY_SIZE = 9;
+const FONT_BODY_SIZE = 10;
 
 
 // --- Helper for amount in words ---
@@ -338,7 +338,7 @@ export function generateCustomInvoicePdf(
             { content: `$ ${grandTotalAmount.toFixed(2)}`, styles: {...classTwoStyles, halign: 'right'} },
         ],
         [
-            { content: 'Total No. Of Pkgs.', colSpan: 3, styles: { ...classOneStyles, cellPadding: 2, halign: 'center' } },
+            { content: 'Total No. Of Pkgs.', colSpan: 3, styles: { ...classOneStyles, cellPadding: 2, halign: 'center', fontSize: FONT_SMALL_FOOTER_LABEL_SIZE } },
             { content: 'EXCHANGE RATE NOFICATION NUMBER AND DATE', colSpan: 4, styles: { ...classOneStyles, cellPadding: 2, fontSize: FONT_SMALL_FOOTER_LABEL_SIZE, halign: 'center' } }
         ],
         [
