@@ -175,12 +175,15 @@ export function generatePerformaInvoicePdf(
   const totalSqmText = (invoice.items.reduce((sum, item) => sum + (item.quantitySqmt || 0), 0)).toFixed(2);
   const amountInWordsStr = amountToWords(invoice.grandTotal || 0, invoice.currencyType);
   const amountInWordsHeight = calculateTextHeight(doc, amountInWordsStr.toUpperCase(), halfContentWidth, FONT_BODY_SMALL, 'normal');
+  const amountInWordsLabelHeight = calculateTextHeight(doc, "TOTAL INVOICE AMOUNT IN WORDS:", halfContentWidth, FONT_HEADER, 'bold');
+  const sharedHeight = Math.max(amountInWordsHeight, amountInWordsLabelHeight);
+
 
   autoTable(doc, {
     startY: yPos,
     body: [
       [{ content: "TOTAL SQM", styles: headerStyle }, { content: totalSqmText, styles: { ...bodyStyle, halign: 'center' } }],
-      [{ content: "TOTAL INVOICE AMOUNT IN WORDS:", styles: { ...headerStyle, minCellHeight: amountInWordsHeight } }, { content: amountInWordsStr.toUpperCase(), styles: { ...bodyStyle, fontSize: FONT_BODY_SMALL, minCellHeight: amountInWordsHeight, halign: 'center', fillColor: COLOR_WHITE_RGB } }]
+      [{ content: "TOTAL INVOICE AMOUNT IN WORDS:", styles: { ...headerStyle, minCellHeight: sharedHeight } }, { content: amountInWordsStr.toUpperCase(), styles: { ...bodyStyle, fontSize: FONT_BODY_SMALL, minCellHeight: sharedHeight, halign: 'center', fillColor: COLOR_WHITE_RGB } }]
     ],
     columnStyles: { 0: { cellWidth: halfContentWidth }, 1: { cellWidth: halfContentWidth } },
     margin: { left: PAGE_MARGIN_X, right: PAGE_MARGIN_X },
@@ -193,7 +196,7 @@ export function generatePerformaInvoicePdf(
   const noteBody = invoice.note || 'N/A';
   const noteHeaderHeight = calculateTextHeight(doc, noteHeader, contentWidth, FONT_HEADER, 'bold');
   const noteBodyHeight = calculateTextHeight(doc, noteBody, contentWidth, FONT_BODY, 'normal');
-  const noteCellHeight = noteHeaderHeight + noteBodyHeight + (CELL_PADDING * 2);
+  const noteCellHeight = noteHeaderHeight + noteBodyHeight + (CELL_PADDING * 2) + 4; // Add 4 for spacing
 
   autoTable(doc, {
       startY: yPos,
@@ -209,7 +212,7 @@ export function generatePerformaInvoicePdf(
               doc.setFont('helvetica', 'bold');
               doc.setFontSize(FONT_HEADER);
               doc.text(noteHeader, cell.x + cell.padding('left'), cursorY + FONT_HEADER);
-              cursorY += noteHeaderHeight + 2;
+              cursorY += noteHeaderHeight + 4; // This controls the space after "Note:"
 
               doc.setFont('helvetica', 'normal');
               doc.setFontSize(FONT_BODY);
@@ -226,7 +229,7 @@ export function generatePerformaInvoicePdf(
   const bankBody = `BENEFICIARY NAME: ${exporter.companyName.toUpperCase()}\nBENEFICIARY BANK: ${selectedBank?.bankName.toUpperCase() || ''}, BRANCH: ${selectedBank?.bankAddress.toUpperCase() || ''}\nBENEFICIARY A/C NO: ${selectedBank?.accountNumber || ''}, SWIFT CODE: ${selectedBank?.swiftCode.toUpperCase() || ''}, IFSC CODE: ${selectedBank?.ifscCode.toUpperCase() || ''}`;
   const bankHeaderHeight = calculateTextHeight(doc, bankHeader, contentWidth, FONT_HEADER, 'bold');
   const bankBodyHeight = calculateTextHeight(doc, bankBody, contentWidth, FONT_BODY, 'normal');
-  const bankCellHeight = bankHeaderHeight + bankBodyHeight + (CELL_PADDING * 2);
+  const bankCellHeight = bankHeaderHeight + bankBodyHeight + (CELL_PADDING * 2) + 4; // Add 4 for spacing
 
   autoTable(doc, {
       startY: yPos,
@@ -242,7 +245,7 @@ export function generatePerformaInvoicePdf(
               doc.setFont('helvetica', 'bold');
               doc.setFontSize(FONT_HEADER);
               doc.text(bankHeader, cell.x + cell.padding('left'), cursorY + FONT_HEADER);
-              cursorY += bankHeaderHeight + 2; 
+              cursorY += bankHeaderHeight + 4; // This controls the space after "Bank Details"
 
               doc.setFont('helvetica', 'normal');
               doc.setFontSize(FONT_BODY);
