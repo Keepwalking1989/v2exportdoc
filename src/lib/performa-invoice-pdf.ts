@@ -137,10 +137,18 @@ export function generatePerformaInvoicePdf(
 
   const tableFooterContent = [
     ['SUB TOTAL', `${currencySymbol} ${(invoice.subTotal || 0).toFixed(2)}`],
-    [`FREIGHT CHARGES`, `${currencySymbol} ${(invoice.freight || 0).toFixed(2)}`],
-    [`DISCOUNT`, `${currencySymbol} ${(invoice.discount || 0).toFixed(2)}`],
-    [`GRAND TOTAL`, `${currencySymbol} ${(invoice.grandTotal || 0).toFixed(2)}`],
   ];
+
+  if (invoice.freight && invoice.freight > 0.5) {
+    tableFooterContent.push([`FREIGHT CHARGES`, `${currencySymbol} ${invoice.freight.toFixed(2)}`]);
+  }
+
+  if (invoice.discount && invoice.discount > 0.5) {
+    tableFooterContent.push([`DISCOUNT`, `${currencySymbol} ${invoice.discount.toFixed(2)}`]);
+  }
+  
+  tableFooterContent.push([`GRAND TOTAL`, `${currencySymbol} ${(invoice.grandTotal || 0).toFixed(2)}`]);
+
 
   autoTable(doc, {
     head: [tableHeadContent],
