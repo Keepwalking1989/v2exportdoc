@@ -188,47 +188,47 @@ export function generatePerformaInvoicePdf(
           0: { cellWidth: contentWidth - sqmValsWidth },
           1: { cellWidth: sqmValsWidth }
       },
-  });
-  // @ts-ignore
-  const headerHeight = doc.lastAutoTable.finalY - yPos;
-  
-  const valueBody = [[
-      {
-          content: amountInWordsStr.toUpperCase(),
-          styles: { ...bodyStyle, fontSize: FONT_BODY_SMALL, halign: 'left', valign: 'top', fillColor: COLOR_WHITE_RGB }
-      },
-      {
-          content: totalSqmText,
-          styles: { ...bodyStyle, halign: 'center' }
+      didDrawPage: (data) => {
+        // @ts-ignore
+        yPos = data.cursor?.y ?? yPos;
       }
-  ]];
-  
+  });
+
   autoTable(doc, {
-      body: valueBody,
-      startY: yPos + headerHeight,
+      body: [[
+        {
+            content: amountInWordsStr.toUpperCase(),
+            styles: { ...bodyStyle, fontSize: FONT_BODY_SMALL, halign: 'left', valign: 'top', fillColor: COLOR_WHITE_RGB }
+        },
+        {
+            content: totalSqmText,
+            styles: { ...bodyStyle, halign: 'center' }
+        }
+      ]],
+      startY: yPos,
       theme: 'grid',
       margin: { left: PAGE_MARGIN_X, right: PAGE_MARGIN_X },
       columnStyles: {
           0: { cellWidth: contentWidth - sqmValsWidth },
           1: { cellWidth: sqmValsWidth }
       },
-      willDrawCell: (data) => {
-          // Calculate max height before drawing to ensure consistency
-          const amountCellWidth = contentWidth - sqmValsWidth;
-          const amountLines = doc.splitTextToSize(amountInWordsStr.toUpperCase(), amountCellWidth - data.cell.padding('horizontal'));
-          const amountHeight = (amountLines.length * FONT_BODY_SMALL) + data.cell.padding('vertical') + (amountLines.length > 1 ? (amountLines.length - 1) * 2 : 0);
-          
-          const sqmHeight = (1 * FONT_BODY) + data.cell.padding('vertical');
-          
-          const maxHeight = Math.max(amountHeight, sqmHeight);
-          data.row.height = maxHeight;
+      didParseCell: (data) => {
+         if(data.row.index === 0 && data.column.index === 0) {
+            const amountCellWidth = contentWidth - sqmValsWidth;
+            const amountLines = doc.splitTextToSize(amountInWordsStr.toUpperCase(), amountCellWidth - data.cell.padding('horizontal'));
+            const amountHeight = (amountLines.length * FONT_BODY_SMALL) + data.cell.padding('vertical') + (amountLines.length > 1 ? (amountLines.length - 1) * 2 : 0);
+            
+            const sqmHeight = (1 * FONT_BODY) + data.cell.padding('vertical');
+            
+            const maxHeight = Math.max(amountHeight, sqmHeight);
+            data.row.height = maxHeight;
+        }
       },
       didDrawPage: (data) => {
         // @ts-ignore
         yPos = data.cursor?.y ?? yPos;
       }
   });
-  
   // @ts-ignore
   yPos = doc.lastAutoTable.finalY;
 
@@ -300,16 +300,13 @@ export function generatePerformaInvoicePdf(
       [
         {
           content: `Declaration:\nCERTIFIED THAT THE PARTICULARS GIVEN ABOVE ARE TRUE AND CORRECT.`,
-          rowSpan: 4,
+          rowSpan: 3,
           styles: { ...bodyStyle, valign: 'top' }
         },
         { content: `Signature & Date ${format(new Date(), 'dd-MM-yyyy')}`, styles: { ...bodyStyle, valign: 'bottom' } }
       ],
       [
         { content: `FOR, ${exporter.companyName.toUpperCase()}`, styles: { ...headerStyle, valign: 'bottom' } }
-      ],
-      [
-        { content: '', styles: { ...bodyStyle, minCellHeight: 40 } }
       ],
       [
         { content: 'AUTHORISED SIGNATURE', styles: { ...headerStyle, halign: 'right', valign: 'bottom' } }
