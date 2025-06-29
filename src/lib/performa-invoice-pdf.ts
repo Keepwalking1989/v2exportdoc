@@ -112,12 +112,12 @@ export function generatePerformaInvoicePdf(
   autoTable(doc, {
     startY: yPos,
     body: [
-      [{ content: 'INVOICE NO:', styles: headerStyle }, { content: 'INVOICE DATE:', styles: headerStyle }, { content: 'FINAL DESTINATION:', styles: headerStyle }],
-      [{ content: invoice.invoiceNumber || 'N/A', styles: {...bodyStyle, halign: 'center'} }, { content: format(new Date(invoice.invoiceDate), 'dd-MM-yyyy'), styles: {...bodyStyle, halign: 'center'} }, { content: invoice.finalDestination || 'N/A', styles: {...bodyStyle, halign: 'center'} }],
+        [{ content: 'INVOICE NO:', styles: headerStyle }, { content: 'INVOICE DATE:', styles: headerStyle }, { content: 'FINAL DESTINATION:', styles: headerStyle }],
+        [{ content: invoice.invoiceNumber || 'N/A', styles: { ...bodyStyle, halign: 'center' } }, { content: format(new Date(invoice.invoiceDate), 'dd-MM-yyyy'), styles: { ...bodyStyle, halign: 'center' } }, { content: invoice.finalDestination || 'N/A', styles: { ...bodyStyle, halign: 'center' } }],
     ],
     columnStyles: { 0: { cellWidth: '33.33%' }, 1: { cellWidth: '33.33%' }, 2: { cellWidth: '33.33%' } },
     margin: { left: PAGE_MARGIN_X, right: PAGE_MARGIN_X },
-  });
+});
   // @ts-ignore
   yPos = doc.lastAutoTable.finalY;
 
@@ -126,7 +126,7 @@ export function generatePerformaInvoicePdf(
     startY: yPos,
     body: [
       [{ content: 'IEC. CODE:', styles: headerStyle }, { content: 'TERMS AND CONDITIONS OF DELIVERY & PAYMENT:', styles: headerStyle }],
-      [{ content: exporter.iecNumber || 'N/A', styles: {...bodyStyle, halign: 'center'} }, { content: invoice.termsAndConditions || 'N/A', styles: { ...bodyStyle, valign: 'top', halign: 'center' } }],
+      [{ content: exporter.iecNumber || 'N/A', styles: {...bodyStyle, halign: 'center'} }, { content: invoice.termsAndConditions || 'N/A', styles: { ...bodyStyle, valign: 'top', halign: 'left' } }],
     ],
     columnStyles: { 0: { cellWidth: halfContentWidth }, 1: { cellWidth: halfContentWidth } },
     margin: { left: PAGE_MARGIN_X, right: PAGE_MARGIN_X },
@@ -135,7 +135,7 @@ export function generatePerformaInvoicePdf(
   yPos = doc.lastAutoTable.finalY;
 
   // --- PRODUCT TABLE ---
-  const tableHeadContent = ['SR.\nNO.', 'HSN\nCODE', 'DESCRIPTION OF GOODS', 'TOTAL\nBOXES', 'TOTAL\nSQMT', 'RATE', 'AMOUNT'];
+  const tableHeadContent = ['SR.\nNO.', 'HSN\nCODE', 'DESCRIPTION OF GOODS', 'TOTAL\nBOXES', 'TOTAL\nSQMT', `RATE\n(${currencySymbol})`, `AMOUNT\n(${currencySymbol})`];
   const tableBodyContent = invoice.items.map((item, index) => {
     const product = allProducts.find(p => p.id === item.productId);
     const size = allSizes.find(s => s.id === item.sizeId);
@@ -146,8 +146,8 @@ export function generatePerformaInvoicePdf(
       goodsDesc,
       item.boxes.toString(),
       (item.quantitySqmt || 0).toFixed(2),
-      `${currencySymbol} ${item.ratePerSqmt.toFixed(2)}`,
-      `${currencySymbol} ${(item.amount || 0).toFixed(2)}`,
+      item.ratePerSqmt.toFixed(2),
+      (item.amount || 0).toFixed(2),
     ];
   });
   
@@ -268,61 +268,43 @@ export function generatePerformaInvoicePdf(
   // @ts-ignore
   yPos = doc.lastAutoTable.finalY;
 
+  // --- Note Box ---
   autoTable(doc, {
     startY: yPos,
     body: [[
-        { content: `Note:\n${invoice.note || 'N/A'}`, styles: { ...bodyStyle, halign: 'left' } }
+      { content: 'Note:', styles: { ...headerStyle, halign: 'left' } }
     ]],
-    didParseCell: (data) => {
-        if (data.section === 'body' && data.cell.raw) {
-            const rawContent = data.cell.raw.toString();
-            const noteIndex = rawContent.indexOf("Note:");
-            if (noteIndex !== -1) {
-                const headerText = rawContent.substring(0, noteIndex + 5);
-                const restOfText = rawContent.substring(noteIndex + 5);
-                data.cell.text = [
-                    {text: headerText, styles: {fontStyle: 'bold', fontSize: FONT_HEADER}},
-                    {text: restOfText, styles: {fontStyle: 'normal', fontSize: FONT_BODY}}
-                ];
-            }
-        }
-    },
-    theme: 'grid',
     margin: { left: PAGE_MARGIN_X, right: PAGE_MARGIN_X },
-    didDrawPage: (data) => {
-      // @ts-ignore
-      yPos = data.cursor?.y ?? yPos;
-    }
+  });
+  // @ts-ignore
+  yPos = doc.lastAutoTable.finalY;
+  autoTable(doc, {
+    startY: yPos,
+    body: [[
+      { content: invoice.note || 'N/A', styles: { ...bodyStyle, halign: 'left', minCellHeight: 40, valign: 'top' } }
+    ]],
+    margin: { left: PAGE_MARGIN_X, right: PAGE_MARGIN_X },
   });
   // @ts-ignore
   yPos = doc.lastAutoTable.finalY;
 
+  // --- Bank Details Box ---
+  autoTable(doc, {
+    startY: yPos,
+    body: [[
+      { content: 'Bank Details', styles: { ...headerStyle, halign: 'left' } }
+    ]],
+    margin: { left: PAGE_MARGIN_X, right: PAGE_MARGIN_X },
+  });
+  // @ts-ignore
+  yPos = doc.lastAutoTable.finalY;
   const bankDetailsText = `BENEFICIARY NAME: ${exporter.companyName.toUpperCase()}\nBENEFICIARY BANK: ${selectedBank?.bankName.toUpperCase() || ''}, BRANCH: ${selectedBank?.bankAddress.toUpperCase() || ''}\nBENEFICIARY A/C NO: ${selectedBank?.accountNumber || ''}, SWIFT CODE: ${selectedBank?.swiftCode.toUpperCase() || ''}, IFSC CODE: ${selectedBank?.ifscCode.toUpperCase() || ''}`;
   autoTable(doc, {
     startY: yPos,
     body: [[
-      { content: `Bank Details\n${bankDetailsText}`, styles: {...bodyStyle, halign: 'left'} }
+      { content: bankDetailsText, styles: { ...bodyStyle, halign: 'left', valign: 'top', minCellHeight: 60 } }
     ]],
-    didParseCell: (data) => {
-        if (data.section === 'body' && data.cell.raw) {
-            const rawContent = data.cell.raw.toString();
-            const headerIndex = rawContent.indexOf("Bank Details");
-            if (headerIndex !== -1) {
-                const headerText = rawContent.substring(0, headerIndex + 12);
-                const restOfText = rawContent.substring(headerIndex + 12);
-                 data.cell.text = [
-                    {text: headerText, styles: {fontStyle: 'bold', fontSize: FONT_HEADER}},
-                    {text: restOfText, styles: {fontStyle: 'normal', fontSize: FONT_BODY}}
-                ];
-            }
-        }
-    },
-    theme: 'grid',
     margin: { left: PAGE_MARGIN_X, right: PAGE_MARGIN_X },
-    didDrawPage: (data) => {
-      // @ts-ignore
-      yPos = data.cursor?.y ?? yPos;
-    }
   });
   // @ts-ignore
   yPos = doc.lastAutoTable.finalY;
@@ -336,7 +318,7 @@ export function generatePerformaInvoicePdf(
       [
         {
           content: `Declaration:\nCERTIFIED THAT THE PARTICULARS GIVEN ABOVE ARE TRUE AND CORRECT.`,
-          rowSpan: 2,
+          rowSpan: 3,
           styles: { ...bodyStyle, valign: 'top' }
         },
         {
@@ -345,7 +327,10 @@ export function generatePerformaInvoicePdf(
         },
       ],
       [
-        { content: `FOR, ${exporter.companyName.toUpperCase()}`, styles: { ...headerStyle, valign: 'bottom', minCellHeight: 40 } }
+        { content: `FOR, ${exporter.companyName.toUpperCase()}`, styles: { ...headerStyle, minCellHeight: 40, valign: 'bottom' } }
+      ],
+      [
+        { content: `AUTHORISED SIGNATURE`, styles: { ...headerStyle, valign: 'bottom' } }
       ]
     ],
     columnStyles: { 0: { cellWidth: contentWidth * 0.60 }, 1: { cellWidth: contentWidth * 0.40 } },
