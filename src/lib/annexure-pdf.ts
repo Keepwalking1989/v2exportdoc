@@ -44,7 +44,7 @@ function drawDocument(doc: jsPDF, docData: ExportDocument, exporter: Company, ma
         const sampleBoxes = (container.sampleItems || []).reduce((sum, item) => sum + (item.boxes || 0), 0);
         return acc + productBoxes + sampleBoxes;
     }, 0);
-    bodyData.push({ label: '8a  Particulars Of Export Invoice: b  Export Invoice No.: c  Total No.Of Packages:', value: `${docData.exportInvoiceNumber}\n${totalBoxes}` });
+    bodyData.push({ label: '8   Particulars Of Export Invoice: a  Export Invoice No.: b  Total No.Of Packages:', value: `${docData.exportInvoiceNumber}\n${totalBoxes}` });
     const consigneeDetails = `Davare Floors, Inc.\n19 E 60 TH ST, Hialeah,FL.33013 . USA`; // Hardcoded as per image
     bodyData.push({ label: ' d  Name & Address Of The Conignee', value: consigneeDetails });
     bodyData.push({ label: '9a Is The Discription Of The Good, The Quality & Their Value As Per Particulars Furnished In The Export Invoice :', value: 'Yes' });
@@ -198,7 +198,7 @@ function drawDocument(doc: jsPDF, docData: ExportDocument, exporter: Company, ma
         body: signatureTableBody,
         theme: 'plain',
         tableWidth: 'wrap',
-        margin: { left: contentWidth / 2 + pageMargin },
+        margin: { left: contentWidth / 2 + pageMargin + 80 },
         styles: { fontSize: 9 },
         didDrawCell: (data) => {
             if (data.section === 'body' && data.row.index === 1) {
