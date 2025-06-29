@@ -386,15 +386,15 @@ export async function generateCustomInvoicePdf(
             { content: conversationRate.toFixed(2), colSpan: 2, styles: { ...classTwoStyles, halign: 'center', cellPadding: 2 } }
         ],
         [
-            { content: amountToWordsUSD(grandTotalAmount), rowSpan: 2, colSpan: 3, styles: { ...classTwoStyles, halign: 'left', minCellHeight: 60 } },
-            { content: 'FOB', styles: { ...classOneStyles, cellPadding: 2, fontSize: 9, halign: 'center' } },
-            { content: 'INR', styles: { ...classTwoStyles, halign: 'center', cellPadding: 2 } },
-            { content: totalAmountInr.toFixed(2), colSpan: 2, styles: { ...classTwoStyles, halign: 'center', cellPadding: 2 } }
+            { content: amountToWordsUSD(grandTotalAmount), rowSpan: 2, colSpan: 3, styles: { ...classTwoStyles, halign: 'left', minCellHeight: 60, cellPadding: 1 } },
+            { content: 'FOB', styles: { ...classOneStyles, cellPadding: 1, fontSize: 9, halign: 'center' } },
+            { content: 'INR', styles: { ...classTwoStyles, halign: 'center', cellPadding: 1 } },
+            { content: totalAmountInr.toFixed(2), colSpan: 2, styles: { ...classTwoStyles, halign: 'center', cellPadding: 1 } }
         ],
         [
-            { content: 'IGST %', styles: { ...classOneStyles, cellPadding: 2, fontSize: 9, halign: 'center' } },
-            { content: docData.gst || '0%', styles: { ...classTwoStyles, halign: 'center', cellPadding: 2 } },
-            { content: gstAmount.toFixed(2), colSpan: 2, styles: { ...classTwoStyles, halign: 'center', cellPadding: 2 } }
+            { content: 'IGST %', styles: { ...classOneStyles, cellPadding: 1, fontSize: 9, halign: 'center' } },
+            { content: docData.gst || '0%', styles: { ...classTwoStyles, halign: 'center', cellPadding: 1 } },
+            { content: gstAmount.toFixed(2), colSpan: 2, styles: { ...classTwoStyles, halign: 'center', cellPadding: 1 } }
         ],
     ];
 
