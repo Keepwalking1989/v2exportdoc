@@ -98,7 +98,7 @@ export function PerformaInvoiceList({
     });
   };
 
-  const handleDownloadPdf = (invoice: PerformaInvoice) => {
+  const handleDownloadPdf = async (invoice: PerformaInvoice) => {
     const exporter = exporters.find(e => e.id === invoice.exporterId);
     const client = clients.find(c => c.id === invoice.clientId);
     const selectedBank = banks.find(b => b.id === invoice.selectedBankId); // Find selected bank
@@ -114,7 +114,7 @@ export function PerformaInvoiceList({
     // Note: selectedBank can be optional if not made mandatory in the form yet
     // If selectedBank is not found and it's mandatory, you might want to show an error
 
-    generatePerformaInvoicePdf(invoice, exporter, client, sizes, allProducts, selectedBank);
+    await generatePerformaInvoicePdf(invoice, exporter, client, sizes, allProducts, selectedBank);
   };
 
   return (

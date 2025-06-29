@@ -30,7 +30,7 @@ const FONT_BODY_SMALL = 7;
 // --- Cell Padding (pt) ---
 const CELL_PADDING = 4;
 
-export function generatePerformaInvoicePdf(
+export async function generatePerformaInvoicePdf(
   invoice: PerformaInvoice,
   exporter: Company,
   client: Client,
@@ -41,6 +41,19 @@ export function generatePerformaInvoicePdf(
   const doc = new jsPDF({ unit: 'pt', format: 'a4' });
   let yPos = PAGE_MARGIN_Y_TOP;
   const halfContentWidth = contentWidth / 2;
+
+  let signatureImage: Uint8Array | null = null;
+  try {
+    const signatureResponse = await fetch('/signature.png');
+    if (signatureResponse.ok) {
+      signatureImage = new Uint8Array(await signatureResponse.arrayBuffer());
+    } else {
+      console.warn('Signature image not found at /signature.png');
+    }
+  } catch (error) {
+    console.error("Error fetching signature image:", error);
+  }
+
 
   // --- Reusable Style Definitions for autoTable ---
   const headerStyle = {
@@ -323,7 +336,7 @@ export function generatePerformaInvoicePdf(
       [
         {
           content: `Declaration:\nCERTIFIED THAT THE PARTICULARS GIVEN ABOVE ARE TRUE AND CORRECT.`,
-          rowSpan: 3,
+          rowSpan: 4,
           styles: { ...bodyStyle, valign: 'top' }
         },
         {
@@ -335,11 +348,28 @@ export function generatePerformaInvoicePdf(
         { content: `FOR, ${exporter.companyName.toUpperCase()}`, styles: { ...headerStyle, valign: 'bottom' } }
       ],
       [
+        { content: '', styles: { ...bodyStyle, minCellHeight: 40 } }
+      ],
+      [
         { content: `AUTHORISED SIGNATURE`, styles: { ...headerStyle, valign: 'bottom' } }
       ]
     ],
     columnStyles: { 0: { cellWidth: contentWidth * 0.60 }, 1: { cellWidth: contentWidth * 0.40 } },
     margin: { left: PAGE_MARGIN_X, right: PAGE_MARGIN_X },
+    didDrawCell: (data) => {
+      // Draw signature image in the dedicated empty cell
+      if (data.section === 'body' && data.row.index === 2 && data.column.index === 1) {
+        if (signatureImage) {
+          const cell = data.cell;
+          const imgWidth = 80; // Define image width
+          const imgHeight = 40; // Define image height
+          // Center the image within the cell
+          const imgX = cell.x + (cell.width - imgWidth) / 2;
+          const imgY = cell.y + (cell.height - imgHeight) / 2;
+          doc.addImage(signatureImage, 'PNG', imgX, imgY, imgWidth, imgHeight);
+        }
+      }
+    }
   });
 
   doc.save(`Performa_Invoice_${invoice.invoiceNumber.replace(/[\\/]/g, '_')}.pdf`);
