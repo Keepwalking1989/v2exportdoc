@@ -402,7 +402,7 @@ function drawCustomInvoice(
         didDrawCell: (data) => {
              // Round Seal in Declaration box
             if (data.section === 'body' && data.row.index === 0 && data.column.index === 0) {
-                if (roundSealImage) { doc.addImage(roundSealImage, 'PNG', data.cell.x + data.cell.width - 50, data.cell.y + 20, 40, 40); }
+                if (roundSealImage) { doc.addImage(roundSealImage, 'PNG', data.cell.x + data.cell.width - 50, data.cell.y + 10, 40, 40); }
             }
             // Signature in its own empty box
             if (data.section === 'body' && data.row.index === 1 && data.column.index === 1) {
