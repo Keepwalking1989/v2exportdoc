@@ -146,8 +146,8 @@ export function generatePerformaInvoicePdf(
       goodsDesc,
       item.boxes.toString(),
       (item.quantitySqmt || 0).toFixed(2),
-      item.ratePerSqmt.toFixed(2),
-      (item.amount || 0).toFixed(2),
+      `${currencySymbol} ${item.ratePerSqmt.toFixed(2)}`,
+      `${currencySymbol} ${(item.amount || 0).toFixed(2)}`,
     ];
   });
   
@@ -158,7 +158,7 @@ export function generatePerformaInvoicePdf(
   }
 
   const tableFooterContent = [];
-
+  
   const showSubTotal = (invoice.freight && invoice.freight > 0.5) || (invoice.discount && invoice.discount > 0.5);
 
   if (showSubTotal) {
@@ -175,6 +175,11 @@ export function generatePerformaInvoicePdf(
   
   tableFooterContent.push([`GRAND TOTAL`, `${currencySymbol} ${(invoice.grandTotal || 0).toFixed(2)}`]);
 
+  // Adjusting the product table header style as requested
+  const productTableHeaderStyle = {
+    ...headerStyle,
+    fontSize: FONT_BODY, // Using a smaller font size for this specific header
+  };
 
   autoTable(doc, {
     head: [tableHeadContent],
@@ -187,7 +192,7 @@ export function generatePerformaInvoicePdf(
     theme: 'plain',
     margin: { left: PAGE_MARGIN_X, right: PAGE_MARGIN_X },
     styles: { lineWidth: 0.5, lineColor: COLOR_BORDER_RGB, cellPadding: CELL_PADDING },
-    headStyles: headerStyle,
+    headStyles: productTableHeaderStyle,
     bodyStyles: { ...bodyStyle, halign: 'left' },
     footStyles: { ...bodyStyle, fontStyle: 'bold', halign: 'right' },
     columnStyles: {
