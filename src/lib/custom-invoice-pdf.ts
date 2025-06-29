@@ -12,6 +12,7 @@ const FONT_CAT1_SIZE = 14;
 const FONT_CAT2_SIZE = 10;
 const FONT_SMALL_FOOTER_LABEL_SIZE = 7;
 const FONT_CAT3_SIZE = 8;
+const FONT_BODY_SIZE = 9;
 
 
 // --- Helper for amount in words ---
@@ -380,7 +381,7 @@ export function generateCustomInvoicePdf(
         theme: 'grid',
         margin: { left: pageMargin, right: pageMargin },
         headStyles: classOneStyles,
-        bodyStyles: {...classTwoStyles, halign: 'left', cellPadding: 1, fontSize: FONT_CAT3_SIZE },
+        bodyStyles: {...classTwoStyles, halign: 'left', cellPadding: 1, fontSize: FONT_BODY_SIZE },
         footStyles: { ...classOneStyles, cellPadding: 2, lineWidth: 0.5 },
         columnStyles: {
             0: { cellWidth: 55, halign: 'center' },
