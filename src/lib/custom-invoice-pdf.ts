@@ -12,7 +12,7 @@ const FONT_CAT1_SIZE = 14;
 const FONT_CAT2_SIZE = 10;
 const FONT_SMALL_FOOTER_LABEL_SIZE = 7;
 const FONT_CAT3_SIZE = 8;
-const FONT_BODY_SIZE = 10;
+const FONT_BODY_SIZE = 9;
 
 
 // --- Helper for amount in words ---
@@ -436,6 +436,12 @@ export function generateCustomInvoicePdf(
                     { content: taxInvoiceText, styles: { ...classTwoStyles, halign: 'left', cellPadding: 1 }, colSpan: 3 },
                 ]
             ],
+            columnStyles: {
+                0: { cellWidth: 120 },
+                1: { cellWidth: 'auto' },
+                2: { cellWidth: 60 },
+                3: { cellWidth: 'auto' },
+            },
             margin: { left: pageMargin, right: pageMargin },
             didDrawPage: data => { yPos = data.cursor?.y ?? yPos; }
         });
