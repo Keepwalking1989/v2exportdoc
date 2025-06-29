@@ -11,7 +11,7 @@ import type { Product } from '@/types/product';
 const FONT_CAT1_SIZE = 14;
 const FONT_CAT2_SIZE = 10;
 const FONT_SMALL_FOOTER_LABEL_SIZE = 7;
-const FONT_CAT3_SIZE = 8;
+const FONT_CAT3_SIZE = 9;
 const FONT_BODY_SIZE = 9;
 
 
@@ -375,13 +375,13 @@ export function generateCustomInvoicePdf(
 
     autoTable(doc, {
         startY: yPos,
-        head: [['HSN Code', 'Sr.\nNo', 'Description Of Goods', 'Boxes', 'Sq.Mtr', 'Rate Per SQM\nin $', 'Total Amount\nIn USD $']],
+        head: [['HSN Code', 'Sr.\nNo', 'Description Of Goods', 'Boxes', 'Sq.Mtr', 'Rate Per SQM in $', 'Total Amount\nIn USD $']],
         body: tableBody,
         foot: tableFooter,
         theme: 'grid',
         margin: { left: pageMargin, right: pageMargin },
         headStyles: classOneStyles,
-        bodyStyles: {...classTwoStyles, halign: 'left', cellPadding: 1, fontSize: FONT_BODY_SIZE },
+        bodyStyles: {...classTwoStyles, halign: 'left', cellPadding: 1, fontSize: FONT_CAT3_SIZE },
         footStyles: { ...classOneStyles, cellPadding: 2, lineWidth: 0.5 },
         columnStyles: {
             0: { cellWidth: 55, halign: 'center' },
@@ -439,8 +439,8 @@ export function generateCustomInvoicePdf(
             columnStyles: {
                 0: { cellWidth: 120 },
                 1: { cellWidth: 'auto' },
-                2: { cellWidth: 60 },
-                3: { cellWidth: 'auto' },
+                2: { cellWidth: 50 },
+                3: { cellWidth: 120 },
             },
             margin: { left: pageMargin, right: pageMargin },
             didDrawPage: data => { yPos = data.cursor?.y ?? yPos; }
