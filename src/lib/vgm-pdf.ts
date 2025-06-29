@@ -190,7 +190,7 @@ export async function generateVgmPdf(
         addHeaderFooter();
         yPos = headerHeight + 20;
     }
-
+    
     const signatureTableBody = [
         [{ content: `FOR, ${exporter.companyName.toUpperCase()}`, styles: { halign: 'center', fontStyle: 'bold' } }],
         [{ content: '', styles: { minCellHeight: 40 } }],
@@ -202,7 +202,7 @@ export async function generateVgmPdf(
         body: signatureTableBody,
         theme: 'plain',
         tableWidth: 'wrap',
-        margin: { left: contentWidth / 2 + pageMargin + 40 },
+        margin: { left: contentWidth / 2 + pageMargin + 80 },
         styles: { fontSize: 9 },
         didDrawCell: (data) => {
             if (data.section === 'body' && data.row.index === 1) {
@@ -217,6 +217,7 @@ export async function generateVgmPdf(
             }
         }
     });
+
 
     // Save the PDF
     doc.save(`VGM_${docData.exportInvoiceNumber.replace(/[\\/:*?"<>|]/g, '_')}.pdf`);
