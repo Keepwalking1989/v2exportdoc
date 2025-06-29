@@ -60,43 +60,24 @@ function amountToWordsUSD(amount: number): string {
     return result.replace(/\s\s+/g, ' ').trim() + " only";
 }
 
-// --- Main PDF Generation Function ---
-export async function generateCustomInvoicePdf(
+// --- Reusable Drawing Function ---
+function drawCustomInvoice(
+    doc: jsPDF,
     docData: ExportDocument,
     exporter: Company,
     manufacturersWithDetails: (Manufacturer & { invoiceNumber: string, invoiceDate?: Date })[],
     allProducts: Product[],
-    allSizes: Size[]
-) {
-    const doc = new jsPDF({ unit: 'pt', format: 'a4' });
+    allSizes: Size[],
+    signatureImage: Uint8Array | null,
+    roundSealImage: Uint8Array | null,
+    padding: number
+): number {
     let yPos = 20;
     const pageMargin = 20;
     const contentWidth = doc.internal.pageSize.getWidth() - (2 * pageMargin);
-
-    let signatureImage: Uint8Array | null = null;
-    let roundSealImage: Uint8Array | null = null;
-
-    try {
-        const signatureResponse = await fetch('/signature.png');
-        if (signatureResponse.ok) {
-            signatureImage = new Uint8Array(await signatureResponse.arrayBuffer());
-        } else {
-            console.warn('Signature image not found at /signature.png');
-        }
-
-        const roundSealResponse = await fetch('/Hemith-Round.png');
-        if (roundSealResponse.ok) {
-            roundSealImage = new Uint8Array(await roundSealResponse.arrayBuffer());
-        } else {
-            console.warn('Hemith-Round.png not found at /public/Hemith-Round.png');
-        }
-    } catch (error) {
-        console.error("Error fetching images for PDF:", error);
-    }
     
     const COLOR_BLUE_RGB = [217, 234, 247]; // Light Blue
 
-    // --- Style Definitions (Classes) ---
     const classOneStyles = { 
         fontStyle: 'bold',
         textColor: '#000000',
@@ -105,7 +86,7 @@ export async function generateCustomInvoicePdf(
         lineWidth: 0.5,
         lineColor: '#000000',
         fillColor: COLOR_BLUE_RGB,
-        cellPadding: 2,
+        cellPadding: padding,
         fontSize: FONT_CAT2_SIZE,
     };
     const classTwoStyles = { 
@@ -114,11 +95,10 @@ export async function generateCustomInvoicePdf(
         valign: 'middle',
         lineWidth: 0.5,
         lineColor: '#000000',
-        cellPadding: 2,
+        cellPadding: padding,
         fontSize: FONT_CAT3_SIZE,
     };
     
-    // --- Document Header ---
     doc.setFontSize(20);
     doc.setFont('helvetica', 'bold');
     doc.text('CUSTOM INVOICE', doc.internal.pageSize.getWidth() / 2, yPos, { align: 'center' });
@@ -137,21 +117,17 @@ export async function generateCustomInvoicePdf(
     // @ts-ignore
     yPos = doc.lastAutoTable.finalY;
 
-
-    // --- Exporter, Invoice Details, Ref (as a table) ---
     autoTable(doc, {
         startY: yPos,
         theme: 'grid',
         body: [
-            // Row 1: Labels (Class 1)
             [
                 { content: 'Exporter', styles: { ...classOneStyles } },
                 { content: 'Export Invoice No & Date', styles: { ...classOneStyles } },
                 { content: 'Export Ref.', styles: { ...classOneStyles } }
             ],
-            // Row 2: Data (Class 2)
             [
-                { content: `${exporter.companyName}\n${exporter.address || ''}`, styles: { ...classTwoStyles, halign: 'left', cellPadding: 2 } },
+                { content: `${exporter.companyName}\n${exporter.address || ''}`, styles: { ...classTwoStyles, halign: 'left' } },
                 { content: `${docData.exportInvoiceNumber}\n${format(new Date(docData.exportInvoiceDate), 'dd/MM/yyyy')}`, styles: { ...classTwoStyles, halign: 'center' } },
                 { content: `IEC Code: ${exporter.iecNumber || 'N/A'}`, styles: { ...classTwoStyles, halign: 'left' } },
             ]
@@ -167,17 +143,14 @@ export async function generateCustomInvoicePdf(
     // @ts-ignore
     yPos = doc.lastAutoTable.finalY;
 
-    // --- Consignee & Buyer ---
     autoTable(doc, {
         startY: yPos,
         theme: 'grid',
         body: [
-             // Row 1: Labels (Class 1)
             [
                 { content: 'Consignee:-', styles: { ...classOneStyles, halign: 'center' } },
                 { content: 'Buyer (If Not Consignee)', styles: { ...classOneStyles, halign: 'center' } }
             ],
-             // Row 2: Data (Class 2)
             [
                 { content: 'TO THE\nORDER', styles: { ...classTwoStyles, halign: 'center', minCellHeight: 10 } },
                 { content: 'TO THE\nORDER', styles: { ...classTwoStyles, halign: 'center', minCellHeight: 10 } }
@@ -193,7 +166,6 @@ export async function generateCustomInvoicePdf(
     // @ts-ignore
     yPos = doc.lastAutoTable.finalY;
 
-    // --- Shipment Details Grid ---
     autoTable(doc, {
         startY: yPos,
         theme: 'grid',
@@ -205,10 +177,10 @@ export async function generateCustomInvoicePdf(
                 { content: 'Country Of Final Destination', styles: {...classOneStyles} },
             ],
             [
-                { content: 'By Road', styles: {...classTwoStyles, halign: 'center', cellPadding: 1} },
-                { content: 'Morbi', styles: {...classTwoStyles, halign: 'center', cellPadding: 1} },
-                { content: 'INDIA', styles: {...classTwoStyles, halign: 'center', cellPadding: 1} },
-                { content: docData.countryOfFinalDestination, styles: {...classTwoStyles, halign: 'center', cellPadding: 1} },
+                { content: 'By Road', styles: {...classTwoStyles, halign: 'center' } },
+                { content: 'Morbi', styles: {...classTwoStyles, halign: 'center' } },
+                { content: 'INDIA', styles: {...classTwoStyles, halign: 'center' } },
+                { content: docData.countryOfFinalDestination, styles: {...classTwoStyles, halign: 'center' } },
             ],
             [
                 { content: 'Vessel / Flight No.', styles: {...classOneStyles} },
@@ -217,10 +189,10 @@ export async function generateCustomInvoicePdf(
                 { content: 'Final Destination', styles: {...classOneStyles} },
             ],
              [
-                { content: docData.vesselFlightNo || 'N/A', styles: {...classTwoStyles, halign: 'center', cellPadding: 1} },
-                { content: docData.portOfLoading || 'N/A', styles: {...classTwoStyles, halign: 'center', cellPadding: 1} },
-                { content: docData.portOfDischarge || 'N/A', styles: {...classTwoStyles, halign: 'center', cellPadding: 1} },
-                { content: docData.finalDestination || 'N/A', styles: {...classTwoStyles, halign: 'center', cellPadding: 1} },
+                { content: docData.vesselFlightNo || 'N/A', styles: {...classTwoStyles, halign: 'center' } },
+                { content: docData.portOfLoading || 'N/A', styles: {...classTwoStyles, halign: 'center' } },
+                { content: docData.portOfDischarge || 'N/A', styles: {...classTwoStyles, halign: 'center' } },
+                { content: docData.finalDestination || 'N/A', styles: {...classTwoStyles, halign: 'center' } },
             ],
         ],
         margin: { left: pageMargin, right: pageMargin },
@@ -235,13 +207,12 @@ export async function generateCustomInvoicePdf(
     // @ts-ignore
     yPos = doc.lastAutoTable.finalY;
 
-    // --- Terms of Delivery ---
     autoTable(doc, {
         startY: yPos,
         theme: 'grid',
         body: [
-            [{ content: 'Terms Of Delivery & Payments', styles: {...classOneStyles, halign: 'left', cellPadding: 1} }],
-            [{ content: docData.termsOfDeliveryAndPayment || 'N/A', styles: {...classTwoStyles, halign: 'left', cellPadding: 1} }],
+            [{ content: 'Terms Of Delivery & Payments', styles: {...classOneStyles, halign: 'left'} }],
+            [{ content: docData.termsOfDeliveryAndPayment || 'N/A', styles: {...classTwoStyles, halign: 'left'} }],
         ],
          margin: { left: pageMargin, right: pageMargin },
         didDrawPage: data => { yPos = data.cursor?.y ?? yPos; }
@@ -258,109 +229,57 @@ export async function generateCustomInvoicePdf(
 
     const groupItems = (items: ExportDocumentProductItem[]) => {
         const grouped = new Map<string, any>();
-
         items.forEach(item => {
             const product = allProducts.find(p => p.id === item.productId);
             const size = product ? allSizes.find(s => s.id === product.sizeId) : undefined;
             if (!size) return;
-
-            // Group by both size and rate to handle different prices for the same size
             const key = `${size.id}-${item.rate}`;
-
             if (!grouped.has(key)) {
                 const hsnCode = size.hsnCode || 'N/A';
-                const description = hsnCode === '69072100'
-                    ? `Polished Glazed Vitrified Tiles ( PGVT ) (${size.size})`
-                    : `Vitrified Tiles (${size.size})`;
-
-                grouped.set(key, {
-                    hsnCode: hsnCode,
-                    description: description,
-                    rate: item.rate || 0,
-                    boxes: 0,
-                    sqm: 0,
-                    total: 0,
-                });
+                const description = hsnCode === '69072100' ? `Polished Glazed Vitrified Tiles ( PGVT ) (${size.size})` : `Vitrified Tiles (${size.size})`;
+                grouped.set(key, { hsnCode: hsnCode, description: description, rate: item.rate || 0, boxes: 0, sqm: 0, total: 0 });
             }
-            
             const existing = grouped.get(key);
             const sqmForThisItem = (item.boxes || 0) * (size.sqmPerBox || 0);
-
             existing.boxes += item.boxes || 0;
             existing.sqm += sqmForThisItem;
             existing.total += sqmForThisItem * (item.rate || 0);
         });
-        
         return Array.from(grouped.values());
     };
 
     const groupedProducts = groupItems(allProductItems);
     const groupedSamples = groupItems(allSampleItems);
-
     let grandTotalBoxes = 0;
     let grandTotalSqm = 0;
     let grandTotalAmount = 0;
     let srNoCounter = 1;
 
     const tableBody: any[] = [];
-
     groupedProducts.forEach(item => {
         grandTotalBoxes += item.boxes;
         grandTotalSqm += item.sqm;
         grandTotalAmount += item.total;
-        
         const effectiveRate = item.sqm > 0 ? item.total / item.sqm : 0;
-
-        tableBody.push([
-            item.hsnCode,
-            srNoCounter++,
-            item.description,
-            item.boxes.toString(),
-            item.sqm.toFixed(2),
-            `$ ${effectiveRate.toFixed(2)}`,
-            `$ ${item.total.toFixed(2)}`
-        ]);
+        tableBody.push([item.hsnCode, srNoCounter++, item.description, item.boxes.toString(), item.sqm.toFixed(2), `$ ${effectiveRate.toFixed(2)}`, `$ ${item.total.toFixed(2)}`]);
     });
-
     if (groupedSamples.length > 0) {
-        tableBody.push([
-            { 
-                content: 'Free Of Cost Samples', 
-                colSpan: 7,
-                styles: { fontStyle: 'bold', halign: 'center' } 
-            }
-        ]);
+        tableBody.push([{ content: 'Free Of Cost Samples', colSpan: 7, styles: { fontStyle: 'bold', halign: 'center' } }]);
         groupedSamples.forEach(item => {
             grandTotalBoxes += item.boxes;
             grandTotalSqm += item.sqm;
-            grandTotalAmount += item.total; // Include sample amount in total
-            
+            grandTotalAmount += item.total;
             const effectiveRate = item.sqm > 0 ? item.total / item.sqm : 0;
-
-            tableBody.push([
-                item.hsnCode,
-                srNoCounter++,
-                `${item.description} (Sample)`, // Add (Sample) to description for clarity
-                item.boxes.toString(),
-                item.sqm.toFixed(2),
-                `$ ${effectiveRate.toFixed(2)}`,
-                `$ ${item.total.toFixed(2)}`
-            ]);
+            tableBody.push([item.hsnCode, srNoCounter++, `${item.description} (Sample)`, item.boxes.toString(), item.sqm.toFixed(2), `$ ${effectiveRate.toFixed(2)}`, `$ ${item.total.toFixed(2)}`]);
         });
     }
-
-
     const emptyRowCount = 5;
-    for (let i = 0; i < emptyRowCount; i++) {
-        tableBody.push(['', '', '', '', '', '', '']);
-    }
-
+    for (let i = 0; i < emptyRowCount; i++) { tableBody.push(['', '', '', '', '', '', '']); }
     const conversationRate = docData.conversationRate || 0;
     const totalAmountInr = grandTotalAmount * conversationRate;
     const gstString = docData.gst || "0";
     const gstRate = parseFloat(gstString.replace('%', '')) / 100 || 0;
     const gstAmount = totalAmountInr * gstRate;
-    const finalTotalInr = totalAmountInr + gstAmount;
 
     const tableFooter = [
         [
@@ -371,30 +290,30 @@ export async function generateCustomInvoicePdf(
             { content: `$ ${grandTotalAmount.toFixed(2)}`, styles: {...classTwoStyles, halign: 'right'} },
         ],
         [
-            { content: 'Total No. Of Pkgs.', colSpan: 3, styles: { ...classOneStyles, cellPadding: 2, halign: 'center', fontSize: 9 } },
-            { content: 'EXCHANGE RATE NOTIFICATION NUMBER AND DATE', colSpan: 4, styles: { ...classOneStyles, cellPadding: 2, fontSize: 8, halign: 'center' } }
+            { content: 'Total No. Of Pkgs.', colSpan: 3, styles: { ...classOneStyles, halign: 'center', fontSize: 9 } },
+            { content: 'EXCHANGE RATE NOTIFICATION NUMBER AND DATE', colSpan: 4, styles: { ...classOneStyles, fontSize: 8, halign: 'center' } }
         ],
         [
-            { content: grandTotalBoxes.toString(), colSpan: 3, styles: { ...classTwoStyles, halign: 'center', cellPadding: 2 } },
-            { content: docData.exchangeNotification || 'N/A', colSpan: 2, styles: { ...classTwoStyles, halign: 'center', cellPadding: 2 } },
-            { content: docData.exchangeDate ? format(new Date(docData.exchangeDate), 'dd/MM/yyyy') : 'N/A', colSpan: 2, styles: { ...classTwoStyles, halign: 'center', cellPadding: 2 } }
+            { content: grandTotalBoxes.toString(), colSpan: 3, styles: { ...classTwoStyles, halign: 'center' } },
+            { content: docData.exchangeNotification || 'N/A', colSpan: 2, styles: { ...classTwoStyles, halign: 'center' } },
+            { content: docData.exchangeDate ? format(new Date(docData.exchangeDate), 'dd/MM/yyyy') : 'N/A', colSpan: 2, styles: { ...classTwoStyles, halign: 'center' } }
         ],
         [
-            { content: 'Amount In Words', colSpan: 3, styles: { ...classOneStyles, cellPadding: 2, fontSize: 9, halign: 'center' } },
-            { content: 'EXCHANGE RATE', styles: { ...classOneStyles, cellPadding: 2, fontSize: 8, halign: 'center' } },
-            { content: '1 USD', styles: { ...classTwoStyles, halign: 'center', cellPadding: 2 } },
-            { content: conversationRate.toFixed(2), colSpan: 2, styles: { ...classTwoStyles, halign: 'center', cellPadding: 2 } }
+            { content: 'Amount In Words', colSpan: 3, styles: { ...classOneStyles, fontSize: 9, halign: 'center' } },
+            { content: 'EXCHANGE RATE', styles: { ...classOneStyles, fontSize: 8, halign: 'center' } },
+            { content: '1 USD', styles: { ...classTwoStyles, halign: 'center' } },
+            { content: conversationRate.toFixed(2), colSpan: 2, styles: { ...classTwoStyles, halign: 'center' } }
         ],
         [
-            { content: amountToWordsUSD(grandTotalAmount), rowSpan: 2, colSpan: 3, styles: { ...classTwoStyles, halign: 'left', minCellHeight: 60, cellPadding: 1 } },
-            { content: 'FOB', styles: { ...classOneStyles, cellPadding: 1, fontSize: 9, halign: 'center' } },
-            { content: 'INR', styles: { ...classTwoStyles, halign: 'center', cellPadding: 1 } },
-            { content: totalAmountInr.toFixed(2), colSpan: 2, styles: { ...classTwoStyles, halign: 'center', cellPadding: 1 } }
+            { content: amountToWordsUSD(grandTotalAmount), rowSpan: 2, colSpan: 3, styles: { ...classTwoStyles, halign: 'left', minCellHeight: 60, cellPadding: padding } },
+            { content: 'FOB', styles: { ...classOneStyles, fontSize: 9, halign: 'center', cellPadding: padding } },
+            { content: 'INR', styles: { ...classTwoStyles, halign: 'center', cellPadding: padding } },
+            { content: totalAmountInr.toFixed(2), colSpan: 2, styles: { ...classTwoStyles, halign: 'center', cellPadding: padding } }
         ],
         [
-            { content: 'IGST %', styles: { ...classOneStyles, cellPadding: 1, fontSize: 9, halign: 'center' } },
-            { content: docData.gst || '0%', styles: { ...classTwoStyles, halign: 'center', cellPadding: 1 } },
-            { content: gstAmount.toFixed(2), colSpan: 2, styles: { ...classTwoStyles, halign: 'center', cellPadding: 1 } }
+            { content: 'IGST %', styles: { ...classOneStyles, fontSize: 9, halign: 'center', cellPadding: padding } },
+            { content: docData.gst || '0%', styles: { ...classTwoStyles, halign: 'center', cellPadding: padding } },
+            { content: gstAmount.toFixed(2), colSpan: 2, styles: { ...classTwoStyles, halign: 'center', cellPadding: padding } }
         ],
     ];
 
@@ -405,18 +324,10 @@ export async function generateCustomInvoicePdf(
         foot: tableFooter,
         theme: 'grid',
         margin: { left: pageMargin, right: pageMargin },
-        headStyles: classOneStyles,
-        bodyStyles: {...classTwoStyles, halign: 'left', cellPadding: 1, fontSize: 10 },
-        footStyles: { ...classOneStyles, cellPadding: 2, lineWidth: 0.5 },
-        columnStyles: {
-            0: { cellWidth: 55 },   // HSN Code
-            1: { cellWidth: 25 },   // Sr. No
-            2: { cellWidth: 260.28 }, // Description Of Goods
-            3: { cellWidth: 40, halign: 'right' },    // Boxes
-            4: { cellWidth: 45, halign: 'right' },    // Sq.Mtr
-            5: { cellWidth: 60, halign: 'right' },    // Rate Per SQM
-            6: { cellWidth: 70, halign: 'right' },    // Total Amount
-        },
+        headStyles: { ...classOneStyles, cellPadding: padding },
+        bodyStyles: {...classTwoStyles, halign: 'left', fontSize: 10, cellPadding: padding },
+        footStyles: { ...classOneStyles, lineWidth: 0.5 },
+        columnStyles: { 0: { cellWidth: 55 }, 1: { cellWidth: 25 }, 2: { cellWidth: 260.28 }, 3: { cellWidth: 40, halign: 'right' }, 4: { cellWidth: 45, halign: 'right' }, 5: { cellWidth: 60, halign: 'right' }, 6: { cellWidth: 70, halign: 'right' } },
         didDrawPage: data => { yPos = data.cursor?.y ?? yPos; }
     });
     // @ts-ignore
@@ -426,9 +337,9 @@ export async function generateCustomInvoicePdf(
     autoTable(doc, {
         startY: yPos,
         theme: 'grid',
-        body: [[{ content: footerText, styles: { ...classOneStyles, halign: 'center', cellPadding: 1 }}]],
+        body: [[{ content: footerText, styles: { ...classOneStyles, halign: 'center' }}]],
         margin: { left: pageMargin, right: pageMargin },
-        styles: { cellPadding: 1 },
+        styles: { cellPadding: padding },
         didDrawPage: data => { yPos = data.cursor?.y ?? yPos; }
     });
     // @ts-ignore
@@ -451,22 +362,17 @@ export async function generateCustomInvoicePdf(
             theme: 'grid',
             body: [
                 [
-                    { content: 'Name', styles: { ...classOneStyles, cellPadding: 1, halign: 'left' } },
-                    { content: manu.companyName, styles: { ...classTwoStyles, halign: 'left', cellPadding: 1 } },
-                    { content: 'GST NO', styles: { ...classOneStyles, cellPadding: 1, fontSize: 8 } },
-                    { content: manu.gstNumber, styles: { ...classTwoStyles, halign: 'left', cellPadding: 1 } },
+                    { content: 'Name', styles: { ...classOneStyles, halign: 'left', cellPadding: padding } },
+                    { content: manu.companyName, styles: { ...classTwoStyles, halign: 'left', cellPadding: padding } },
+                    { content: 'GST NO', styles: { ...classOneStyles, fontSize: 8, cellPadding: padding } },
+                    { content: manu.gstNumber, styles: { ...classTwoStyles, halign: 'left', cellPadding: padding } },
                 ],
                 [
-                    { content: 'Tax Invoice No & Date', styles: { ...classOneStyles, cellPadding: 1, halign: 'left' } },
-                    { content: taxInvoiceText, styles: { ...classTwoStyles, halign: 'left', cellPadding: 1 }, colSpan: 3 },
+                    { content: 'Tax Invoice No & Date', styles: { ...classOneStyles, halign: 'left', cellPadding: padding } },
+                    { content: taxInvoiceText, styles: { ...classTwoStyles, halign: 'left', cellPadding: padding }, colSpan: 3 },
                 ]
             ],
-            columnStyles: {
-                0: { cellWidth: 120 },
-                1: { cellWidth: 'auto' },
-                2: { cellWidth: 60 },
-                3: { cellWidth: 'auto' },
-            },
+            columnStyles: { 0: { cellWidth: 120 }, 1: { cellWidth: 'auto' }, 2: { cellWidth: 60 }, 3: { cellWidth: 'auto' } },
             margin: { left: pageMargin, right: pageMargin },
             didDrawPage: data => { yPos = data.cursor?.y ?? yPos; }
         });
@@ -481,65 +387,61 @@ export async function generateCustomInvoicePdf(
         theme: 'plain',
         body: [
             [
-                {
-                    content: `Declaration:\n${declarationText}`,
-                    rowSpan: 2, 
-                    styles: {
-                        fontStyle: 'normal',
-                        textColor: [0, 0, 0],
-                        fontSize: 8,
-                        lineWidth: 0.5,
-                        lineColor: [0, 0, 0],
-                        valign: 'top',
-                        halign: 'left',
-                        cellPadding: 2,
-                        minCellHeight: 60
-                    }
-                },
-                {
-                    content: `FOR, ${exporter.companyName.toUpperCase()}`,
-                    colSpan: 2,
-                    styles: {lineWidth: 0.5, lineColor: [0,0,0], ...classOneStyles, halign: 'center', fontSize: FONT_CAT2_SIZE}
-                }
+                { content: `Declaration:\n${declarationText}`, rowSpan: 2, styles: { fontStyle: 'normal', textColor: [0, 0, 0], fontSize: 8, lineWidth: 0.5, lineColor: [0, 0, 0], valign: 'top', halign: 'left', cellPadding: padding, minCellHeight: 60 } },
+                { content: `FOR, ${exporter.companyName.toUpperCase()}`, colSpan: 2, styles: {lineWidth: 0.5, lineColor: [0,0,0], ...classOneStyles, halign: 'center', fontSize: FONT_CAT2_SIZE} }
             ],
             [
-                {
-                    content: 'AUTHORISED SIGNATURE',
-                    colSpan: 2,
-                    styles: {lineWidth: 0.5, lineColor: [0,0,0], ...classTwoStyles, fontStyle: 'bold', halign: 'center', minCellHeight: 40}
-                }
+                { content: 'AUTHORISED SIGNATURE', colSpan: 2, styles: {lineWidth: 0.5, lineColor: [0,0,0], ...classTwoStyles, fontStyle: 'bold', halign: 'center', minCellHeight: 40} }
             ]
         ],
-        columnStyles: {
-            0: { cellWidth: contentWidth * 0.65 },
-            1: { cellWidth: contentWidth * 0.175 },
-            2: { cellWidth: contentWidth * 0.175 },
-        },
+        columnStyles: { 0: { cellWidth: contentWidth * 0.65 }, 1: { cellWidth: contentWidth * 0.175 }, 2: { cellWidth: contentWidth * 0.175 } },
         margin: { left: pageMargin, right: pageMargin },
         didDrawCell: (data) => {
-            // Draw round seal in declaration box
             if (data.section === 'body' && data.row.index === 0 && data.column.index === 0) {
-                if (roundSealImage) {
-                    const imgWidth = 40;
-                    const imgHeight = 40;
-                    // Position at top-right of the declaration cell
-                    const imgX = data.cell.x + data.cell.width - imgWidth - 5; // 5pt padding from right
-                    const imgY = data.cell.y + 10; // 10pt padding from top
-                    doc.addImage(roundSealImage, 'PNG', imgX, imgY, imgWidth, imgHeight);
-                }
+                if (roundSealImage) { doc.addImage(roundSealImage, 'PNG', data.cell.x + data.cell.width - 45, data.cell.y + 10, 40, 40); }
             }
-            // Draw signature image in its cell
             if (data.section === 'body' && data.row.index === 1 && data.column.index === 1) {
-                if (signatureImage) {
-                    const imgWidth = 80;
-                    const imgHeight = 40;
-                    const imgX = data.cell.x + (data.cell.width - imgWidth) / 2;
-                    const imgY = data.cell.y; // Align to top of cell
-                    doc.addImage(signatureImage, 'PNG', imgX, imgY, imgWidth, imgHeight);
-                }
+                if (signatureImage) { doc.addImage(signatureImage, 'PNG', data.cell.x + (data.cell.width - 80) / 2, data.cell.y, 80, 40); }
             }
         }
     });
 
-    doc.save(`Custom_Invoice_${docData.exportInvoiceNumber.replace(/[\\/:*?"<>|]/g, '_')}.pdf`);
+    return doc.internal.getNumberOfPages();
+}
+
+// --- Main PDF Generation Function (Wrapper) ---
+export async function generateCustomInvoicePdf(
+    docData: ExportDocument,
+    exporter: Company,
+    manufacturersWithDetails: (Manufacturer & { invoiceNumber: string, invoiceDate?: Date })[],
+    allProducts: Product[],
+    allSizes: Size[]
+) {
+    let signatureImage: Uint8Array | null = null;
+    let roundSealImage: Uint8Array | null = null;
+
+    try {
+        const signatureResponse = await fetch('/signature.png');
+        if (signatureResponse.ok) { signatureImage = new Uint8Array(await signatureResponse.arrayBuffer()); } 
+        else { console.warn('Signature image not found at /signature.png'); }
+
+        const roundSealResponse = await fetch('/Hemith-Round.png');
+        if (roundSealResponse.ok) { roundSealImage = new Uint8Array(await roundSealResponse.arrayBuffer()); } 
+        else { console.warn('Hemith-Round.png not found at /public/Hemith-Round.png'); }
+    } catch (error) {
+        console.error("Error fetching images for PDF:", error);
+    }
+    
+    const largePadding = 4;
+    const smallPadding = 1.5;
+
+    const tempDoc = new jsPDF({ unit: 'pt', format: 'a4' });
+    const pageCountWithLargePadding = drawCustomInvoice(tempDoc, docData, exporter, manufacturersWithDetails, allProducts, allSizes, signatureImage, roundSealImage, largePadding);
+    
+    const finalPadding = pageCountWithLargePadding > 1 ? smallPadding : largePadding;
+
+    const finalDoc = new jsPDF({ unit: 'pt', format: 'a4' });
+    drawCustomInvoice(finalDoc, docData, exporter, manufacturersWithDetails, allProducts, allSizes, signatureImage, roundSealImage, finalPadding);
+
+    finalDoc.save(`Custom_Invoice_${docData.exportInvoiceNumber.replace(/[\\/:*?"<>|]/g, '_')}.pdf`);
 }
