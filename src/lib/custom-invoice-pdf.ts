@@ -386,7 +386,7 @@ export async function generateCustomInvoicePdf(
             { content: conversationRate.toFixed(2), colSpan: 2, styles: { ...classTwoStyles, halign: 'center', cellPadding: 2 } }
         ],
         [
-            { content: amountToWordsUSD(grandTotalAmount), rowSpan: 4, colSpan: 3, styles: { ...classTwoStyles, halign: 'left', minCellHeight: 60 } },
+            { content: amountToWordsUSD(grandTotalAmount), rowSpan: 3, colSpan: 3, styles: { ...classTwoStyles, halign: 'left', minCellHeight: 60 } },
             { content: 'FOB', styles: { ...classOneStyles, cellPadding: 2, fontSize: 9, halign: 'center' } },
             { content: 'INR', styles: { ...classTwoStyles, halign: 'center', cellPadding: 2 } },
             { content: totalAmountInr.toFixed(2), colSpan: 2, styles: { ...classTwoStyles, halign: 'center', cellPadding: 2 } }
@@ -400,9 +400,6 @@ export async function generateCustomInvoicePdf(
             { content: 'TOTAL', styles: { ...classOneStyles, cellPadding: 2, fontSize: 9, halign: 'center' } },
             { content: 'INR', styles: { ...classTwoStyles, halign: 'center', cellPadding: 2 } },
             { content: finalTotalInr.toFixed(2), colSpan: 2, styles: { ...classTwoStyles, halign: 'center', cellPadding: 2 } }
-        ],
-         [
-            { content: '', styles: { ...classTwoStyles, cellPadding: 2, minCellHeight: 10 }, colSpan: 4 } // Empty row for spacing
         ],
     ];
 
