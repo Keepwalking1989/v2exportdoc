@@ -6,15 +6,54 @@ import type { ExportDocument } from '@/types/export-document';
 import type { Company } from '@/types/company'; // Exporter
 import type { Manufacturer } from '@/types/manufacturer';
 
-export function generateVgmPdf(
+export async function generateVgmPdf(
     docData: ExportDocument,
     exporter: Company,
     manufacturer: Manufacturer | undefined
 ) {
     const doc = new jsPDF({ unit: 'pt', format: 'a4' });
-    let yPos = 40;
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const pageHeight = doc.internal.pageSize.getHeight();
+
+    let headerImage: Uint8Array | null = null;
+    let footerImage: Uint8Array | null = null;
+    let headerHeight = 0;
+    let footerHeight = 0;
+
+    try {
+        const headerResponse = await fetch('/Latter-pad-head.png');
+        if (headerResponse.ok) {
+            headerImage = new Uint8Array(await headerResponse.arrayBuffer());
+            // Set fixed height for layout consistency
+            headerHeight = 70; 
+        } else {
+            console.warn('Header image not found at /Latter-pad-head.png');
+        }
+
+        const footerResponse = await fetch('/Latter-pad-bottom.png');
+        if (footerResponse.ok) {
+            footerImage = new Uint8Array(await footerResponse.arrayBuffer());
+            // Set fixed height for layout consistency
+            footerHeight = 50; 
+        } else {
+            console.warn('Footer image not found at /Latter-pad-bottom.png');
+        }
+    } catch (error) {
+        console.error("Error fetching letterhead images for PDF:", error);
+    }
+    
+    const addHeaderFooter = () => {
+        if (headerImage) {
+            doc.addImage(headerImage, 'PNG', 0, 0, pageWidth, headerHeight);
+        }
+        if (footerImage) {
+            doc.addImage(footerImage, 'PNG', 0, pageHeight - footerHeight, pageWidth, footerHeight);
+        }
+    };
+
+    let yPos = headerHeight + 20;
     const pageMargin = 30;
-    const contentWidth = doc.internal.pageSize.getWidth() - 2 * pageMargin;
+    const contentWidth = pageWidth - 2 * pageMargin;
 
     // Title
     doc.setFontSize(14);
@@ -66,12 +105,17 @@ export function generateVgmPdf(
             1: { cellWidth: 'auto' },
             2: { cellWidth: 'auto' },
         },
-        margin: { left: pageMargin, right: pageMargin },
-        didDrawPage: data => { yPos = data.cursor?.y ?? yPos; }
+        margin: { left: pageMargin, right: pageMargin, top: headerHeight, bottom: footerHeight },
+        didDrawPage: (data) => {
+            addHeaderFooter();
+            // We re-add the title if a new page is created by this table, below the header.
+            doc.setFontSize(14);
+            doc.setFont('helvetica', 'bold');
+            doc.text('INFORMATION ABOUT VERIFIED GROSS MASS OF CONTAINER', contentWidth / 2 + pageMargin, headerHeight + 20, { align: 'center' });
+        },
     });
     // @ts-ignore
     yPos = doc.lastAutoTable.finalY + 20;
-
 
     // Container Weight Details Table (Redesigned)
     const containerTableBody = (docData.containerItems || []).map(container => {
@@ -120,9 +164,11 @@ export function generateVgmPdf(
             3: { halign: 'right' },   // Tare Wt
             4: { halign: 'right' },   // Total Wt
         },
-        margin: { left: pageMargin, right: pageMargin },
+        margin: { left: pageMargin, right: pageMargin, top: headerHeight, bottom: footerHeight },
+        didDrawPage: (data) => {
+             addHeaderFooter();
+        }
     });
-
 
     // Save the PDF
     doc.save(`VGM_${docData.exportInvoiceNumber.replace(/[\\/:*?"<>|]/g, '_')}.pdf`);
