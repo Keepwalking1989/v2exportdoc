@@ -191,71 +191,29 @@ export function generatePerformaInvoicePdf(
   // @ts-ignore
   yPos = doc.lastAutoTable.finalY;
 
-  // --- Note Box ---
-  const noteHeader = "Note:";
+  // --- Note and Bank Details in separate boxes ---
   const noteBody = invoice.note || 'N/A';
-  const noteHeaderHeight = calculateTextHeight(doc, noteHeader, contentWidth, FONT_HEADER, 'bold');
-  const noteBodyHeight = calculateTextHeight(doc, noteBody, contentWidth, FONT_BODY, 'normal');
-  const noteCellHeight = noteHeaderHeight + noteBodyHeight + (CELL_PADDING * 2) + 4; // Add 4 for spacing
-
-  autoTable(doc, {
-      startY: yPos,
-      body: [[{ content: '', styles: { minCellHeight: noteCellHeight } }]],
-      theme: 'grid',
-      styles: { ...bodyStyle, halign: 'left', valign: 'top' },
-      margin: { left: PAGE_MARGIN_X, right: PAGE_MARGIN_X },
-      didDrawCell: (data) => {
-          if (data.section === 'body' && data.row.index === 0) {
-              const cell = data.cell;
-              let cursorY = cell.y + cell.padding('top');
-              
-              doc.setFont('helvetica', 'bold');
-              doc.setFontSize(FONT_HEADER);
-              doc.text(noteHeader, cell.x + cell.padding('left'), cursorY + FONT_HEADER);
-              cursorY += noteHeaderHeight + 4; // This controls the space after "Note:"
-
-              doc.setFont('helvetica', 'normal');
-              doc.setFontSize(FONT_BODY);
-              const contentLines = doc.splitTextToSize(noteBody, cell.width - cell.padding('left') - cell.padding('right'));
-              doc.text(contentLines, cell.x + cell.padding('left'), cursorY);
-          }
-      },
-  });
-  // @ts-ignore
-  yPos = doc.lastAutoTable.finalY;
-
-  // --- Bank Details Box ---
-  const bankHeader = "Bank Details";
   const bankBody = `BENEFICIARY NAME: ${exporter.companyName.toUpperCase()}\nBENEFICIARY BANK: ${selectedBank?.bankName.toUpperCase() || ''}, BRANCH: ${selectedBank?.bankAddress.toUpperCase() || ''}\nBENEFICIARY A/C NO: ${selectedBank?.accountNumber || ''}, SWIFT CODE: ${selectedBank?.swiftCode.toUpperCase() || ''}, IFSC CODE: ${selectedBank?.ifscCode.toUpperCase() || ''}`;
-  const bankHeaderHeight = calculateTextHeight(doc, bankHeader, contentWidth, FONT_HEADER, 'bold');
-  const bankBodyHeight = calculateTextHeight(doc, bankBody, contentWidth, FONT_BODY, 'normal');
-  const bankCellHeight = bankHeaderHeight + bankBodyHeight + (CELL_PADDING * 2) + 4; // Add 4 for spacing
 
   autoTable(doc, {
-      startY: yPos,
-      body: [[{ content: '', styles: { minCellHeight: bankCellHeight } }]],
-      theme: 'grid',
-      styles: { ...bodyStyle, halign: 'left', valign: 'top' },
-      margin: { left: PAGE_MARGIN_X, right: PAGE_MARGIN_X },
-      didDrawCell: (data) => {
-          if (data.section === 'body' && data.row.index === 0) {
-              const cell = data.cell;
-              let cursorY = cell.y + cell.padding('top');
-
-              doc.setFont('helvetica', 'bold');
-              doc.setFontSize(FONT_HEADER);
-              doc.text(bankHeader, cell.x + cell.padding('left'), cursorY + FONT_HEADER);
-              cursorY += bankHeaderHeight + 4; // This controls the space after "Bank Details"
-
-              doc.setFont('helvetica', 'normal');
-              doc.setFontSize(FONT_BODY);
-              const contentLines = doc.splitTextToSize(bankBody, cell.width - cell.padding('left') - cell.padding('right'));
-              doc.text(contentLines, cell.x + cell.padding('left'), cursorY);
-          }
-      },
+    startY: yPos,
+    body: [
+      [{ content: 'Note:', styles: { ...headerStyle, halign: 'left' } }],
+      [{ content: noteBody, styles: { ...bodyStyle, halign: 'left' } }],
+      [{ content: 'Bank Details', styles: { ...headerStyle, halign: 'left' } }],
+      [{ content: bankBody, styles: { ...bodyStyle, halign: 'left' } }],
+    ],
+    theme: 'grid',
+    margin: { left: PAGE_MARGIN_X, right: PAGE_MARGIN_X },
+    didDrawPage: (data) => {
+      // @ts-ignore
+      yPos = data.cursor?.y ?? yPos;
+    }
   });
+
   // @ts-ignore
   yPos = doc.lastAutoTable.finalY;
+
 
   // --- Declaration & Signature Block ---
   autoTable(doc, {
