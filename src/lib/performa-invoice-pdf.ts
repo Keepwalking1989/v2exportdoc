@@ -184,8 +184,8 @@ export function generatePerformaInvoicePdf(
       ]],
       margin: { left: PAGE_MARGIN_X, right: PAGE_MARGIN_X },
       columnStyles: {
-          0: { cellWidth: contentWidth - 35 },
-          1: { cellWidth: 35 }
+          0: { cellWidth: contentWidth - 50 },
+          1: { cellWidth: 50 }
       },
   });
   // @ts-ignore
@@ -208,12 +208,12 @@ export function generatePerformaInvoicePdf(
       theme: 'grid',
       margin: { left: PAGE_MARGIN_X, right: PAGE_MARGIN_X },
       columnStyles: {
-          0: { cellWidth: contentWidth - 35 },
-          1: { cellWidth: 35 }
+          0: { cellWidth: contentWidth - 50 },
+          1: { cellWidth: 50 }
       },
       willDrawCell: (data) => {
           // Calculate max height before drawing to ensure consistency
-          const amountCellWidth = contentWidth - 35;
+          const amountCellWidth = contentWidth - 50;
           const amountLines = doc.splitTextToSize(amountInWordsStr.toUpperCase(), amountCellWidth - data.cell.padding('horizontal'));
           const amountHeight = (amountLines.length * FONT_BODY_SMALL) + data.cell.padding('vertical') + (amountLines.length > 1 ? (amountLines.length - 1) * 2 : 0);
           
@@ -231,16 +231,25 @@ export function generatePerformaInvoicePdf(
   // @ts-ignore
   yPos = doc.lastAutoTable.finalY;
 
-
-  // Note and Bank Details
   autoTable(doc, {
     startY: yPos,
-    body: [
-      [{ content: 'Note:', styles: { ...headerStyle, halign: 'left', fontStyle: 'bold' } }],
-      [{ content: invoice.note || 'N/A', styles: { ...bodyStyle, halign: 'left' } }],
-      [{ content: 'Bank Details', styles: { ...headerStyle, halign: 'left', fontStyle: 'bold' } }],
-      [{ content: `BENEFICIARY NAME: ${exporter.companyName.toUpperCase()}\nBENEFICIARY BANK: ${selectedBank?.bankName.toUpperCase() || ''}, BRANCH: ${selectedBank?.bankAddress.toUpperCase() || ''}\nBENEFICIARY A/C NO: ${selectedBank?.accountNumber || ''}, SWIFT CODE: ${selectedBank?.swiftCode.toUpperCase() || ''}, IFSC CODE: ${selectedBank?.ifscCode.toUpperCase() || ''}`, styles: { ...bodyStyle, halign: 'left' } }]
-    ],
+    body: [[
+        { content: `Note:\n${invoice.note || 'N/A'}`, styles: { ...bodyStyle, halign: 'left' } }
+    ]],
+    didParseCell: (data) => {
+        if (data.section === 'body' && data.cell.raw) {
+            const rawContent = data.cell.raw.toString();
+            const noteIndex = rawContent.indexOf("Note:");
+            if (noteIndex !== -1) {
+                const noteText = rawContent.substring(0, noteIndex + 5);
+                const restOfText = rawContent.substring(noteIndex + 5);
+                data.cell.text = [
+                    {text: noteText, styles: {fontStyle: 'bold', fontSize: FONT_HEADER}},
+                    {text: restOfText, styles: {fontStyle: 'normal', fontSize: FONT_BODY}}
+                ];
+            }
+        }
+    },
     theme: 'grid',
     margin: { left: PAGE_MARGIN_X, right: PAGE_MARGIN_X },
     didDrawPage: (data) => {
@@ -250,6 +259,37 @@ export function generatePerformaInvoicePdf(
   });
   // @ts-ignore
   yPos = doc.lastAutoTable.finalY;
+
+  const bankDetailsText = `BENEFICIARY NAME: ${exporter.companyName.toUpperCase()}\nBENEFICIARY BANK: ${selectedBank?.bankName.toUpperCase() || ''}, BRANCH: ${selectedBank?.bankAddress.toUpperCase() || ''}\nBENEFICIARY A/C NO: ${selectedBank?.accountNumber || ''}, SWIFT CODE: ${selectedBank?.swiftCode.toUpperCase() || ''}, IFSC CODE: ${selectedBank?.ifscCode.toUpperCase() || ''}`;
+  autoTable(doc, {
+    startY: yPos,
+    body: [[
+      { content: `Bank Details\n${bankDetailsText}`, styles: {...bodyStyle, halign: 'left'} }
+    ]],
+    didParseCell: (data) => {
+        if (data.section === 'body' && data.cell.raw) {
+            const rawContent = data.cell.raw.toString();
+            const headerIndex = rawContent.indexOf("Bank Details");
+            if (headerIndex !== -1) {
+                const headerText = rawContent.substring(0, headerIndex + 12);
+                const restOfText = rawContent.substring(headerIndex + 12);
+                 data.cell.text = [
+                    {text: headerText, styles: {fontStyle: 'bold', fontSize: FONT_HEADER}},
+                    {text: restOfText, styles: {fontStyle: 'normal', fontSize: FONT_BODY}}
+                ];
+            }
+        }
+    },
+    theme: 'grid',
+    margin: { left: PAGE_MARGIN_X, right: PAGE_MARGIN_X },
+    didDrawPage: (data) => {
+      // @ts-ignore
+      yPos = data.cursor?.y ?? yPos;
+    }
+  });
+  // @ts-ignore
+  yPos = doc.lastAutoTable.finalY;
+
 
   // --- Declaration & Signature Block ---
   autoTable(doc, {
