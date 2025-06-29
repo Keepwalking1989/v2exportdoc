@@ -52,9 +52,9 @@ export function generateAnnexurePdf(
     bodyData.push({ label: '8a  Particulars Of Export Invoice:\n b  Export Invoice No.:\n c  Total No.Of Packages:', value: `\n${docData.exportInvoiceNumber}\n${totalBoxes}` });
     const consigneeDetails = `Davare Floors, Inc.\n19 E 60 TH ST, Hialeah,FL.33013 . USA`; // Hardcoded as per image
     bodyData.push({ label: ' d  Name & Address Of The Conignee', value: consigneeDetails });
-    bodyData.push({ label: '9a  Is The Discription Of The Good, The Quality & Their Value\n    As Per Particulars Furnished In The Export Invoice :', value: 'Yes' });
-    bodyData.push({ label: ' b  Whether Sample Is Drawn For\n    Forwarded To Port Of Export:', value: 'No' });
-    bodyData.push({ label: ' c  If Yes The Number Of The Seal Of The Packge Containing\n    The Sample:', value: 'N/A' });
+    bodyData.push({ label: '9a  Is The Discription Of The Good, The Quality & Their Value As Per Particulars Furnished In The Export Invoice :', value: 'Yes' });
+    bodyData.push({ label: ' b  Whether Sample Is Drawn For Forwarded To Port Of Export:', value: 'No' });
+    bodyData.push({ label: ' c  If Yes The Number Of The Seal Of The Packge Containing The Sample:', value: 'N/A' });
     bodyData.push({ label: '10  Central GST/ CUSTOMS SEAL NOS.:\n  a For Non-Containerised Cargo No.Of Packages:\n  b For Containerised Cargo', value: '\nSELF SEALNG\nSELF SEALNG' });
 
     autoTable(doc, {
