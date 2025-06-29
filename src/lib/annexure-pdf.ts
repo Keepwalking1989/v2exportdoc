@@ -6,7 +6,7 @@ import type { ExportDocument, ManufacturerInfo } from '@/types/export-document';
 import type { Company } from '@/types/company'; // Exporter
 import type { Manufacturer } from '@/types/manufacturer';
 
-function drawDocument(doc: jsPDF, docData: ExportDocument, exporter: Company, manufacturersWithDetails: (Manufacturer & { invoiceNumber: string, invoiceDate?: Date })[], padding: number): number {
+function drawDocument(doc: jsPDF, docData: ExportDocument, exporter: Company, manufacturersWithDetails: (Manufacturer & { invoiceNumber: string, invoiceDate?: Date })[], padding: number, signatureImage: Uint8Array | null): number {
     let yPos = 20;
     const pageMargin = 30;
     const contentWidth = doc.internal.pageSize.getWidth() - 2 * pageMargin;
@@ -178,25 +178,47 @@ function drawDocument(doc: jsPDF, docData: ExportDocument, exporter: Company, ma
     const combinedFooterText = "Examined the export goods covered under this invoice description of the goods with reference to DBK & MEIS Scheme Value cap p/kg.Net Weight of Ceramic Glazed Wall Tiles are as under. Certified that the description and value of the goods covered by this invoice have been checked by me and the goods have been packed and sealed with lead seal one time lock seal checked by me and the goods have been packed and sealed with lead seal/ one time lock seal.";
     drawCenteredWrappedText(combinedFooterText);
     
-    yPos += 10;
+    yPos += 20;
 
     // --- Signature ---
-    doc.setFontSize(9);
-    doc.setFont('helvetica', 'bold');
-    doc.text(`For, ${exporter.companyName}`, pageMargin, yPos);
+    const signatureBlockHeight = 80;
+    if (yPos + signatureBlockHeight > doc.internal.pageSize.getHeight() - pageMargin) {
+        doc.addPage();
+        yPos = pageMargin;
+    }
 
-    yPos += 24; // Two empty lines
+    const signatureTableBody = [
+        [{ content: `For, ${exporter.companyName.toUpperCase()}`, styles: { halign: 'center', fontStyle: 'bold' } }],
+        [{ content: '', styles: { minCellHeight: 40 } }],
+        [{ content: 'AUTHORISED SIGNATURE', styles: { halign: 'center', fontStyle: 'bold' } }]
+    ];
 
-    doc.setFont('helvetica', 'bold');
-    doc.text('AUTHORISED SIGN', pageMargin, yPos);
-    yPos += 12;
-    doc.text('SIGNATURE OF EXPORTER', pageMargin, yPos);
+    autoTable(doc, {
+        startY: yPos,
+        body: signatureTableBody,
+        theme: 'plain',
+        tableWidth: 'wrap',
+        margin: { left: contentWidth / 2 + pageMargin },
+        styles: { fontSize: 9 },
+        didDrawCell: (data) => {
+            if (data.section === 'body' && data.row.index === 1) {
+                if (signatureImage) {
+                    const cell = data.cell;
+                    const imgWidth = 80;
+                    const imgHeight = 40;
+                    const imgX = cell.x + (cell.width - imgWidth) / 2;
+                    const imgY = cell.y + (cell.height - imgHeight) / 2;
+                    doc.addImage(signatureImage, 'PNG', imgX, imgY, imgWidth, imgHeight);
+                }
+            }
+        }
+    });
     
     return doc.internal.getNumberOfPages();
 }
 
 
-export function generateAnnexurePdf(
+export async function generateAnnexurePdf(
     docData: ExportDocument,
     exporter: Company,
     manufacturersWithDetails: (Manufacturer & { invoiceNumber: string, invoiceDate?: Date })[]
@@ -204,16 +226,28 @@ export function generateAnnexurePdf(
     const largePadding = 4;
     const smallPadding = 2;
 
+    let signatureImage: Uint8Array | null = null;
+    try {
+        const signatureResponse = await fetch('/signature.png');
+        if (signatureResponse.ok) {
+            signatureImage = new Uint8Array(await signatureResponse.arrayBuffer());
+        } else {
+            console.warn('Signature image not found at /signature.png');
+        }
+    } catch (error) {
+        console.error("Error fetching signature image for PDF:", error);
+    }
+
     // 1. Dry run with large padding to check page count
     const tempDoc = new jsPDF({ unit: 'pt', format: 'a4' });
-    const pageCountWithLargePadding = drawDocument(tempDoc, docData, exporter, manufacturersWithDetails, largePadding);
+    const pageCountWithLargePadding = drawDocument(tempDoc, docData, exporter, manufacturersWithDetails, largePadding, signatureImage);
     
     // 2. Decide final padding
     const finalPadding = pageCountWithLargePadding > 1 ? smallPadding : largePadding;
 
     // 3. Draw the final document with the chosen padding
     const finalDoc = new jsPDF({ unit: 'pt', format: 'a4' });
-    drawDocument(finalDoc, docData, exporter, manufacturersWithDetails, finalPadding);
+    drawDocument(finalDoc, docData, exporter, manufacturersWithDetails, finalPadding, signatureImage);
 
     // 4. Save the final PDF
     finalDoc.save(`ANNEXURE_${docData.exportInvoiceNumber.replace(/[\\/:*?"<>|]/g, '_')}.pdf`);
