@@ -12,8 +12,7 @@ import { amountToWords } from '@/lib/utils';
 
 // --- Page & General Layout (Using Points) ---
 const PAGE_MARGIN_X = 28.34; // pt (approx 10mm)
-const PAGE_MARGIN_Y_TOP = 28.34; // pt (approx 10mm)
-const contentWidth = 595.28 - 2 * PAGE_MARGIN_X;
+const CONTENT_WIDTH = 595.28 - 2 * PAGE_MARGIN_X;
 
 // --- Colors ---
 const COLOR_BLUE_RGB = [217, 234, 247]; // Light blue for backgrounds
@@ -39,11 +38,32 @@ export async function generatePerformaInvoicePdf(
   selectedBank?: Bank
 ) {
   const doc = new jsPDF({ unit: 'pt', format: 'a4' });
-  let yPos = PAGE_MARGIN_Y_TOP;
-  const halfContentWidth = contentWidth / 2;
-
+  const pageWidth = doc.internal.pageSize.getWidth();
+  const pageHeight = doc.internal.pageSize.getHeight();
+  let headerHeight = 0;
+  let footerHeight = 0;
+  
+  let headerImage: Uint8Array | null = null;
+  let footerImage: Uint8Array | null = null;
   let signatureImage: Uint8Array | null = null;
+
   try {
+    const headerResponse = await fetch('/Latter-pad-head.png');
+    if (headerResponse.ok) {
+        headerImage = new Uint8Array(await headerResponse.arrayBuffer());
+        headerHeight = 70; // Set fixed height
+    } else {
+        console.warn('Header image not found at /Latter-pad-head.png');
+    }
+
+    const footerResponse = await fetch('/Latter-pad-bottom.png');
+    if (footerResponse.ok) {
+        footerImage = new Uint8Array(await footerResponse.arrayBuffer());
+        footerHeight = 80; // Set fixed height
+    } else {
+        console.warn('Footer image not found at /Latter-pad-bottom.png');
+    }
+
     const signatureResponse = await fetch('/signature.png');
     if (signatureResponse.ok) {
       signatureImage = new Uint8Array(await signatureResponse.arrayBuffer());
@@ -51,9 +71,19 @@ export async function generatePerformaInvoicePdf(
       console.warn('Signature image not found at /signature.png');
     }
   } catch (error) {
-    console.error("Error fetching signature image:", error);
+    console.error("Error fetching images for PDF:", error);
   }
-
+  
+  const addHeaderFooter = () => {
+    if (headerImage) {
+      doc.addImage(headerImage, 'PNG', 0, 0, pageWidth, headerHeight);
+    }
+    if (footerImage) {
+      doc.addImage(footerImage, 'PNG', 0, pageHeight - footerHeight, pageWidth, footerHeight);
+    }
+  };
+  
+  addHeaderFooter(); // Add to the first page
 
   // --- Reusable Style Definitions for autoTable ---
   const headerStyle = {
@@ -87,6 +117,8 @@ export async function generatePerformaInvoicePdf(
     }
   };
   const currencySymbol = getCurrencySymbol(invoice.currencyType);
+  
+  let yPos = headerHeight + 10;
 
   // --- Row 1: PROFORMA INVOICE ---
   autoTable(doc, {
@@ -102,7 +134,8 @@ export async function generatePerformaInvoicePdf(
       lineColor: COLOR_BORDER_RGB,
       fillColor: COLOR_BLUE_RGB,
     },
-    margin: { left: PAGE_MARGIN_X, right: PAGE_MARGIN_X },
+    margin: { left: PAGE_MARGIN_X, right: PAGE_MARGIN_X, top: headerHeight, bottom: footerHeight },
+    didDrawPage: addHeaderFooter,
   });
   // @ts-ignore
   yPos = doc.lastAutoTable.finalY;
@@ -115,8 +148,9 @@ export async function generatePerformaInvoicePdf(
       [{ content: exporter.companyName.toUpperCase(), styles: { ...headerStyle, fontSize: FONT_BODY } }, { content: client.companyName.toUpperCase(), styles: { ...headerStyle, fontSize: FONT_BODY } }],
       [{ content: exporter.address, styles: {...bodyStyle, halign: 'center'} }, { content: client.address, styles: {...bodyStyle, halign: 'center'} }],
     ],
-    columnStyles: { 0: { cellWidth: halfContentWidth }, 1: { cellWidth: halfContentWidth } },
-    margin: { left: PAGE_MARGIN_X, right: PAGE_MARGIN_X },
+    columnStyles: { 0: { cellWidth: CONTENT_WIDTH/2 }, 1: { cellWidth: CONTENT_WIDTH/2 } },
+    margin: { left: PAGE_MARGIN_X, right: PAGE_MARGIN_X, top: headerHeight, bottom: footerHeight },
+    didDrawPage: addHeaderFooter,
   });
   // @ts-ignore
   yPos = doc.lastAutoTable.finalY;
@@ -129,7 +163,8 @@ export async function generatePerformaInvoicePdf(
         [{ content: invoice.invoiceNumber || 'N/A', styles: { ...bodyStyle, halign: 'center' } }, { content: format(new Date(invoice.invoiceDate), 'dd-MM-yyyy'), styles: { ...bodyStyle, halign: 'center' } }, { content: invoice.finalDestination || 'N/A', styles: { ...bodyStyle, halign: 'center' } }],
     ],
     columnStyles: { 0: { cellWidth: '33.33%' }, 1: { cellWidth: '33.33%' }, 2: { cellWidth: '33.33%' } },
-    margin: { left: PAGE_MARGIN_X, right: PAGE_MARGIN_X },
+    margin: { left: PAGE_MARGIN_X, right: PAGE_MARGIN_X, top: headerHeight, bottom: footerHeight },
+    didDrawPage: addHeaderFooter,
 });
   // @ts-ignore
   yPos = doc.lastAutoTable.finalY;
@@ -141,8 +176,9 @@ export async function generatePerformaInvoicePdf(
       [{ content: 'IEC. CODE:', styles: headerStyle }, { content: 'TERMS AND CONDITIONS OF DELIVERY & PAYMENT:', styles: headerStyle }],
       [{ content: exporter.iecNumber || 'N/A', styles: {...bodyStyle, halign: 'center'} }, { content: invoice.termsAndConditions || 'N/A', styles: { ...bodyStyle, valign: 'top', halign: 'left' } }],
     ],
-    columnStyles: { 0: { cellWidth: halfContentWidth }, 1: { cellWidth: halfContentWidth } },
-    margin: { left: PAGE_MARGIN_X, right: PAGE_MARGIN_X },
+    columnStyles: { 0: { cellWidth: CONTENT_WIDTH/2 }, 1: { cellWidth: CONTENT_WIDTH/2 } },
+    margin: { left: PAGE_MARGIN_X, right: PAGE_MARGIN_X, top: headerHeight, bottom: footerHeight },
+    didDrawPage: addHeaderFooter,
   });
   // @ts-ignore
   yPos = doc.lastAutoTable.finalY;
@@ -203,7 +239,7 @@ export async function generatePerformaInvoicePdf(
     ]),
     startY: yPos,
     theme: 'plain',
-    margin: { left: PAGE_MARGIN_X, right: PAGE_MARGIN_X },
+    margin: { left: PAGE_MARGIN_X, right: PAGE_MARGIN_X, top: headerHeight, bottom: footerHeight },
     styles: { lineWidth: 0.5, lineColor: COLOR_BORDER_RGB, cellPadding: CELL_PADDING },
     headStyles: productTableHeaderStyle,
     bodyStyles: { ...bodyStyle, halign: 'left' },
@@ -220,6 +256,7 @@ export async function generatePerformaInvoicePdf(
         }
       }
     },
+    didDrawPage: addHeaderFooter,
   });
   // @ts-ignore
   yPos = doc.lastAutoTable.finalY;
@@ -235,15 +272,12 @@ export async function generatePerformaInvoicePdf(
           { content: "TOTAL INVOICE AMOUNT IN WORDS:", styles: { ...headerStyle, halign: 'left' } },
           { content: "TOTAL SQM", styles: headerStyle }
       ]],
-      margin: { left: PAGE_MARGIN_X, right: PAGE_MARGIN_X },
+      margin: { left: PAGE_MARGIN_X, right: PAGE_MARGIN_X, top: headerHeight, bottom: footerHeight },
       columnStyles: {
-          0: { cellWidth: contentWidth - sqmValsWidth },
+          0: { cellWidth: CONTENT_WIDTH - sqmValsWidth },
           1: { cellWidth: sqmValsWidth }
       },
-      didDrawPage: (data) => {
-        // @ts-ignore
-        yPos = data.cursor?.y ?? yPos;
-      }
+      didDrawPage: addHeaderFooter,
   });
   // @ts-ignore
   yPos = doc.lastAutoTable.finalY;
@@ -261,14 +295,14 @@ export async function generatePerformaInvoicePdf(
       ]],
       startY: yPos,
       theme: 'grid',
-      margin: { left: PAGE_MARGIN_X, right: PAGE_MARGIN_X },
+      margin: { left: PAGE_MARGIN_X, right: PAGE_MARGIN_X, top: headerHeight, bottom: footerHeight },
       columnStyles: {
-          0: { cellWidth: contentWidth - sqmValsWidth },
+          0: { cellWidth: CONTENT_WIDTH - sqmValsWidth },
           1: { cellWidth: sqmValsWidth }
       },
       didParseCell: (data) => {
          if(data.row.index === 0 && data.column.index === 0) {
-            const amountCellWidth = contentWidth - sqmValsWidth;
+            const amountCellWidth = CONTENT_WIDTH - sqmValsWidth;
             const amountLines = doc.splitTextToSize(amountInWordsStr.toUpperCase(), amountCellWidth - data.cell.padding('horizontal'));
             const amountHeight = (amountLines.length * FONT_BODY_SMALL) + data.cell.padding('vertical') + (amountLines.length > 1 ? (amountLines.length - 1) * 2 : 0);
             
@@ -278,10 +312,7 @@ export async function generatePerformaInvoicePdf(
             data.row.height = maxHeight;
         }
       },
-      didDrawPage: (data) => {
-        // @ts-ignore
-        yPos = data.cursor?.y ?? yPos;
-      }
+      didDrawPage: addHeaderFooter,
   });
   // @ts-ignore
   yPos = doc.lastAutoTable.finalY;
@@ -292,7 +323,8 @@ export async function generatePerformaInvoicePdf(
     body: [[
       { content: 'Note:', styles: { ...headerStyle, halign: 'left' } }
     ]],
-    margin: { left: PAGE_MARGIN_X, right: PAGE_MARGIN_X },
+    margin: { left: PAGE_MARGIN_X, right: PAGE_MARGIN_X, top: headerHeight, bottom: footerHeight },
+    didDrawPage: addHeaderFooter,
   });
   // @ts-ignore
   yPos = doc.lastAutoTable.finalY;
@@ -301,7 +333,8 @@ export async function generatePerformaInvoicePdf(
     body: [[
       { content: invoice.note || 'N/A', styles: { ...bodyStyle, halign: 'left', minCellHeight: 40, valign: 'top' } }
     ]],
-    margin: { left: PAGE_MARGIN_X, right: PAGE_MARGIN_X },
+    margin: { left: PAGE_MARGIN_X, right: PAGE_MARGIN_X, top: headerHeight, bottom: footerHeight },
+    didDrawPage: addHeaderFooter,
   });
   // @ts-ignore
   yPos = doc.lastAutoTable.finalY;
@@ -312,7 +345,8 @@ export async function generatePerformaInvoicePdf(
     body: [[
       { content: 'Bank Details', styles: { ...headerStyle, halign: 'left' } }
     ]],
-    margin: { left: PAGE_MARGIN_X, right: PAGE_MARGIN_X },
+    margin: { left: PAGE_MARGIN_X, right: PAGE_MARGIN_X, top: headerHeight, bottom: footerHeight },
+    didDrawPage: addHeaderFooter,
   });
   // @ts-ignore
   yPos = doc.lastAutoTable.finalY;
@@ -322,7 +356,8 @@ export async function generatePerformaInvoicePdf(
     body: [[
       { content: bankDetailsText, styles: { ...bodyStyle, halign: 'left', valign: 'top', minCellHeight: 60 } }
     ]],
-    margin: { left: PAGE_MARGIN_X, right: PAGE_MARGIN_X },
+    margin: { left: PAGE_MARGIN_X, right: PAGE_MARGIN_X, top: headerHeight, bottom: footerHeight },
+    didDrawPage: addHeaderFooter,
   });
   // @ts-ignore
   yPos = doc.lastAutoTable.finalY;
@@ -354,8 +389,8 @@ export async function generatePerformaInvoicePdf(
         { content: `AUTHORISED SIGNATURE`, styles: { ...headerStyle, valign: 'bottom' } }
       ]
     ],
-    columnStyles: { 0: { cellWidth: contentWidth * 0.60 }, 1: { cellWidth: contentWidth * 0.40 } },
-    margin: { left: PAGE_MARGIN_X, right: PAGE_MARGIN_X },
+    columnStyles: { 0: { cellWidth: CONTENT_WIDTH * 0.60 }, 1: { cellWidth: CONTENT_WIDTH * 0.40 } },
+    margin: { left: PAGE_MARGIN_X, right: PAGE_MARGIN_X, top: headerHeight, bottom: footerHeight },
     didDrawCell: (data) => {
       // Draw signature image in the dedicated empty cell
       if (data.section === 'body' && data.row.index === 2 && data.column.index === 1) {
@@ -369,7 +404,8 @@ export async function generatePerformaInvoicePdf(
           doc.addImage(signatureImage, 'PNG', imgX, imgY, imgWidth, imgHeight);
         }
       }
-    }
+    },
+    didDrawPage: addHeaderFooter,
   });
 
   doc.save(`Performa_Invoice_${invoice.invoiceNumber.replace(/[\\/]/g, '_')}.pdf`);
