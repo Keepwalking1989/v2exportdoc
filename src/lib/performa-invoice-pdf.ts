@@ -29,15 +29,6 @@ const FONT_BODY_SMALL = 7;
 // --- Cell Padding (pt) ---
 const CELL_PADDING = 4;
 
-// Helper function to calculate the height a block of text will occupy
-const calculateTextHeight = (doc: jsPDF, text: string, width: number, fontSize: number, fontStyle: 'normal' | 'bold') => {
-    doc.setFont('helvetica', fontStyle);
-    doc.setFontSize(fontSize);
-    const lines = doc.splitTextToSize(text, width - (2 * CELL_PADDING));
-    return lines.length * fontSize * 1.15; // 1.15 is a line height factor
-};
-
-
 export function generatePerformaInvoicePdf(
   invoice: PerformaInvoice,
   exporter: Company,
@@ -99,11 +90,11 @@ export function generatePerformaInvoicePdf(
     body: [
       [{ content: 'EXPORTER', styles: headerStyle }, { content: 'CONSIGNEE / BUYER:', styles: headerStyle }],
       [{ content: exporter.companyName.toUpperCase(), styles: { ...headerStyle, fontSize: FONT_BODY } }, { content: client.companyName.toUpperCase(), styles: { ...headerStyle, fontSize: FONT_BODY } }],
-      [{ content: exporter.address, styles: bodyStyle }, { content: client.address, styles: bodyStyle }],
+      [{ content: exporter.address, styles: {...bodyStyle, halign: 'center'} }, { content: client.address, styles: {...bodyStyle, halign: 'center'} }],
       [{ content: 'INVOICE NO & DATE:', styles: headerStyle }, { content: 'FINAL DESTINATION:', styles: headerStyle }],
-      [{ content: `${invoice.invoiceNumber || 'N/A'} / ${format(new Date(invoice.invoiceDate), 'dd-MM-yyyy')}`, styles: bodyStyle }, { content: invoice.finalDestination || 'N/A', styles: bodyStyle }],
+      [{ content: `${invoice.invoiceNumber || 'N/A'} / ${format(new Date(invoice.invoiceDate), 'dd-MM-yyyy')}`, styles: {...bodyStyle, halign: 'center'} }, { content: invoice.finalDestination || 'N/A', styles: {...bodyStyle, halign: 'center'} }],
       [{ content: 'IEC. CODE:', styles: headerStyle }, { content: 'TERMS AND CONDITIONS OF DELIVERY & PAYMENT:', styles: headerStyle }],
-      [{ content: exporter.iecNumber || 'N/A', styles: bodyStyle }, { content: invoice.termsAndConditions || 'N/A', styles: { ...bodyStyle, valign: 'top' } }],
+      [{ content: exporter.iecNumber || 'N/A', styles: {...bodyStyle, halign: 'center'} }, { content: invoice.termsAndConditions || 'N/A', styles: { ...bodyStyle, valign: 'top', halign: 'center' } }],
     ],
     columnStyles: { 0: { cellWidth: halfContentWidth }, 1: { cellWidth: halfContentWidth } },
     margin: { left: PAGE_MARGIN_X, right: PAGE_MARGIN_X },
@@ -174,34 +165,38 @@ export function generatePerformaInvoicePdf(
   // --- TOTAL SQM and AMOUNT IN WORDS ---
   const totalSqmText = (invoice.items.reduce((sum, item) => sum + (item.quantitySqmt || 0), 0)).toFixed(2);
   const amountInWordsStr = amountToWords(invoice.grandTotal || 0, invoice.currencyType);
-  const amountInWordsHeight = calculateTextHeight(doc, amountInWordsStr.toUpperCase(), halfContentWidth, FONT_BODY_SMALL, 'normal');
-  const amountInWordsLabelHeight = calculateTextHeight(doc, "TOTAL INVOICE AMOUNT IN WORDS:", halfContentWidth, FONT_HEADER, 'bold');
-  const sharedHeight = Math.max(amountInWordsHeight, amountInWordsLabelHeight);
-
 
   autoTable(doc, {
     startY: yPos,
     body: [
-      [{ content: "TOTAL SQM", styles: headerStyle }, { content: totalSqmText, styles: { ...bodyStyle, halign: 'center' } }],
-      [{ content: "TOTAL INVOICE AMOUNT IN WORDS:", styles: { ...headerStyle, minCellHeight: sharedHeight } }, { content: amountInWordsStr.toUpperCase(), styles: { ...bodyStyle, fontSize: FONT_BODY_SMALL, minCellHeight: sharedHeight, halign: 'center', fillColor: COLOR_WHITE_RGB } }]
+        [{ content: "TOTAL SQM", styles: headerStyle }],
+        [{ content: totalSqmText, styles: { ...bodyStyle, halign: 'center' } }]
     ],
-    columnStyles: { 0: { cellWidth: halfContentWidth }, 1: { cellWidth: halfContentWidth } },
+    columnStyles: { 0: { cellWidth: halfContentWidth } },
     margin: { left: PAGE_MARGIN_X, right: PAGE_MARGIN_X },
   });
+  
+  autoTable(doc, {
+    startY: yPos,
+    body: [
+      [{ content: "TOTAL INVOICE AMOUNT IN WORDS:", styles: headerStyle }],
+      [{ content: amountInWordsStr.toUpperCase(), styles: { ...bodyStyle, fontSize: FONT_BODY_SMALL, halign: 'center' } }]
+    ],
+    columnStyles: { 0: { cellWidth: halfContentWidth } },
+    margin: { left: PAGE_MARGIN_X + halfContentWidth, right: PAGE_MARGIN_X },
+  });
+
   // @ts-ignore
   yPos = doc.lastAutoTable.finalY;
 
-  // --- Note and Bank Details in separate boxes ---
-  const noteBody = invoice.note || 'N/A';
-  const bankBody = `BENEFICIARY NAME: ${exporter.companyName.toUpperCase()}\nBENEFICIARY BANK: ${selectedBank?.bankName.toUpperCase() || ''}, BRANCH: ${selectedBank?.bankAddress.toUpperCase() || ''}\nBENEFICIARY A/C NO: ${selectedBank?.accountNumber || ''}, SWIFT CODE: ${selectedBank?.swiftCode.toUpperCase() || ''}, IFSC CODE: ${selectedBank?.ifscCode.toUpperCase() || ''}`;
-
+  // Note and Bank Details
   autoTable(doc, {
     startY: yPos,
     body: [
-      [{ content: 'Note:', styles: { ...headerStyle, halign: 'left' } }],
-      [{ content: noteBody, styles: { ...bodyStyle, halign: 'left' } }],
-      [{ content: 'Bank Details', styles: { ...headerStyle, halign: 'left' } }],
-      [{ content: bankBody, styles: { ...bodyStyle, halign: 'left' } }],
+      [{ content: 'Note:', styles: { ...headerStyle, halign: 'left', fontStyle: 'bold' } }],
+      [{ content: invoice.note || 'N/A', styles: { ...bodyStyle, halign: 'left' } }],
+      [{ content: 'Bank Details', styles: { ...headerStyle, halign: 'left', fontStyle: 'bold' } }],
+      [{ content: `BENEFICIARY NAME: ${exporter.companyName.toUpperCase()}\nBENEFICIARY BANK: ${selectedBank?.bankName.toUpperCase() || ''}, BRANCH: ${selectedBank?.bankAddress.toUpperCase() || ''}\nBENEFICIARY A/C NO: ${selectedBank?.accountNumber || ''}, SWIFT CODE: ${selectedBank?.swiftCode.toUpperCase() || ''}, IFSC CODE: ${selectedBank?.ifscCode.toUpperCase() || ''}`, styles: { ...bodyStyle, halign: 'left' } }]
     ],
     theme: 'grid',
     margin: { left: PAGE_MARGIN_X, right: PAGE_MARGIN_X },
@@ -210,10 +205,8 @@ export function generatePerformaInvoicePdf(
       yPos = data.cursor?.y ?? yPos;
     }
   });
-
   // @ts-ignore
   yPos = doc.lastAutoTable.finalY;
-
 
   // --- Declaration & Signature Block ---
   autoTable(doc, {
