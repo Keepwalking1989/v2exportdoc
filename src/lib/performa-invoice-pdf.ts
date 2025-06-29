@@ -340,7 +340,7 @@ export function generatePerformaInvoicePdf(
   const amountInWordsHeight = calculateCellHeight(doc, amountInWordsStr.toUpperCase(), halfContentWidth, 2, amtInWordsValueCellStyleOverride);
 
   const yAfterAmtWordsLbl = drawCell(doc, "TOTAL INVOICE AMOUNT IN WORDS:", leftColX, yPos, halfContentWidth, 2, amountInWordsHeight);
-  const yAfterAmtWordsVal = drawCell(doc, amountInWordsStr.toUpperCase(), rightColX, yPos, halfContentWidth, 2, amountInWordsHeight, 'center', amtInWordsValueCellStyleOverride, true);
+  const yAfterAmtWordsVal = drawCell(doc, amountInWordsStr.toUpperCase(), rightColX, yPos, halfContentWidth, 3, amountInWordsHeight, 'center', amtInWordsValueCellStyleOverride, true);
   yPos = Math.max(yAfterAmtWordsLbl, yAfterAmtWordsVal);
   
   // --- Merged Note box with styled label ---
@@ -366,19 +366,38 @@ export function generatePerformaInvoicePdf(
               doc.text(contentLines, cell.x + cell.padding('left'), textY);
           }
       },
-      didDrawPage: data => { yPos = data.cursor?.y ?? yPos; }
+      didDrawPage: data => { 
+        // @ts-ignore
+        yPos = data.cursor?.y ?? yPos; 
+      }
   });
+  // @ts-ignore
   yPos = doc.lastAutoTable.finalY;
 
   // --- Bank Details Section ---
-  yPos = drawCell(doc, "Bank Details", leftColX, yPos, contentWidth, 2, null, 'center', {size: FONT_CAT2_SIZE, weight: 'bold'});
+  autoTable(doc, {
+      startY: yPos,
+      theme: 'plain',
+      body: [
+          [{ content: 'Bank Details', styles: { ...getCellStyle(2), halign: 'center' } }],
+      ],
+      margin: { left: PAGE_MARGIN_X, right: PAGE_MARGIN_X },
+  });
+  // @ts-ignore
+  yPos = doc.lastAutoTable.finalY;
   
   let beneficiaryText = 'N/A';
   if (selectedBank) {
     beneficiaryText = `BENEFICIARY NAME: ${exporter.companyName.toUpperCase()}\nBENEFICIARY BANK: ${selectedBank.bankName.toUpperCase()}, BRANCH: ${selectedBank.bankAddress.toUpperCase()}\nBENEFICIARY A/C NO: ${selectedBank.accountNumber}, SWIFT CODE: ${selectedBank.swiftCode.toUpperCase()}, IFSC CODE: ${selectedBank.ifscCode.toUpperCase()}`;
   }
-  const beneficiaryTextHeight = calculateCellHeight(doc, beneficiaryText, contentWidth, 3);
-  yPos = drawCell(doc, beneficiaryText, leftColX, yPos, contentWidth, 3, beneficiaryTextHeight, 'left');
+  autoTable(doc, {
+    startY: yPos,
+    theme: 'plain',
+    body: [[{ content: beneficiaryText, styles: { ...getCellStyle(3), halign: 'left', lineWidth: {top: 0, right: 0.5, bottom: 0.5, left: 0.5} } }]],
+    margin: { left: PAGE_MARGIN_X, right: PAGE_MARGIN_X },
+  });
+  // @ts-ignore
+  yPos = doc.lastAutoTable.finalY;
 
 
   // --- Declaration & Signature Block ---
@@ -391,14 +410,19 @@ export function generatePerformaInvoicePdf(
       startY: yPos,
       theme: 'plain',
       body: [
-          [
+          [ // Row 1 of the whole block
               { 
-                  content: '', // Empty, drawn in didDrawCell
-                  rowSpan: 3, 
+                  content: `Declaration:\n${declarationContent}`,
+                  rowSpan: 4, 
                   styles: { 
-                      lineWidth: 0.5, 
-                      lineColor: COLOR_BORDER_RGB, 
+                      fontStyle: 'normal',
+                      textColor: [0, 0, 0],
+                      fontSize: 8,
+                      lineWidth: 0.5,
+                      lineColor: COLOR_BORDER_RGB,
                       valign: 'top', 
+                      halign: 'left',
+                      cellPadding: CELL_PADDING
                   } 
               },
               { 
@@ -412,7 +436,7 @@ export function generatePerformaInvoicePdf(
                   } 
               }
           ],
-          [
+          [ // Row 2 of the signature block (declaration cell is spanned)
               { 
                   content: forExporterText,
                   styles: { 
@@ -425,11 +449,20 @@ export function generatePerformaInvoicePdf(
                       fillColor: COLOR_BLUE_RGB,
                       textColor: COLOR_BLACK_RGB,
                       cellPadding: CELL_PADDING,
+                  } 
+              }
+          ],
+          [ // Row 3 (empty for signature)
+               { 
+                  content: '',
+                  styles: {
+                      lineWidth: 0.5, 
+                      lineColor: COLOR_BORDER_RGB,
                       minCellHeight: 40
                   } 
               }
           ],
-          [
+          [ // Row 4
               { 
                   content: authorisedSignatureText,
                   styles: { 
@@ -449,24 +482,6 @@ export function generatePerformaInvoicePdf(
           1: { cellWidth: contentWidth * 0.40 }
       },
       margin: { left: PAGE_MARGIN_X, right: PAGE_MARGIN_X },
-      didDrawCell: (data) => {
-          if (data.section === 'body' && data.row.index === 0 && data.column.index === 0) {
-              const cell = data.cell;
-              const boldFontSize = FONT_CAT3_SIZE + 1;
-              const normalFontSize = FONT_CAT3_SIZE;
-              let textY = cell.y + cell.padding('top');
-
-              doc.setFont('helvetica', 'bold');
-              doc.setFontSize(boldFontSize);
-              doc.text("Declaration:", cell.x + cell.padding('left'), textY + boldFontSize);
-              textY += boldFontSize + LINE_HEIGHT_ADDITION + 2;
-              
-              doc.setFont('helvetica', 'normal');
-              doc.setFontSize(normalFontSize);
-              const textLines = doc.splitTextToSize(declarationContent, cell.width - cell.padding('left') - cell.padding('right'));
-              doc.text(textLines, cell.x + cell.padding('left'), textY);
-          }
-      }
   });
 
 
