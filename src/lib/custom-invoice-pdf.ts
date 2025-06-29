@@ -372,7 +372,7 @@ export async function generateCustomInvoicePdf(
         ],
         [
             { content: 'Total No. Of Pkgs.', colSpan: 3, styles: { ...classOneStyles, cellPadding: 2, halign: 'center', fontSize: 9 } },
-            { content: 'EXCHANGE RATE NOFICATION NUMBER AND DATE', colSpan: 4, styles: { ...classOneStyles, cellPadding: 2, fontSize: FONT_CAT3_SIZE, halign: 'center' } }
+            { content: 'EXCHANGE RATE NOTIFICATION NUMBER AND DATE', colSpan: 4, styles: { ...classOneStyles, cellPadding: 2, fontSize: 8, halign: 'center' } }
         ],
         [
             { content: grandTotalBoxes.toString(), colSpan: 3, styles: { ...classTwoStyles, halign: 'center', cellPadding: 2 } },
@@ -386,7 +386,7 @@ export async function generateCustomInvoicePdf(
             { content: conversationRate.toFixed(2), colSpan: 2, styles: { ...classTwoStyles, halign: 'center', cellPadding: 2 } }
         ],
         [
-            { content: amountToWordsUSD(grandTotalAmount), rowSpan: 3, colSpan: 3, styles: { ...classTwoStyles, halign: 'left', minCellHeight: 60 } },
+            { content: amountToWordsUSD(grandTotalAmount), rowSpan: 2, colSpan: 3, styles: { ...classTwoStyles, halign: 'left', minCellHeight: 60 } },
             { content: 'FOB', styles: { ...classOneStyles, cellPadding: 2, fontSize: 9, halign: 'center' } },
             { content: 'INR', styles: { ...classTwoStyles, halign: 'center', cellPadding: 2 } },
             { content: totalAmountInr.toFixed(2), colSpan: 2, styles: { ...classTwoStyles, halign: 'center', cellPadding: 2 } }
@@ -395,11 +395,6 @@ export async function generateCustomInvoicePdf(
             { content: 'IGST %', styles: { ...classOneStyles, cellPadding: 2, fontSize: 9, halign: 'center' } },
             { content: docData.gst || '0%', styles: { ...classTwoStyles, halign: 'center', cellPadding: 2 } },
             { content: gstAmount.toFixed(2), colSpan: 2, styles: { ...classTwoStyles, halign: 'center', cellPadding: 2 } }
-        ],
-        [
-            { content: 'TOTAL', styles: { ...classOneStyles, cellPadding: 2, fontSize: 9, halign: 'center' } },
-            { content: 'INR', styles: { ...classTwoStyles, halign: 'center', cellPadding: 2 } },
-            { content: finalTotalInr.toFixed(2), colSpan: 2, styles: { ...classTwoStyles, halign: 'center', cellPadding: 2 } }
         ],
     ];
 
