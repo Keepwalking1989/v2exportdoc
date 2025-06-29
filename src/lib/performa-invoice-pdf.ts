@@ -299,6 +299,9 @@ export function generatePerformaInvoicePdf(
       yPos = data.cursor?.y ?? yPos;
     }
   });
+  // @ts-ignore
+  yPos = doc.lastAutoTable.finalY;
+
 
   // --- Row after table: TOTAL SQM Label | TOTAL SQM Value ---
   const totalSqmText = (invoice.items.reduce((sum, item) => sum + (item.quantitySqmt || 0), 0)).toFixed(2);
@@ -327,16 +330,64 @@ export function generatePerformaInvoicePdf(
   const yAfterBenVal = drawCell(doc, beneficiaryText, rightColX, yPos, halfContentWidth, 3);
   yPos = Math.max(yAfterBenLbl, yAfterBenVal);
 
-  // --- Row: Declaration Label | Declaration Content ---
+  // --- Declaration & Signature Block ---
   const declarationContent = "CERTIFIED THAT THE PARTICULARS GIVEN ABOVE ARE TRUE AND CORRECT.";
-  const yAfterDecLbl = drawCell(doc, "Declaration:", leftColX, yPos, halfContentWidth, 2);
-  const yAfterDecVal = drawCell(doc, declarationContent, rightColX, yPos, halfContentWidth, 3);
-  yPos = Math.max(yAfterDecLbl, yAfterDecVal);
-  
-  // --- Row: Signature ---
-  // For simplicity, making signature elements full width, centered Cat 2.
-  yPos = drawCell(doc, `FOR, ${exporter.companyName.toUpperCase()}`, leftColX, yPos, contentWidth, 2, FONT_CAT2_SIZE * 3); // Extra height for signing space
-  yPos = drawCell(doc, "AUTHORISED SIGNATURE", leftColX, yPos, contentWidth, 2);
+  autoTable(doc, {
+    startY: yPos,
+    theme: 'plain',
+    body: [
+      [
+        { 
+          content: `Declaration:\n${declarationContent}`,
+          rowSpan: 2,
+          styles: { 
+            fontStyle: 'normal', 
+            fontSize: FONT_CAT3_SIZE, 
+            lineWidth: 0.5, 
+            lineColor: COLOR_BORDER_RGB, 
+            valign: 'top', 
+            halign: 'left', 
+            cellPadding: CELL_PADDING 
+          } 
+        },
+        { 
+          content: `FOR, ${exporter.companyName.toUpperCase()}`,
+          styles: {
+            lineWidth: 0.5, 
+            lineColor: COLOR_BORDER_RGB, 
+            fontStyle: 'bold',
+            fontSize: FONT_CAT2_SIZE,
+            halign: 'center',
+            valign: 'bottom',
+            cellPadding: CELL_PADDING,
+            minCellHeight: 60,
+          }
+        }
+      ],
+      [
+        { 
+          content: 'AUTHORISED SIGNATURE',
+          styles: {
+            lineWidth: 0.5, 
+            lineColor: COLOR_BORDER_RGB, 
+            fontStyle: 'bold', 
+            fontSize: FONT_CAT2_SIZE, 
+            halign: 'center',
+            cellPadding: CELL_PADDING,
+          }
+        }
+      ]
+    ],
+    columnStyles: { 
+      0: { cellWidth: contentWidth * 0.60 },
+      1: { cellWidth: contentWidth * 0.40 }
+    },
+    margin: { left: PAGE_MARGIN_X, right: PAGE_MARGIN_X },
+    didDrawPage: (data) => {
+        // @ts-ignore
+        yPos = data.cursor?.y ?? yPos;
+    }
+  });
 
 
   // Ensure yPos does not exceed page bottom margin before saving
