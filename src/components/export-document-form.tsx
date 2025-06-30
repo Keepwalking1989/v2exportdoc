@@ -50,7 +50,7 @@ const manufacturerInfoSchema = z.object({
 
 const formSchema = z.object({
   exporterId: z.string().min(1, "Exporter is required"),
-  transporterId: z.string().optional(),
+  transporterId: z.string().min(1, "Transporter is required"),
   exportInvoiceNumber: z.string().min(1, "Export Invoice Number is required."),
   exportInvoiceDate: z.date({ required_error: "Export Invoice Date is required." }),
   
@@ -848,7 +848,7 @@ export function ExportDocumentForm({
                     <FormItem>
                     <FormLabel className="flex items-center gap-2">
                         <Truck className="h-4 w-4 text-muted-foreground" />
-                        Transporter (Optional)
+                        Transporter *
                     </FormLabel>
                     <Combobox
                         options={transporterOptions}
