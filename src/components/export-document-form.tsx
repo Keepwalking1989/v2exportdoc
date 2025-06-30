@@ -571,8 +571,6 @@ const ManufacturerPermissionUpdater: React.FC<{
     name: `manufacturerDetails.${index}.manufacturerId`,
   });
 
-  const isFormDirty = control.formState.isDirty;
-
   useEffect(() => {
     // Only autofill if the user hasn't manually changed the permission number
     // for this item, or if the manufacturer changes.
