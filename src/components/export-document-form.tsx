@@ -39,17 +39,17 @@ const productItemSchema = z.object({
   id: z.string().optional(),
   productId: z.string().min(1, 'Product is required'),
   boxes: z.coerce.number().positive('Boxes must be > 0'),
-  netWeight: z.coerce.number().nonnegative('Net Weight cannot be negative').optional(),
-  grossWeight: z.coerce.number().nonnegative('Gross Weight cannot be negative').optional(),
-  rate: z.coerce.number().nonnegative('Rate cannot be negative').optional(),
+  netWeight: z.coerce.number().positive('Net Weight is required'),
+  grossWeight: z.coerce.number().positive('Gross Weight is required'),
+  rate: z.coerce.number().min(0, 'Rate is required'),
 });
 
 const manufacturerInfoSchema = z.object({
   id: z.string(),
   manufacturerId: z.string().min(1, "Manufacturer is required."),
   invoiceNumber: z.string().min(1, "Invoice number is required."),
-  invoiceDate: z.date().optional(),
-  permissionNumber: z.string().optional(),
+  invoiceDate: z.date({ required_error: "Invoice Date is required." }),
+  permissionNumber: z.string().min(1, 'Permission No. is required.'),
 });
 
 const formSchema = z.object({
@@ -58,8 +58,8 @@ const formSchema = z.object({
   exportInvoiceDate: z.date({ required_error: "Export Invoice Date is required." }),
   
   clientId: z.string().min(1, "Client is required"),
-  performaInvoiceId: z.string().optional(),
-  purchaseOrderId: z.string().optional(),
+  performaInvoiceId: z.string().min(1, 'Performa Invoice is required.'),
+  purchaseOrderId: z.string().min(1, 'Purchase Order is required.'),
 
   manufacturerDetails: z.array(manufacturerInfoSchema).min(1, "At least one manufacturer is required."),
 
@@ -78,22 +78,22 @@ const formSchema = z.object({
   
   containerItems: z.array(z.object({
     id: z.string().optional(),
-    bookingNo: z.string().optional(),
-    containerNo: z.string().optional(),
-    lineSeal: z.string().optional(),
-    rfidSeal: z.string().optional(),
-    truckNumber: z.string().optional(),
-    builtyNo: z.string().optional(),
-    tareWeight: z.coerce.number().optional(),
-    startPalletNo: z.string().optional(),
-    endPalletNo: z.string().optional(),
-    totalPallets: z.string().optional(),
-    description: z.string().optional(),
-    weighingSlipNo: z.string().optional(),
-    weighingDateTime: z.coerce.date().optional(),
-    productItems: z.array(productItemSchema).optional(),
+    bookingNo: z.string().min(1, 'Booking No. is required.'),
+    containerNo: z.string().min(1, 'Container No. is required.'),
+    lineSeal: z.string().min(1, 'Line Seal is required.'),
+    rfidSeal: z.string().min(1, 'RFID Seal is required.'),
+    truckNumber: z.string().min(1, 'Truck No. is required.'),
+    builtyNo: z.string().min(1, 'Builty No. is required.'),
+    tareWeight: z.coerce.number().positive('Tare Weight is required.'),
+    startPalletNo: z.string().min(1, 'Start Pallet No. is required.'),
+    endPalletNo: z.string().min(1, 'End Pallet No. is required.'),
+    totalPallets: z.string().min(1, 'Total Pallets is required.'),
+    description: z.string().min(1, 'Description is required.'),
+    weighingSlipNo: z.string().min(1, 'Weighing Slip No. is required.'),
+    weighingDateTime: z.coerce.date({ required_error: 'Weighing Date/Time is required.' }),
+    productItems: z.array(productItemSchema).min(1, 'At least one product is required.'),
     sampleItems: z.array(productItemSchema).optional(),
-  })).optional(),
+  })).min(1, 'At least one container is required.'),
 });
 
 export type ExportDocumentFormValues = z.infer<typeof formSchema>;
@@ -268,7 +268,7 @@ const ContainerProductItem: React.FC<ItemProps> = ({
             name={`containerItems.${containerIndex}.${fieldArrayName}.${productIndex}.productId`}
             render={({ field }) => (
                 <FormItem>
-                    <FormLabel>Product</FormLabel>
+                    <FormLabel>Product *</FormLabel>
                     <Combobox
                         options={productOptions}
                         value={field.value}
@@ -288,7 +288,7 @@ const ContainerProductItem: React.FC<ItemProps> = ({
                 name={`containerItems.${containerIndex}.${fieldArrayName}.${productIndex}.boxes`}
                 render={({ field }) => (
                     <FormItem>
-                        <FormLabel className="flex items-center gap-1"><Boxes className="h-4 w-4 text-muted-foreground"/>Boxes</FormLabel>
+                        <FormLabel className="flex items-center gap-1"><Boxes className="h-4 w-4 text-muted-foreground"/>Boxes *</FormLabel>
                         <FormControl>
                             <Input type="number" placeholder="e.g. 100" {...field} />
                         </FormControl>
@@ -312,7 +312,7 @@ const ContainerProductItem: React.FC<ItemProps> = ({
                 name={`containerItems.${containerIndex}.${fieldArrayName}.${productIndex}.rate`}
                 render={({ field }) => (
                     <FormItem>
-                        <FormLabel className="flex items-center gap-1"><DollarSign className="h-4 w-4 text-muted-foreground"/>Rate</FormLabel>
+                        <FormLabel className="flex items-center gap-1"><DollarSign className="h-4 w-4 text-muted-foreground"/>Rate *</FormLabel>
                         <FormControl>
                             <Input type="number" placeholder="e.g. 12.50" {...field} />
                         </FormControl>
@@ -325,7 +325,7 @@ const ContainerProductItem: React.FC<ItemProps> = ({
               name={`containerItems.${containerIndex}.${fieldArrayName}.${productIndex}.netWeight`}
               render={({ field }) => (
               <FormItem>
-                <FormLabel className="flex items-center gap-1"><Weight className="h-4 w-4 text-muted-foreground"/>Net Wt.</FormLabel>
+                <FormLabel className="flex items-center gap-1"><Weight className="h-4 w-4 text-muted-foreground"/>Net Wt. *</FormLabel>
                 <FormControl>
                     <Input
                       type="number"
@@ -346,7 +346,7 @@ const ContainerProductItem: React.FC<ItemProps> = ({
               name={`containerItems.${containerIndex}.${fieldArrayName}.${productIndex}.grossWeight`}
               render={({ field }) => (
               <FormItem>
-                <FormLabel className="flex items-center gap-1"><Weight className="h-4 w-4 text-muted-foreground"/>Gross Wt.</FormLabel>
+                <FormLabel className="flex items-center gap-1"><Weight className="h-4 w-4 text-muted-foreground"/>Gross Wt. *</FormLabel>
                 <FormControl>
                     <Input
                       type="number"
@@ -397,7 +397,7 @@ const ContainerProductManager: React.FC<ItemManagerProps> = ({ containerIndex, c
             <div className="flex justify-between items-center mb-2">
                 <h4 className="text-md font-semibold flex items-center gap-2">
                     <Package className="h-5 w-5 text-primary" />
-                    Products in this Container
+                    Products in this Container *
                 </h4>
                 <Button
                     type="button"
@@ -426,8 +426,8 @@ const ContainerProductManager: React.FC<ItemManagerProps> = ({ containerIndex, c
                     />
                 ))}
                 {fields.length === 0 && (
-                     <div className="p-2 border border-dashed rounded-md text-center text-muted-foreground text-sm min-h-[50px] flex items-center justify-center">
-                        <p>{productOptions.length > 0 ? "No products added to this container yet." : "No products available. Please add products on the Product page."}</p>
+                     <div className="p-2 border border-dashed rounded-md text-center text-destructive text-sm min-h-[50px] flex items-center justify-center">
+                        <p>At least one product must be added to this container.</p>
                     </div>
                 )}
             </div>
@@ -774,15 +774,15 @@ export function ExportDocumentForm({
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                <FormField control={form.control} name="exportInvoiceNumber" render={({ field }) => ( <FormItem><FormLabel className="flex items-center gap-2"><Hash className="h-4 w-4 text-muted-foreground" />Export Invoice No.</FormLabel><FormControl><Input placeholder="e.g. EXP/HEM/001/25-26" {...field} /></FormControl><FormMessage /></FormItem>)} />
-                <FormField control={form.control} name="exportInvoiceDate" render={({ field }) => ( <FormItem className="flex flex-col"><FormLabel className="flex items-center gap-2"><CalendarIcon className="h-4 w-4 text-muted-foreground" />Export Invoice Date</FormLabel><Popover><PopoverTrigger asChild><FormControl><Button variant={"outline"} className={cn("w-full pl-3 text-left font-normal",!field.value && "text-muted-foreground")}>{field.value ? format(field.value, "PPP"): <span>Pick a date</span>}<CalendarIcon className="ml-auto h-4 w-4 opacity-50" /></Button></FormControl></PopoverTrigger><PopoverContent className="w-auto p-0" align="start"><Calendar mode="single" selected={field.value} onSelect={field.onChange} disabled={(date) =>date > new Date() || date < new Date("2000-01-01")} initialFocus /></PopoverContent></Popover><FormMessage /></FormItem>)} />
+                <FormField control={form.control} name="exportInvoiceNumber" render={({ field }) => ( <FormItem><FormLabel className="flex items-center gap-2"><Hash className="h-4 w-4 text-muted-foreground" />Export Invoice No. *</FormLabel><FormControl><Input placeholder="e.g. EXP/HEM/001/25-26" {...field} /></FormControl><FormMessage /></FormItem>)} />
+                <FormField control={form.control} name="exportInvoiceDate" render={({ field }) => ( <FormItem className="flex flex-col"><FormLabel className="flex items-center gap-2"><CalendarIcon className="h-4 w-4 text-muted-foreground" />Export Invoice Date *</FormLabel><Popover><PopoverTrigger asChild><FormControl><Button variant={"outline"} className={cn("w-full pl-3 text-left font-normal",!field.value && "text-muted-foreground")}>{field.value ? format(field.value, "PPP"): <span>Pick a date</span>}<CalendarIcon className="ml-auto h-4 w-4 opacity-50" /></Button></FormControl></PopoverTrigger><PopoverContent className="w-auto p-0" align="start"><Calendar mode="single" selected={field.value} onSelect={field.onChange} disabled={(date) =>date > new Date() || date < new Date("2000-01-01")} initialFocus /></PopoverContent></Popover><FormMessage /></FormItem>)} />
                 <FormField control={form.control} name="exporterId" render={({ field }) => ( <FormItem><FormLabel className="flex items-center gap-2"><Briefcase className="h-4 w-4 text-muted-foreground" />Exporter *</FormLabel><Combobox options={exporterOptions} value={field.value} onChange={field.onChange} placeholder="Select Exporter..." searchPlaceholder="Search Exporters..." emptySearchMessage="No exporter found. Add on Exporter page." disabled={exporterOptions.length === 0} /><FormMessage /></FormItem>)} />
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <FormField control={form.control} name="clientId" render={({ field }) => ( <FormItem><FormLabel className="flex items-center gap-2"><Users className="h-4 w-4 text-muted-foreground" />Client *</FormLabel><Combobox options={clientOptions} value={field.value} onChange={field.onChange} placeholder="Select Client..."/><FormMessage /></FormItem>)} />
-                <FormField control={form.control} name="performaInvoiceId" render={({ field }) => ( <FormItem><FormLabel className="flex items-center gap-2"><ShoppingCart className="h-4 w-4 text-muted-foreground" />Performa Invoice</FormLabel><Combobox options={piOptions} value={field.value} onChange={field.onChange} placeholder="Select PI..." disabled={!watchedClientId} /><FormMessage /></FormItem>)} />
-                <FormField control={form.control} name="purchaseOrderId" render={({ field }) => ( <FormItem><FormLabel className="flex items-center gap-2"><ReceiptText className="h-4 w-4 text-muted-foreground" />Purchase Order</FormLabel><Combobox options={poOptions} value={field.value} onChange={field.onChange} placeholder="Select PO..." disabled={!watchedManufacturers || watchedManufacturers.length === 0} /><FormMessage /></FormItem>)} />
+                <FormField control={form.control} name="performaInvoiceId" render={({ field }) => ( <FormItem><FormLabel className="flex items-center gap-2"><ShoppingCart className="h-4 w-4 text-muted-foreground" />Performa Invoice *</FormLabel><Combobox options={piOptions} value={field.value} onChange={field.onChange} placeholder="Select PI..." disabled={!watchedClientId} /><FormMessage /></FormItem>)} />
+                <FormField control={form.control} name="purchaseOrderId" render={({ field }) => ( <FormItem><FormLabel className="flex items-center gap-2"><ReceiptText className="h-4 w-4 text-muted-foreground" />Purchase Order *</FormLabel><Combobox options={poOptions} value={field.value} onChange={field.onChange} placeholder="Select PO..." disabled={!watchedManufacturers || watchedManufacturers.length === 0} /><FormMessage /></FormItem>)} />
             </div>
             
             <Card>
@@ -798,8 +798,8 @@ export function ExportDocumentForm({
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                                 <FormField control={form.control} name={`manufacturerDetails.${index}.manufacturerId`} render={({ field }) => (<FormItem><FormLabel><Factory className="inline mr-2 h-4 w-4 text-muted-foreground" />Manufacturer *</FormLabel><Combobox options={manufacturerOptions} {...field} placeholder="Select Manufacturer..."/><FormMessage /></FormItem>)} />
                                 <FormField control={form.control} name={`manufacturerDetails.${index}.invoiceNumber`} render={({ field }) => ( <FormItem><FormLabel><Hash className="inline mr-2 h-4 w-4 text-muted-foreground" />Invoice No. *</FormLabel><FormControl><Input placeholder="e.g. MAN-INV-001" {...field} /></FormControl><FormMessage /></FormItem>)} />
-                                <FormField control={form.control} name={`manufacturerDetails.${index}.invoiceDate`} render={({ field }) => ( <FormItem className="flex flex-col"><FormLabel><CalendarIcon className="inline mr-2 h-4 w-4 text-muted-foreground" />Invoice Date</FormLabel><Popover><PopoverTrigger asChild><FormControl><Button variant="outline" className={cn("w-full justify-start", !field.value && "text-muted-foreground")}>{field.value ? format(field.value, "PPP") : <span>Pick date</span>}<CalendarIcon className="ml-auto h-4 w-4"/></Button></FormControl></PopoverTrigger><PopoverContent><Calendar mode="single" selected={field.value} onSelect={field.onChange}/></PopoverContent></Popover><FormMessage /></FormItem>)} />
-                                <FormField control={form.control} name={`manufacturerDetails.${index}.permissionNumber`} render={({ field }) => (<FormItem><FormLabel><BadgeCheck className="inline mr-2 h-4 w-4 text-muted-foreground" />Permission No.</FormLabel><FormControl><Input placeholder="Auto-filled from Manufacturer" {...field} /></FormControl><FormMessage /></FormItem>)} />
+                                <FormField control={form.control} name={`manufacturerDetails.${index}.invoiceDate`} render={({ field }) => ( <FormItem className="flex flex-col"><FormLabel><CalendarIcon className="inline mr-2 h-4 w-4 text-muted-foreground" />Invoice Date *</FormLabel><Popover><PopoverTrigger asChild><FormControl><Button variant="outline" className={cn("w-full justify-start", !field.value && "text-muted-foreground")}>{field.value ? format(field.value, "PPP") : <span>Pick date</span>}<CalendarIcon className="ml-auto h-4 w-4"/></Button></FormControl></PopoverTrigger><PopoverContent><Calendar mode="single" selected={field.value} onSelect={field.onChange}/></PopoverContent></Popover><FormMessage /></FormItem>)} />
+                                <FormField control={form.control} name={`manufacturerDetails.${index}.permissionNumber`} render={({ field }) => (<FormItem><FormLabel><BadgeCheck className="inline mr-2 h-4 w-4 text-muted-foreground" />Permission No. *</FormLabel><FormControl><Input placeholder="Auto-filled from Manufacturer" {...field} /></FormControl><FormMessage /></FormItem>)} />
                             </div>
                         </div>
                     );
@@ -831,7 +831,7 @@ export function ExportDocumentForm({
 
             <Card>
               <CardHeader>
-                  <CardTitle className="flex items-center justify-between">Container Items<Button type="button" size="sm" onClick={() => appendContainer(defaultNewContainerItem)}><PlusCircle className="mr-2 h-4 w-4" /> Add Container</Button></CardTitle>
+                  <CardTitle className="flex items-center justify-between">Container Items *<Button type="button" size="sm" onClick={() => appendContainer(defaultNewContainerItem)}><PlusCircle className="mr-2 h-4 w-4" /> Add Container</Button></CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
                   {containerFields.map((field, index) => (
@@ -840,28 +840,28 @@ export function ExportDocumentForm({
                           <Button type="button" variant="destructive" size="icon" onClick={() => containerFields.length > 1 && removeContainer(index)} className="absolute top-2 right-2 h-7 w-7" disabled={containerFields.length <= 1}><Trash2 className="h-4 w-4" /><span className="sr-only">Remove Item</span></Button>
                           
                           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                            <FormField control={form.control} name={`containerItems.${index}.bookingNo`} render={({ field }) => (<FormItem><FormLabel>Booking No.</FormLabel><FormControl><Input placeholder="e.g. BK123456" {...field} /></FormControl><FormMessage /></FormItem>)} />
-                            <FormField control={form.control} name={`containerItems.${index}.containerNo`} render={({ field }) => (<FormItem><FormLabel>Container No.</FormLabel><FormControl><Input placeholder="e.g. MSKU1234567" {...field} /></FormControl><FormMessage /></FormItem>)} />
-                            <FormField control={form.control} name={`containerItems.${index}.lineSeal`} render={({ field }) => (<FormItem><FormLabel className="flex items-center gap-2"><Stamp className="h-4 w-4 text-muted-foreground" />LINE SEAL</FormLabel><FormControl><Input placeholder="e.g. LS123" {...field} /></FormControl><FormMessage /></FormItem>)} />
+                            <FormField control={form.control} name={`containerItems.${index}.bookingNo`} render={({ field }) => (<FormItem><FormLabel>Booking No. *</FormLabel><FormControl><Input placeholder="e.g. BK123456" {...field} /></FormControl><FormMessage /></FormItem>)} />
+                            <FormField control={form.control} name={`containerItems.${index}.containerNo`} render={({ field }) => (<FormItem><FormLabel>Container No. *</FormLabel><FormControl><Input placeholder="e.g. MSKU1234567" {...field} /></FormControl><FormMessage /></FormItem>)} />
+                            <FormField control={form.control} name={`containerItems.${index}.lineSeal`} render={({ field }) => (<FormItem><FormLabel className="flex items-center gap-2"><Stamp className="h-4 w-4 text-muted-foreground" />LINE SEAL *</FormLabel><FormControl><Input placeholder="e.g. LS123" {...field} /></FormControl><FormMessage /></FormItem>)} />
                           </div>
 
                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                            <FormField control={form.control} name={`containerItems.${index}.rfidSeal`} render={({ field }) => (<FormItem><FormLabel className="flex items-center gap-2"><Radio className="h-4 w-4 text-muted-foreground" />RFID SEAL</FormLabel><FormControl><Input placeholder="e.g. RFID456" {...field} /></FormControl><FormMessage /></FormItem>)} />
-                            <FormField control={form.control} name={`containerItems.${index}.truckNumber`} render={({ field }) => (<FormItem><FormLabel className="flex items-center gap-2"><Truck className="h-4 w-4 text-muted-foreground" />Truck Number</FormLabel><FormControl><Input placeholder="e.g. GJ01AB1234" {...field} /></FormControl><FormMessage /></FormItem>)} />
-                            <FormField control={form.control} name={`containerItems.${index}.builtyNo`} render={({ field }) => (<FormItem><FormLabel className="flex items-center gap-2"><FileText className="h-4 w-4 text-muted-foreground" />Builty No</FormLabel><FormControl><Input placeholder="e.g. BN789" {...field} /></FormControl><FormMessage /></FormItem>)} />
+                            <FormField control={form.control} name={`containerItems.${index}.rfidSeal`} render={({ field }) => (<FormItem><FormLabel className="flex items-center gap-2"><Radio className="h-4 w-4 text-muted-foreground" />RFID SEAL *</FormLabel><FormControl><Input placeholder="e.g. RFID456" {...field} /></FormControl><FormMessage /></FormItem>)} />
+                            <FormField control={form.control} name={`containerItems.${index}.truckNumber`} render={({ field }) => (<FormItem><FormLabel className="flex items-center gap-2"><Truck className="h-4 w-4 text-muted-foreground" />Truck Number *</FormLabel><FormControl><Input placeholder="e.g. GJ01AB1234" {...field} /></FormControl><FormMessage /></FormItem>)} />
+                            <FormField control={form.control} name={`containerItems.${index}.builtyNo`} render={({ field }) => (<FormItem><FormLabel className="flex items-center gap-2"><FileText className="h-4 w-4 text-muted-foreground" />Builty No *</FormLabel><FormControl><Input placeholder="e.g. BN789" {...field} /></FormControl><FormMessage /></FormItem>)} />
                            </div>
 
                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                                <FormField control={form.control} name={`containerItems.${index}.tareWeight`} render={({ field }) => (<FormItem><FormLabel className="flex items-center gap-2"><Weight className="h-4 w-4 text-muted-foreground" />Tare weight (Kgs)</FormLabel><FormControl><Input type="number" placeholder="e.g. 4500" {...field} /></FormControl><FormMessage /></FormItem>)} />
-                                <FormField control={form.control} name={`containerItems.${index}.startPalletNo`} render={({ field }) => (<FormItem><FormLabel className="flex items-center gap-2"><ListStart className="h-4 w-4 text-muted-foreground" />Start PALLET NO</FormLabel><FormControl><Input placeholder="e.g. 1" {...field} /></FormControl><FormMessage /></FormItem>)} />
-                                <FormField control={form.control} name={`containerItems.${index}.endPalletNo`} render={({ field }) => (<FormItem><FormLabel className="flex items-center gap-2"><ListEnd className="h-4 w-4 text-muted-foreground" />End PALLET NO</FormLabel><FormControl><Input placeholder="e.g. 26" {...field} /></FormControl><FormMessage /></FormItem>)} />
-                                <FormField control={form.control} name={`containerItems.${index}.totalPallets`} render={({ field }) => (<FormItem><FormLabel className="flex items-center gap-2"><Boxes className="h-4 w-4 text-muted-foreground" />Total Pallets</FormLabel><FormControl><Input placeholder="Auto-calculated" {...field} /></FormControl><FormMessage /></FormItem>)} />
+                                <FormField control={form.control} name={`containerItems.${index}.tareWeight`} render={({ field }) => (<FormItem><FormLabel className="flex items-center gap-2"><Weight className="h-4 w-4 text-muted-foreground" />Tare weight (Kgs) *</FormLabel><FormControl><Input type="number" placeholder="e.g. 4500" {...field} /></FormControl><FormMessage /></FormItem>)} />
+                                <FormField control={form.control} name={`containerItems.${index}.startPalletNo`} render={({ field }) => (<FormItem><FormLabel className="flex items-center gap-2"><ListStart className="h-4 w-4 text-muted-foreground" />Start PALLET NO *</FormLabel><FormControl><Input placeholder="e.g. 1" {...field} /></FormControl><FormMessage /></FormItem>)} />
+                                <FormField control={form.control} name={`containerItems.${index}.endPalletNo`} render={({ field }) => (<FormItem><FormLabel className="flex items-center gap-2"><ListEnd className="h-4 w-4 text-muted-foreground" />End PALLET NO *</FormLabel><FormControl><Input placeholder="e.g. 26" {...field} /></FormControl><FormMessage /></FormItem>)} />
+                                <FormField control={form.control} name={`containerItems.${index}.totalPallets`} render={({ field }) => (<FormItem><FormLabel className="flex items-center gap-2"><Boxes className="h-4 w-4 text-muted-foreground" />Total Pallets *</FormLabel><FormControl><Input placeholder="Auto-calculated" {...field} /></FormControl><FormMessage /></FormItem>)} />
                            </div>
 
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                                <FormField control={form.control} name={`containerItems.${index}.description`} render={({ field }) => (<FormItem className="lg:col-span-1"><FormLabel className="flex items-center gap-2"><NotebookText className="h-4 w-4 text-muted-foreground" />Description</FormLabel><FormControl><Textarea placeholder="e.g. Contains fragile items, handle with care." {...field} /></FormControl><FormMessage /></FormItem>)} />
-                                <FormField control={form.control} name={`containerItems.${index}.weighingSlipNo`} render={({ field }) => (<FormItem><FormLabel className="flex items-center gap-2"><FileScan className="h-4 w-4 text-muted-foreground" />Weighing Slip No</FormLabel><FormControl><Input placeholder="e.g. WSN-5678" {...field} /></FormControl><FormMessage /></FormItem>)} />
-                                <Controller control={form.control} name={`containerItems.${index}.weighingDateTime`} render={({ field }) => {const dateValue = field.value ? new Date(field.value) : new Date(); const localISOString = new Date(dateValue.getTime() - (dateValue.getTimezoneOffset() * 60000)).toISOString().slice(0, 16); return (<FormItem><FormLabel className="flex items-center gap-2"><Clock className="h-4 w-4 text-muted-foreground" />Weighing Date & Time</FormLabel><FormControl><Input type="datetime-local" value={field.value ? localISOString : ''} onChange={(e) => {field.onChange(e.target.value ? new Date(e.target.value) : null);}} /></FormControl><FormMessage /></FormItem>);}} />
+                                <FormField control={form.control} name={`containerItems.${index}.description`} render={({ field }) => (<FormItem className="lg:col-span-1"><FormLabel className="flex items-center gap-2"><NotebookText className="h-4 w-4 text-muted-foreground" />Description *</FormLabel><FormControl><Textarea placeholder="e.g. Contains fragile items, handle with care." {...field} /></FormControl><FormMessage /></FormItem>)} />
+                                <FormField control={form.control} name={`containerItems.${index}.weighingSlipNo`} render={({ field }) => (<FormItem><FormLabel className="flex items-center gap-2"><FileScan className="h-4 w-4 text-muted-foreground" />Weighing Slip No *</FormLabel><FormControl><Input placeholder="e.g. WSN-5678" {...field} /></FormControl><FormMessage /></FormItem>)} />
+                                <Controller control={form.control} name={`containerItems.${index}.weighingDateTime`} render={({ field }) => {const dateValue = field.value ? new Date(field.value) : new Date(); const localISOString = new Date(dateValue.getTime() - (dateValue.getTimezoneOffset() * 60000)).toISOString().slice(0, 16); return (<FormItem><FormLabel className="flex items-center gap-2"><Clock className="h-4 w-4 text-muted-foreground" />Weighing Date & Time *</FormLabel><FormControl><Input type="datetime-local" value={field.value ? localISOString : ''} onChange={(e) => {field.onChange(e.target.value ? new Date(e.target.value) : null);}} /></FormControl><FormMessage /></FormItem>);}} />
                             </div>
                             
                             <ContainerProductManager containerIndex={index} control={form.control} allProducts={allProducts} allSizes={allSizes} getValues={form.getValues} setValue={form.setValue} />
