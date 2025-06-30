@@ -660,7 +660,7 @@ export function ExportDocumentForm({
                           "Fill in the details for the new document.";
 
   return (
-    <Card className="w-full max-w-4xl mx-auto shadow-xl mb-8">
+    <Card className="w-full max-w-6xl mx-auto shadow-xl mb-8">
       <CardHeader>
         <CardTitle className="font-headline text-2xl flex items-center gap-2">
           <FileSignature className="h-6 w-6 text-primary" />
@@ -670,7 +670,7 @@ export function ExportDocumentForm({
       </CardHeader>
       <CardContent>
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <FormField
                 control={form.control}
@@ -728,28 +728,52 @@ export function ExportDocumentForm({
                 />
             </div>
             
-            <FormField
-            control={form.control}
-            name="exporterId"
-            render={({ field }) => (
-                <FormItem>
-                <FormLabel className="flex items-center gap-2">
-                    <Briefcase className="h-4 w-4 text-muted-foreground" />
-                    Exporter *
-                </FormLabel>
-                <Combobox
-                    options={exporterOptions}
-                    value={field.value}
-                    onChange={field.onChange}
-                    placeholder="Select Exporter..."
-                    searchPlaceholder="Search Exporters..."
-                    emptySearchMessage="No exporter found. Add on Exporter page."
-                    disabled={exporterOptions.length === 0}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <FormField
+                control={form.control}
+                name="exporterId"
+                render={({ field }) => (
+                    <FormItem>
+                    <FormLabel className="flex items-center gap-2">
+                        <Briefcase className="h-4 w-4 text-muted-foreground" />
+                        Exporter *
+                    </FormLabel>
+                    <Combobox
+                        options={exporterOptions}
+                        value={field.value}
+                        onChange={field.onChange}
+                        placeholder="Select Exporter..."
+                        searchPlaceholder="Search Exporters..."
+                        emptySearchMessage="No exporter found. Add on Exporter page."
+                        disabled={exporterOptions.length === 0}
+                    />
+                    <FormMessage />
+                    </FormItem>
+                )}
                 />
-                <FormMessage />
-                </FormItem>
-            )}
-            />
+                 <FormField
+                control={form.control}
+                name="transporterId"
+                render={({ field }) => (
+                    <FormItem>
+                    <FormLabel className="flex items-center gap-2">
+                        <Truck className="h-4 w-4 text-muted-foreground" />
+                        Transporter *
+                    </FormLabel>
+                    <Combobox
+                        options={transporterOptions}
+                        value={field.value}
+                        onChange={field.onChange}
+                        placeholder="Select Transporter..."
+                        searchPlaceholder="Search Transporters..."
+                        emptySearchMessage="No transporter found. Add on Transporter page."
+                        disabled={transporterOptions.length === 0}
+                    />
+                    <FormMessage />
+                    </FormItem>
+                )}
+                />
+            </div>
 
             <Card>
                 <CardHeader>
@@ -826,8 +850,7 @@ export function ExportDocumentForm({
                 </CardContent>
             </Card>
 
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                  <FormField
                     control={form.control}
                     name="permissionNumber"
@@ -842,45 +865,18 @@ export function ExportDocumentForm({
                     )}
                 />
                 <FormField
-                control={form.control}
-                name="transporterId"
-                render={({ field }) => (
-                    <FormItem>
-                    <FormLabel className="flex items-center gap-2">
-                        <Truck className="h-4 w-4 text-muted-foreground" />
-                        Transporter *
-                    </FormLabel>
-                    <Combobox
-                        options={transporterOptions}
-                        value={field.value}
-                        onChange={field.onChange}
-                        placeholder="Select Transporter..."
-                        searchPlaceholder="Search Transporters..."
-                        emptySearchMessage="No transporter found. Add on Transporter page."
-                        disabled={transporterOptions.length === 0}
-                    />
-                    <FormMessage />
-                    </FormItem>
-                )}
-    />
-            </div>
-            
-
-            <FormField
-                control={form.control}
-                name="countryOfFinalDestination"
-                render={({ field }) => (
-                    <FormItem>
-                    <FormLabel className="flex items-center gap-2"><Globe className="h-4 w-4 text-muted-foreground" />Country of Final Destination *</FormLabel>
-                    <FormControl>
-                        <Input placeholder="e.g. United States" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                    </FormItem>
-                )}
-            />
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    control={form.control}
+                    name="countryOfFinalDestination"
+                    render={({ field }) => (
+                        <FormItem>
+                        <FormLabel className="flex items-center gap-2"><Globe className="h-4 w-4 text-muted-foreground" />Country of Final Destination *</FormLabel>
+                        <FormControl>
+                            <Input placeholder="e.g. United States" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                        </FormItem>
+                    )}
+                />
                 <FormField
                     control={form.control}
                     name="vesselFlightNo"
@@ -894,22 +890,9 @@ export function ExportDocumentForm({
                         </FormItem>
                     )}
                 />
-                 <FormField
-                    control={form.control}
-                    name="finalDestination"
-                    render={({ field }) => (
-                        <FormItem>
-                        <FormLabel className="flex items-center gap-2"><Anchor className="h-4 w-4 text-muted-foreground" />Final Destination (Place)</FormLabel>
-                        <FormControl>
-                            <Input placeholder="e.g. New York, USA" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                        </FormItem>
-                    )}
-                />
             </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <FormField
                     control={form.control}
                     name="portOfLoading"
@@ -931,6 +914,19 @@ export function ExportDocumentForm({
                         <FormLabel className="flex items-center gap-2"><Anchor className="h-4 w-4 text-muted-foreground" />Port Of Discharge</FormLabel>
                         <FormControl>
                             <Input placeholder="e.g. Newark, USA" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                        </FormItem>
+                    )}
+                />
+                 <FormField
+                    control={form.control}
+                    name="finalDestination"
+                    render={({ field }) => (
+                        <FormItem>
+                        <FormLabel className="flex items-center gap-2"><Anchor className="h-4 w-4 text-muted-foreground" />Final Destination (Place)</FormLabel>
+                        <FormControl>
+                            <Input placeholder="e.g. New York, USA" {...field} />
                         </FormControl>
                         <FormMessage />
                         </FormItem>
