@@ -268,7 +268,7 @@ const ContainerProductItem: React.FC<ItemProps> = ({
             )}
         />
 
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 items-start">
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-2 items-start">
             <FormField
                 control={control}
                 name={`containerItems.${containerIndex}.${fieldArrayName}.${productIndex}.boxes`}
