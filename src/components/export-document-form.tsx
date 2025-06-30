@@ -572,9 +572,6 @@ const ManufacturerPermissionUpdater: React.FC<{
   });
 
   useEffect(() => {
-    // Only autofill if the user hasn't manually changed the permission number
-    // for this item, or if the manufacturer changes.
-    // The check for isDirty is a bit broad, but prevents overriding on first load of an existing doc.
     if (manufacturerId) {
       const selectedManufacturer = allManufacturers.find((m) => m.id === manufacturerId);
       if (selectedManufacturer) {
@@ -588,6 +585,34 @@ const ManufacturerPermissionUpdater: React.FC<{
 
   return null;
 };
+
+const PalletCalculator: React.FC<{
+  containerIndex: number;
+  control: Control<ExportDocumentFormValues>;
+  setValue: UseFormSetValue<ExportDocumentFormValues>;
+}> = ({ containerIndex, control, setValue }) => {
+  const startPallet = useWatch({
+    control,
+    name: `containerItems.${containerIndex}.startPalletNo`,
+  });
+  const endPallet = useWatch({
+    control,
+    name: `containerItems.${containerIndex}.endPalletNo`,
+  });
+
+  React.useEffect(() => {
+    const start = parseInt(startPallet || '0', 10);
+    const end = parseInt(endPallet || '0', 10);
+
+    if (!isNaN(start) && !isNaN(end) && end >= start && start > 0) {
+      const total = (end - start + 1).toString();
+      setValue(`containerItems.${containerIndex}.totalPallets`, total);
+    }
+  }, [startPallet, endPallet, setValue, containerIndex]);
+
+  return null; // This component doesn't render anything
+};
+
 
 export function ExportDocumentForm({
   initialData,
@@ -755,27 +780,30 @@ export function ExportDocumentForm({
               <CardContent className="space-y-4">
                   {containerFields.map((field, index) => (
                       <div key={field.id} className="p-4 border rounded-md space-y-4 relative bg-card/50">
+                          <PalletCalculator containerIndex={index} control={form.control} setValue={form.setValue} />
                           <Button type="button" variant="destructive" size="icon" onClick={() => containerFields.length > 1 && removeContainer(index)} className="absolute top-2 right-2 h-7 w-7" disabled={containerFields.length <= 1}><Trash2 className="h-4 w-4" /><span className="sr-only">Remove Item</span></Button>
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          
+                          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                             <FormField control={form.control} name={`containerItems.${index}.bookingNo`} render={({ field }) => (<FormItem><FormLabel>Booking No.</FormLabel><FormControl><Input placeholder="e.g. BK123456" {...field} /></FormControl><FormMessage /></FormItem>)} />
                             <FormField control={form.control} name={`containerItems.${index}.containerNo`} render={({ field }) => (<FormItem><FormLabel>Container No.</FormLabel><FormControl><Input placeholder="e.g. MSKU1234567" {...field} /></FormControl><FormMessage /></FormItem>)} />
-                          </div>
-                           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <FormField control={form.control} name={`containerItems.${index}.lineSeal`} render={({ field }) => (<FormItem><FormLabel className="flex items-center gap-2"><Stamp className="h-4 w-4 text-muted-foreground" />LINE SEAL</FormLabel><FormControl><Input placeholder="e.g. LS123" {...field} /></FormControl><FormMessage /></FormItem>)} />
+                          </div>
+
+                           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                             <FormField control={form.control} name={`containerItems.${index}.rfidSeal`} render={({ field }) => (<FormItem><FormLabel className="flex items-center gap-2"><Radio className="h-4 w-4 text-muted-foreground" />RFID SEAL</FormLabel><FormControl><Input placeholder="e.g. RFID456" {...field} /></FormControl><FormMessage /></FormItem>)} />
+                            <FormField control={form.control} name={`containerItems.${index}.truckNumber`} render={({ field }) => (<FormItem><FormLabel className="flex items-center gap-2"><Truck className="h-4 w-4 text-muted-foreground" />Truck Number</FormLabel><FormControl><Input placeholder="e.g. GJ01AB1234" {...field} /></FormControl><FormMessage /></FormItem>)} />
+                            <FormField control={form.control} name={`containerItems.${index}.builtyNo`} render={({ field }) => (<FormItem><FormLabel className="flex items-center gap-2"><FileText className="h-4 w-4 text-muted-foreground" />Builty No</FormLabel><FormControl><Input placeholder="e.g. BN789" {...field} /></FormControl><FormMessage /></FormItem>)} />
                            </div>
-                           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                             <FormField control={form.control} name={`containerItems.${index}.truckNumber`} render={({ field }) => (<FormItem><FormLabel className="flex items-center gap-2"><Truck className="h-4 w-4 text-muted-foreground" />Truck Number</FormLabel><FormControl><Input placeholder="e.g. GJ01AB1234" {...field} /></FormControl><FormMessage /></FormItem>)} />
-                             <FormField control={form.control} name={`containerItems.${index}.builtyNo`} render={({ field }) => (<FormItem><FormLabel className="flex items-center gap-2"><FileText className="h-4 w-4 text-muted-foreground" />Builty No</FormLabel><FormControl><Input placeholder="e.g. BN789" {...field} /></FormControl><FormMessage /></FormItem>)} />
-                           </div>
-                           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 pt-4">
+
+                           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                                 <FormField control={form.control} name={`containerItems.${index}.tareWeight`} render={({ field }) => (<FormItem><FormLabel className="flex items-center gap-2"><Weight className="h-4 w-4 text-muted-foreground" />Tare weight (Kgs)</FormLabel><FormControl><Input type="number" placeholder="e.g. 4500" {...field} /></FormControl><FormMessage /></FormItem>)} />
                                 <FormField control={form.control} name={`containerItems.${index}.startPalletNo`} render={({ field }) => (<FormItem><FormLabel className="flex items-center gap-2"><ListStart className="h-4 w-4 text-muted-foreground" />Start PALLET NO</FormLabel><FormControl><Input placeholder="e.g. 1" {...field} /></FormControl><FormMessage /></FormItem>)} />
                                 <FormField control={form.control} name={`containerItems.${index}.endPalletNo`} render={({ field }) => (<FormItem><FormLabel className="flex items-center gap-2"><ListEnd className="h-4 w-4 text-muted-foreground" />End PALLET NO</FormLabel><FormControl><Input placeholder="e.g. 26" {...field} /></FormControl><FormMessage /></FormItem>)} />
                                 <FormField control={form.control} name={`containerItems.${index}.totalPallets`} render={({ field }) => (<FormItem><FormLabel className="flex items-center gap-2"><Boxes className="h-4 w-4 text-muted-foreground" />Total Pallets</FormLabel><FormControl><Input placeholder="e.g. 26" {...field} /></FormControl><FormMessage /></FormItem>)} />
                            </div>
-                            <FormField control={form.control} name={`containerItems.${index}.description`} render={({ field }) => (<FormItem><FormLabel className="flex items-center gap-2"><NotebookText className="h-4 w-4 text-muted-foreground" />Description for this Container</FormLabel><FormControl><Textarea placeholder="e.g. Contains fragile items, handle with care." {...field} /></FormControl><FormMessage /></FormItem>)} />
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                <FormField control={form.control} name={`containerItems.${index}.description`} render={({ field }) => (<FormItem className="lg:col-span-1"><FormLabel className="flex items-center gap-2"><NotebookText className="h-4 w-4 text-muted-foreground" />Description</FormLabel><FormControl><Textarea placeholder="e.g. Contains fragile items, handle with care." {...field} /></FormControl><FormMessage /></FormItem>)} />
                                 <FormField control={form.control} name={`containerItems.${index}.weighingSlipNo`} render={({ field }) => (<FormItem><FormLabel className="flex items-center gap-2"><FileScan className="h-4 w-4 text-muted-foreground" />Weighing Slip No</FormLabel><FormControl><Input placeholder="e.g. WSN-5678" {...field} /></FormControl><FormMessage /></FormItem>)} />
                                 <Controller control={form.control} name={`containerItems.${index}.weighingDateTime`} render={({ field }) => {const dateValue = field.value ? new Date(field.value) : new Date(); const localISOString = new Date(dateValue.getTime() - (dateValue.getTimezoneOffset() * 60000)).toISOString().slice(0, 16); return (<FormItem><FormLabel className="flex items-center gap-2"><Clock className="h-4 w-4 text-muted-foreground" />Weighing Date & Time</FormLabel><FormControl><Input type="datetime-local" value={field.value ? localISOString : ''} onChange={(e) => {field.onChange(e.target.value ? new Date(e.target.value) : null);}} /></FormControl><FormMessage /></FormItem>);}} />
                             </div>
