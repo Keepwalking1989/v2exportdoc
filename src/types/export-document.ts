@@ -32,19 +32,19 @@ export interface ManufacturerInfo {
   manufacturerId: string;
   invoiceNumber: string;
   invoiceDate?: Date;
+  permissionNumber?: string;
 }
 
 export interface ExportDocument {
   id:string; // Unique ID for the Export Document
   exporterId: string; // ID of the selected Exporter
   purchaseOrderId?: string; // ID of the source Purchase Order, if applicable
-  transporterId?: string; // ID of the selected Transporter
+  transporterId: string; // ID of the selected Transporter
   exportInvoiceNumber: string; // The user-facing invoice number
   exportInvoiceDate: Date; // The date of the export invoice
   
-  manufacturerDetails?: ManufacturerInfo[]; // Replaces single manufacturer fields
+  manufacturerDetails: ManufacturerInfo[];
 
-  permissionNumber?: string;
   countryOfFinalDestination: string; // Country of Final Destination
   vesselFlightNo?: string;
   portOfLoading?: string;

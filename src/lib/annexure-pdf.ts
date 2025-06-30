@@ -6,7 +6,7 @@ import type { ExportDocument, ManufacturerInfo } from '@/types/export-document';
 import type { Company } from '@/types/company'; // Exporter
 import type { Manufacturer } from '@/types/manufacturer';
 
-function drawDocument(doc: jsPDF, docData: ExportDocument, exporter: Company, manufacturersWithDetails: (Manufacturer & { invoiceNumber: string, invoiceDate?: Date })[], padding: number): number {
+function drawDocument(doc: jsPDF, docData: ExportDocument, exporter: Company, manufacturersWithDetails: (Manufacturer & { invoiceNumber: string, invoiceDate?: Date, permissionNumber?: string })[], padding: number): number {
     let yPos = 20;
     const pageMargin = 30;
     const contentWidth = doc.internal.pageSize.getWidth() - 2 * pageMargin;
@@ -23,7 +23,7 @@ function drawDocument(doc: jsPDF, docData: ExportDocument, exporter: Company, ma
     yPos += 20;
 
     const manufacturerDetailsText = manufacturersWithDetails.map(m => 
-        `STUFFING DETAIL - ${m.companyName}\n${m.address}\nPERMISSION NO. - ${docData.permissionNumber || 'N/A'}`
+        `STUFFING DETAIL - ${m.companyName}\n${m.address}\nPERMISSION NO. - ${m.permissionNumber || 'N/A'}`
     ).join('\n\n');
 
     // --- Main Body using a structured table for alignment ---
@@ -119,7 +119,7 @@ function drawDocument(doc: jsPDF, docData: ExportDocument, exporter: Company, ma
         ],
         [
             { content: '12  Custome Permission Order File No.:', styles: { fontStyle: 'bold' }, colSpan: 2 },
-            { content: `PERMISSION NO. -${docData.permissionNumber || 'N/A'}`, colSpan: 2 },
+            { content: `PERMISSION NO. -${manufacturersWithDetails[0]?.permissionNumber || 'N/A'}`, colSpan: 2 },
         ]
     ];
 
@@ -205,7 +205,7 @@ function drawDocument(doc: jsPDF, docData: ExportDocument, exporter: Company, ma
 export async function generateAnnexurePdf(
     docData: ExportDocument,
     exporter: Company,
-    manufacturersWithDetails: (Manufacturer & { invoiceNumber: string, invoiceDate?: Date })[]
+    manufacturersWithDetails: (Manufacturer & { invoiceNumber: string, invoiceDate?: Date, permissionNumber?: string })[]
 ) {
     const largePadding = 4;
     const smallPadding = 2;

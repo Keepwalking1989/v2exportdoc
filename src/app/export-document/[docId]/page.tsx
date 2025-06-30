@@ -297,7 +297,7 @@ export default function DocumentDataPage() {
     const manufacturersWithDetails = (document.manufacturerDetails || []).map(md => {
       const manu = allManufacturers.find(m => m.id === md.manufacturerId);
       return manu ? { ...manu, ...md } : null;
-    }).filter(Boolean) as (Manufacturer & { invoiceNumber: string, invoiceDate?: Date })[];
+    }).filter(Boolean) as (Manufacturer & { invoiceNumber: string, invoiceDate?: Date, permissionNumber?: string })[];
 
     if (manufacturersWithDetails.length === 0) {
        toast({ variant: "destructive", title: "Error", description: "No valid manufacturers found for this document. They may have been deleted." });
@@ -342,7 +342,7 @@ export default function DocumentDataPage() {
     const manufacturersWithDetails = (document.manufacturerDetails || []).map(md => {
         const manu = allManufacturers.find(m => m.id === md.manufacturerId);
         return manu ? { ...manu, ...md } : null;
-    }).filter(Boolean) as (Manufacturer & { invoiceNumber: string, invoiceDate?: Date })[];
+    }).filter(Boolean) as (Manufacturer & { invoiceNumber: string, invoiceDate?: Date, permissionNumber?: string })[];
 
     if (manufacturersWithDetails.length === 0) {
       toast({ variant: "destructive", title: "Error", description: "No valid manufacturers found for this document. They may have been deleted." });

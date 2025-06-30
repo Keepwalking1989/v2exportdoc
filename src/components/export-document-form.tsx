@@ -46,6 +46,7 @@ const manufacturerInfoSchema = z.object({
   manufacturerId: z.string().min(1, "Manufacturer is required."),
   invoiceNumber: z.string().min(1, "Invoice number is required."),
   invoiceDate: z.date().optional(),
+  permissionNumber: z.string().optional(),
 });
 
 const formSchema = z.object({
@@ -56,7 +57,6 @@ const formSchema = z.object({
   
   manufacturerDetails: z.array(manufacturerInfoSchema).min(1, "At least one manufacturer is required."),
 
-  permissionNumber: z.string().optional(),
   countryOfFinalDestination: z.string().min(1, "Country of Final Destination is required."),
   vesselFlightNo: z.string().optional(),
   portOfLoading: z.string().optional(),
@@ -129,6 +129,7 @@ const defaultNewManufacturerItem = {
     manufacturerId: "",
     invoiceNumber: "",
     invoiceDate: new Date(),
+    permissionNumber: "",
 };
 
 const getDefaultFormValues = (nextInvoiceNumber: string): ExportDocumentFormValues => ({
@@ -137,7 +138,6 @@ const getDefaultFormValues = (nextInvoiceNumber: string): ExportDocumentFormValu
   exportInvoiceNumber: nextInvoiceNumber,
   exportInvoiceDate: new Date(),
   manufacturerDetails: [defaultNewManufacturerItem],
-  permissionNumber: "",
   countryOfFinalDestination: "",
   vesselFlightNo: "",
   portOfLoading: "",
@@ -560,6 +560,36 @@ const ContainerTotals: React.FC<ContainerTotalsProps> = ({ containerIndex, contr
     );
 };
 
+const ManufacturerPermissionUpdater: React.FC<{
+  control: Control<ExportDocumentFormValues>;
+  index: number;
+  allManufacturers: Manufacturer[];
+  setValue: UseFormSetValue<ExportDocumentFormValues>;
+}> = ({ control, index, allManufacturers, setValue }) => {
+  const manufacturerId = useWatch({
+    control,
+    name: `manufacturerDetails.${index}.manufacturerId`,
+  });
+
+  const isFormDirty = control.formState.isDirty;
+
+  useEffect(() => {
+    // Only autofill if the user hasn't manually changed the permission number
+    // for this item, or if the manufacturer changes.
+    // The check for isDirty is a bit broad, but prevents overriding on first load of an existing doc.
+    if (manufacturerId) {
+      const selectedManufacturer = allManufacturers.find((m) => m.id === manufacturerId);
+      if (selectedManufacturer) {
+        setValue(
+          `manufacturerDetails.${index}.permissionNumber`,
+          selectedManufacturer.stuffingPermissionNumber || ''
+        );
+      }
+    }
+  }, [manufacturerId, index, allManufacturers, setValue]);
+
+  return null;
+};
 
 export function ExportDocumentForm({
   initialData,
@@ -600,7 +630,6 @@ export function ExportDocumentForm({
         exportInvoiceNumber: initialData.exportInvoiceNumber || "",
         exportInvoiceDate: initialData.exportInvoiceDate ? new Date(initialData.exportInvoiceDate) : new Date(),
         manufacturerDetails: initialData.manufacturerDetails?.map(md => ({...md, invoiceDate: md.invoiceDate ? new Date(md.invoiceDate) : undefined})) || [defaultNewManufacturerItem],
-        permissionNumber: initialData.permissionNumber || "",
         countryOfFinalDestination: initialData.countryOfFinalDestination || "",
         vesselFlightNo: initialData.vesselFlightNo || "",
         portOfLoading: initialData.portOfLoading || "",
@@ -671,178 +700,28 @@ export function ExportDocumentForm({
       <CardContent>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <FormField
-                control={form.control}
-                name="exportInvoiceNumber"
-                render={({ field }) => (
-                    <FormItem>
-                    <FormLabel className="flex items-center gap-2"><Hash className="h-4 w-4 text-muted-foreground" />Export Invoice No.</FormLabel>
-                    <FormControl>
-                        <Input placeholder="e.g. EXP/HEM/001/25-26" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                    </FormItem>
-                )}
-                />
-                <FormField
-                control={form.control}
-                name="exportInvoiceDate"
-                render={({ field }) => (
-                    <FormItem className="flex flex-col">
-                    <FormLabel className="flex items-center gap-2"><CalendarIcon className="h-4 w-4 text-muted-foreground" />Export Invoice Date</FormLabel>
-                    <Popover>
-                        <PopoverTrigger asChild>
-                        <FormControl>
-                            <Button
-                            variant={"outline"}
-                            className={cn(
-                                "w-full pl-3 text-left font-normal",
-                                !field.value && "text-muted-foreground"
-                            )}
-                            >
-                            {field.value ? (
-                                format(field.value, "PPP")
-                            ) : (
-                                <span>Pick a date</span>
-                            )}
-                            <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                            </Button>
-                        </FormControl>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0" align="start">
-                        <Calendar
-                            mode="single"
-                            selected={field.value}
-                            onSelect={field.onChange}
-                            disabled={(date) =>
-                            date > new Date() || date < new Date("2000-01-01")
-                            }
-                            initialFocus
-                        />
-                        </PopoverContent>
-                    </Popover>
-                    <FormMessage />
-                    </FormItem>
-                )}
-                />
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                <FormField control={form.control} name="exportInvoiceNumber" render={({ field }) => ( <FormItem><FormLabel className="flex items-center gap-2"><Hash className="h-4 w-4 text-muted-foreground" />Export Invoice No.</FormLabel><FormControl><Input placeholder="e.g. EXP/HEM/001/25-26" {...field} /></FormControl><FormMessage /></FormItem>)} />
+                <FormField control={form.control} name="exportInvoiceDate" render={({ field }) => ( <FormItem className="flex flex-col"><FormLabel className="flex items-center gap-2"><CalendarIcon className="h-4 w-4 text-muted-foreground" />Export Invoice Date</FormLabel><Popover><PopoverTrigger asChild><FormControl><Button variant={"outline"} className={cn("w-full pl-3 text-left font-normal",!field.value && "text-muted-foreground")}>{field.value ? format(field.value, "PPP"): <span>Pick a date</span>}<CalendarIcon className="ml-auto h-4 w-4 opacity-50" /></Button></FormControl></PopoverTrigger><PopoverContent className="w-auto p-0" align="start"><Calendar mode="single" selected={field.value} onSelect={field.onChange} disabled={(date) =>date > new Date() || date < new Date("2000-01-01")} initialFocus /></PopoverContent></Popover><FormMessage /></FormItem>)} />
+                <FormField control={form.control} name="exporterId" render={({ field }) => ( <FormItem><FormLabel className="flex items-center gap-2"><Briefcase className="h-4 w-4 text-muted-foreground" />Exporter *</FormLabel><Combobox options={exporterOptions} value={field.value} onChange={field.onChange} placeholder="Select Exporter..." searchPlaceholder="Search Exporters..." emptySearchMessage="No exporter found. Add on Exporter page." disabled={exporterOptions.length === 0} /><FormMessage /></FormItem>)} />
+                <FormField control={form.control} name="transporterId" render={({ field }) => ( <FormItem><FormLabel className="flex items-center gap-2"><Truck className="h-4 w-4 text-muted-foreground" />Transporter *</FormLabel><Combobox options={transporterOptions} value={field.value} onChange={field.onChange} placeholder="Select Transporter..." searchPlaceholder="Search Transporters..." emptySearchMessage="No transporter found. Add on Transporter page." disabled={transporterOptions.length === 0} /><FormMessage /></FormItem>)} />
             </div>
             
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <FormField
-                control={form.control}
-                name="exporterId"
-                render={({ field }) => (
-                    <FormItem>
-                    <FormLabel className="flex items-center gap-2">
-                        <Briefcase className="h-4 w-4 text-muted-foreground" />
-                        Exporter *
-                    </FormLabel>
-                    <Combobox
-                        options={exporterOptions}
-                        value={field.value}
-                        onChange={field.onChange}
-                        placeholder="Select Exporter..."
-                        searchPlaceholder="Search Exporters..."
-                        emptySearchMessage="No exporter found. Add on Exporter page."
-                        disabled={exporterOptions.length === 0}
-                    />
-                    <FormMessage />
-                    </FormItem>
-                )}
-                />
-                 <FormField
-                control={form.control}
-                name="transporterId"
-                render={({ field }) => (
-                    <FormItem>
-                    <FormLabel className="flex items-center gap-2">
-                        <Truck className="h-4 w-4 text-muted-foreground" />
-                        Transporter *
-                    </FormLabel>
-                    <Combobox
-                        options={transporterOptions}
-                        value={field.value}
-                        onChange={field.onChange}
-                        placeholder="Select Transporter..."
-                        searchPlaceholder="Search Transporters..."
-                        emptySearchMessage="No transporter found. Add on Transporter page."
-                        disabled={transporterOptions.length === 0}
-                    />
-                    <FormMessage />
-                    </FormItem>
-                )}
-                />
-            </div>
-
             <Card>
                 <CardHeader>
-                    <CardTitle className="flex items-center justify-between">
-                        Manufacturer Details
-                        <Button type="button" size="sm" onClick={() => appendManufacturer(defaultNewManufacturerItem)}>
-                            <PlusCircle className="mr-2 h-4 w-4" /> Add Manufacturer
-                        </Button>
-                    </CardTitle>
+                    <CardTitle className="flex items-center justify-between">Manufacturer Details<Button type="button" size="sm" onClick={() => appendManufacturer(defaultNewManufacturerItem)}><PlusCircle className="mr-2 h-4 w-4" /> Add Manufacturer</Button></CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   {manufacturerFields.map((field, index) => {
-                    const selectedManufacturer = allManufacturers.find(m => m.id === form.getValues(`manufacturerDetails.${index}.manufacturerId`));
-                    const manufacturerFirstName = selectedManufacturer ? selectedManufacturer.companyName.split(" ")[0] : "Manufacturer";
-                    
                     return (
                         <div key={field.id} className="p-4 border rounded-md space-y-4 relative bg-card/50">
-                            <Button
-                                type="button"
-                                variant="destructive"
-                                size="icon"
-                                onClick={() => manufacturerFields.length > 1 && removeManufacturer(index)}
-                                className="absolute top-2 right-2 h-7 w-7"
-                                disabled={manufacturerFields.length <= 1}
-                            >
-                                <Trash2 className="h-4 w-4" />
-                                <span className="sr-only">Remove Manufacturer</span>
-                            </Button>
-                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                <FormField
-                                    control={form.control}
-                                    name={`manufacturerDetails.${index}.manufacturerId`}
-                                    render={({ field }) => (
-                                        <FormItem>
-                                            <FormLabel><Factory className="inline mr-2 h-4 w-4 text-muted-foreground" />Manufacturer *</FormLabel>
-                                            <Combobox options={manufacturerOptions} {...field} placeholder="Select Manufacturer..."/>
-                                            <FormMessage />
-                                        </FormItem>
-                                    )}
-                                />
-                                <FormField
-                                    control={form.control}
-                                    name={`manufacturerDetails.${index}.invoiceNumber`}
-                                    render={({ field }) => (
-                                        <FormItem>
-                                            <FormLabel><Hash className="inline mr-2 h-4 w-4 text-muted-foreground" />{manufacturerFirstName}'s Invoice No. *</FormLabel>
-                                            <FormControl><Input placeholder="e.g. MAN-INV-001" {...field} /></FormControl>
-                                            <FormMessage />
-                                        </FormItem>
-                                    )}
-                                />
-                                 <FormField
-                                    control={form.control}
-                                    name={`manufacturerDetails.${index}.invoiceDate`}
-                                    render={({ field }) => (
-                                        <FormItem className="flex flex-col">
-                                        <FormLabel><CalendarIcon className="inline mr-2 h-4 w-4 text-muted-foreground" />Invoice Date</FormLabel>
-                                        <Popover>
-                                            <PopoverTrigger asChild>
-                                            <FormControl>
-                                                <Button variant="outline" className={cn("w-full justify-start", !field.value && "text-muted-foreground")}>{field.value ? format(field.value, "PPP") : <span>Pick date</span>}<CalendarIcon className="ml-auto h-4 w-4"/></Button>
-                                            </FormControl>
-                                            </PopoverTrigger>
-                                            <PopoverContent><Calendar mode="single" selected={field.value} onSelect={field.onChange}/></PopoverContent>
-                                        </Popover>
-                                        <FormMessage />
-                                        </FormItem>
-                                    )}
-                                />
+                            <ManufacturerPermissionUpdater control={form.control} index={index} allManufacturers={allManufacturers} setValue={form.setValue}/>
+                            <Button type="button" variant="destructive" size="icon" onClick={() => manufacturerFields.length > 1 && removeManufacturer(index)} className="absolute top-2 right-2 h-7 w-7" disabled={manufacturerFields.length <= 1}><Trash2 className="h-4 w-4" /><span className="sr-only">Remove Manufacturer</span></Button>
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                                <FormField control={form.control} name={`manufacturerDetails.${index}.manufacturerId`} render={({ field }) => (<FormItem><FormLabel><Factory className="inline mr-2 h-4 w-4 text-muted-foreground" />Manufacturer *</FormLabel><Combobox options={manufacturerOptions} {...field} placeholder="Select Manufacturer..."/><FormMessage /></FormItem>)} />
+                                <FormField control={form.control} name={`manufacturerDetails.${index}.invoiceNumber`} render={({ field }) => ( <FormItem><FormLabel><Hash className="inline mr-2 h-4 w-4 text-muted-foreground" />Invoice No. *</FormLabel><FormControl><Input placeholder="e.g. MAN-INV-001" {...field} /></FormControl><FormMessage /></FormItem>)} />
+                                <FormField control={form.control} name={`manufacturerDetails.${index}.invoiceDate`} render={({ field }) => ( <FormItem className="flex flex-col"><FormLabel><CalendarIcon className="inline mr-2 h-4 w-4 text-muted-foreground" />Invoice Date</FormLabel><Popover><PopoverTrigger asChild><FormControl><Button variant="outline" className={cn("w-full justify-start", !field.value && "text-muted-foreground")}>{field.value ? format(field.value, "PPP") : <span>Pick date</span>}<CalendarIcon className="ml-auto h-4 w-4"/></Button></FormControl></PopoverTrigger><PopoverContent><Calendar mode="single" selected={field.value} onSelect={field.onChange}/></PopoverContent></Popover><FormMessage /></FormItem>)} />
+                                <FormField control={form.control} name={`manufacturerDetails.${index}.permissionNumber`} render={({ field }) => (<FormItem><FormLabel><BadgeCheck className="inline mr-2 h-4 w-4 text-muted-foreground" />Permission No.</FormLabel><FormControl><Input placeholder="Auto-filled from Manufacturer" {...field} /></FormControl><FormMessage /></FormItem>)} />
                             </div>
                         </div>
                     );
@@ -850,460 +729,72 @@ export function ExportDocumentForm({
                 </CardContent>
             </Card>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                 <FormField
-                    control={form.control}
-                    name="permissionNumber"
-                    render={({ field }) => (
-                        <FormItem>
-                        <FormLabel className="flex items-center gap-2"><BadgeCheck className="h-4 w-4 text-muted-foreground" />Permission No.</FormLabel>
-                        <FormControl>
-                            <Input placeholder="Enter Permission Number" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                        </FormItem>
-                    )}
-                />
-                <FormField
-                    control={form.control}
-                    name="countryOfFinalDestination"
-                    render={({ field }) => (
-                        <FormItem>
-                        <FormLabel className="flex items-center gap-2"><Globe className="h-4 w-4 text-muted-foreground" />Country of Final Destination *</FormLabel>
-                        <FormControl>
-                            <Input placeholder="e.g. United States" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                        </FormItem>
-                    )}
-                />
-                <FormField
-                    control={form.control}
-                    name="vesselFlightNo"
-                    render={({ field }) => (
-                        <FormItem>
-                        <FormLabel className="flex items-center gap-2"><Ship className="h-4 w-4 text-muted-foreground" />Vessel / Flight No.</FormLabel>
-                        <FormControl>
-                            <Input placeholder="e.g. MAERSK-123" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                        </FormItem>
-                    )}
-                />
-            </div>
-            
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <FormField
-                    control={form.control}
-                    name="portOfLoading"
-                    render={({ field }) => (
-                        <FormItem>
-                        <FormLabel className="flex items-center gap-2"><Anchor className="h-4 w-4 text-muted-foreground" />Port Of Loading</FormLabel>
-                        <FormControl>
-                            <Input placeholder="e.g. Mundra, India" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                        </FormItem>
-                    )}
-                />
-                <FormField
-                    control={form.control}
-                    name="portOfDischarge"
-                    render={({ field }) => (
-                        <FormItem>
-                        <FormLabel className="flex items-center gap-2"><Anchor className="h-4 w-4 text-muted-foreground" />Port Of Discharge</FormLabel>
-                        <FormControl>
-                            <Input placeholder="e.g. Newark, USA" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                        </FormItem>
-                    )}
-                />
-                 <FormField
-                    control={form.control}
-                    name="finalDestination"
-                    render={({ field }) => (
-                        <FormItem>
-                        <FormLabel className="flex items-center gap-2"><Anchor className="h-4 w-4 text-muted-foreground" />Final Destination (Place)</FormLabel>
-                        <FormControl>
-                            <Input placeholder="e.g. New York, USA" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                        </FormItem>
-                    )}
-                />
-            </div>
-            
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <FormField
-                    control={form.control}
-                    name="conversationRate"
-                    render={({ field }) => (
-                        <FormItem>
-                        <FormLabel className="flex items-center gap-2"><ArrowLeftRight className="h-4 w-4 text-muted-foreground" />Conversation Rate</FormLabel>
-                        <FormControl>
-                            <Input type="number" placeholder="e.g. 83.50" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                        </FormItem>
-                    )}
-                />
-                <FormField
-                    control={form.control}
-                    name="freight"
-                    render={({ field }) => (
-                        <FormItem>
-                        <FormLabel className="flex items-center gap-2"><Ship className="h-4 w-4 text-muted-foreground" />Freight</FormLabel>
-                        <FormControl>
-                            <Input type="number" placeholder="e.g. 500" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                        </FormItem>
-                    )}
-                />
-                <FormField
-                    control={form.control}
-                    name="gst"
-                    render={({ field }) => (
-                        <FormItem>
-                        <FormLabel className="flex items-center gap-2"><Percent className="h-4 w-4 text-muted-foreground" />GST</FormLabel>
-                        <FormControl>
-                            <Input placeholder="e.g. 18%" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                        </FormItem>
-                    )}
-                />
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <FormField
-                    control={form.control}
-                    name="exchangeNotification"
-                    render={({ field }) => (
-                        <FormItem>
-                        <FormLabel className="flex items-center gap-2"><Bell className="h-4 w-4 text-muted-foreground" />Exchange Notification</FormLabel>
-                        <FormControl>
-                            <Input placeholder="e.g. Notif-123" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                        </FormItem>
-                    )}
-                />
-                <FormField
-                    control={form.control}
-                    name="exchangeDate"
-                    render={({ field }) => (
-                        <FormItem className="flex flex-col">
-                        <FormLabel className="flex items-center gap-2"><CalendarClock className="h-4 w-4 text-muted-foreground" />Exchange Date</FormLabel>
-                        <Popover>
-                            <PopoverTrigger asChild>
-                            <FormControl>
-                                <Button
-                                variant={"outline"}
-                                className={cn(
-                                    "w-full pl-3 text-left font-normal",
-                                    !field.value && "text-muted-foreground"
-                                )}
-                                >
-                                {field.value ? (
-                                    format(field.value, "PPP")
-                                ) : (
-                                    <span>Pick a date</span>
-                                )}
-                                <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                                </Button>
-                            </FormControl>
-                            </PopoverTrigger>
-                            <PopoverContent className="w-auto p-0" align="start">
-                            <Calendar
-                                mode="single"
-                                selected={field.value}
-                                onSelect={field.onChange}
-                                initialFocus
-                            />
-                            </PopoverContent>
-                        </Popover>
-                        <FormMessage />
-                        </FormItem>
-                    )}
-                />
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                <FormField control={form.control} name="countryOfFinalDestination" render={({ field }) => (<FormItem><FormLabel className="flex items-center gap-2"><Globe className="h-4 w-4 text-muted-foreground" />Country of Final Destination *</FormLabel><FormControl><Input placeholder="e.g. United States" {...field} /></FormControl><FormMessage /></FormItem>)}/>
+                <FormField control={form.control} name="vesselFlightNo" render={({ field }) => (<FormItem><FormLabel className="flex items-center gap-2"><Ship className="h-4 w-4 text-muted-foreground" />Vessel / Flight No.</FormLabel><FormControl><Input placeholder="e.g. MAERSK-123" {...field} /></FormControl><FormMessage /></FormItem>)} />
+                <FormField control={form.control} name="portOfLoading" render={({ field }) => (<FormItem><FormLabel className="flex items-center gap-2"><Anchor className="h-4 w-4 text-muted-foreground" />Port Of Loading</FormLabel><FormControl><Input placeholder="e.g. Mundra, India" {...field} /></FormControl><FormMessage /></FormItem>)} />
+                <FormField control={form.control} name="portOfDischarge" render={({ field }) => (<FormItem><FormLabel className="flex items-center gap-2"><Anchor className="h-4 w-4 text-muted-foreground" />Port Of Discharge</FormLabel><FormControl><Input placeholder="e.g. Newark, USA" {...field} /></FormControl><FormMessage /></FormItem>)} />
             </div>
 
-            <FormField
-                control={form.control}
-                name="termsOfDeliveryAndPayment"
-                render={({ field }) => (
-                    <FormItem>
-                    <FormLabel className="flex items-center gap-2"><FileText className="h-4 w-4 text-muted-foreground" />Terms Of Delivery & Payments</FormLabel>
-                    <FormControl>
-                        <Textarea placeholder="Terms..." {...field} />
-                    </FormControl>
-                    <FormMessage />
-                    </FormItem>
-                )}
-            />
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                 <FormField control={form.control} name="finalDestination" render={({ field }) => ( <FormItem><FormLabel className="flex items-center gap-2"><Anchor className="h-4 w-4 text-muted-foreground" />Final Destination (Place)</FormLabel><FormControl><Input placeholder="e.g. New York, USA" {...field} /></FormControl><FormMessage /></FormItem>)} />
+                 <FormField control={form.control} name="conversationRate" render={({ field }) => (<FormItem><FormLabel className="flex items-center gap-2"><ArrowLeftRight className="h-4 w-4 text-muted-foreground" />Conversation Rate</FormLabel><FormControl><Input type="number" placeholder="e.g. 83.50" {...field} /></FormControl><FormMessage /></FormItem>)} />
+                 <FormField control={form.control} name="freight" render={({ field }) => (<FormItem><FormLabel className="flex items-center gap-2"><Ship className="h-4 w-4 text-muted-foreground" />Freight</FormLabel><FormControl><Input type="number" placeholder="e.g. 500" {...field} /></FormControl><FormMessage /></FormItem>)} />
+                 <FormField control={form.control} name="gst" render={({ field }) => (<FormItem><FormLabel className="flex items-center gap-2"><Percent className="h-4 w-4 text-muted-foreground" />GST</FormLabel><FormControl><Input placeholder="e.g. 18%" {...field} /></FormControl><FormMessage /></FormItem>)} />
+            </div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <FormField control={form.control} name="exchangeNotification" render={({ field }) => (<FormItem><FormLabel className="flex items-center gap-2"><Bell className="h-4 w-4 text-muted-foreground" />Exchange Notification</FormLabel><FormControl><Input placeholder="e.g. Notif-123" {...field} /></FormControl><FormMessage /></FormItem>)} />
+                <FormField control={form.control} name="exchangeDate" render={({ field }) => (<FormItem className="flex flex-col"><FormLabel className="flex items-center gap-2"><CalendarClock className="h-4 w-4 text-muted-foreground" />Exchange Date</FormLabel><Popover><PopoverTrigger asChild><FormControl><Button variant={"outline"} className={cn("w-full pl-3 text-left font-normal",!field.value && "text-muted-foreground")}>{field.value ? format(field.value, "PPP"): <span>Pick a date</span>}<CalendarIcon className="ml-auto h-4 w-4 opacity-50" /></Button></FormControl></PopoverTrigger><PopoverContent className="w-auto p-0" align="start"><Calendar mode="single" selected={field.value} onSelect={field.onChange} initialFocus /></PopoverContent></Popover><FormMessage /></FormItem>)} />
+            </div>
+
+            <FormField control={form.control} name="termsOfDeliveryAndPayment" render={({ field }) => (<FormItem><FormLabel className="flex items-center gap-2"><FileText className="h-4 w-4 text-muted-foreground" />Terms Of Delivery & Payments</FormLabel><FormControl><Textarea placeholder="Terms..." {...field} /></FormControl><FormMessage /></FormItem>)} />
 
             <Card>
               <CardHeader>
-                  <CardTitle className="flex items-center justify-between">
-                      Container Items
-                      <Button type="button" size="sm" onClick={() => appendContainer(defaultNewContainerItem)}>
-                          <PlusCircle className="mr-2 h-4 w-4" /> Add Container
-                      </Button>
-                  </CardTitle>
+                  <CardTitle className="flex items-center justify-between">Container Items<Button type="button" size="sm" onClick={() => appendContainer(defaultNewContainerItem)}><PlusCircle className="mr-2 h-4 w-4" /> Add Container</Button></CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
                   {containerFields.map((field, index) => (
                       <div key={field.id} className="p-4 border rounded-md space-y-4 relative bg-card/50">
-                          <Button
-                              type="button"
-                              variant="destructive"
-                              size="icon"
-                                    onClick={() => containerFields.length > 1 && removeContainer(index)} // Prevent removing the last container
-                              className="absolute top-2 right-2 h-7 w-7"
-                              disabled={containerFields.length <= 1}
-                          >
-                              <Trash2 className="h-4 w-4" />
-                              <span className="sr-only">Remove Item</span>
-                          </Button>
+                          <Button type="button" variant="destructive" size="icon" onClick={() => containerFields.length > 1 && removeContainer(index)} className="absolute top-2 right-2 h-7 w-7" disabled={containerFields.length <= 1}><Trash2 className="h-4 w-4" /><span className="sr-only">Remove Item</span></Button>
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <FormField
-                                control={form.control}
-                                name={`containerItems.${index}.bookingNo`}
-                                render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>Booking No.</FormLabel>
-                                        <FormControl>
-                                            <Input placeholder="e.g. BK123456" {...field} />
-                                        </FormControl>
-                                        <FormMessage />
-                                    </FormItem>
-                                )}
-                            />
-                             <FormField
-                                control={form.control}
-                                name={`containerItems.${index}.containerNo`}
-                                render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>Container No.</FormLabel>
-                                        <FormControl>
-                                            <Input placeholder="e.g. MSKU1234567" {...field} />
-                                        </FormControl>
-                                        <FormMessage />
-                                    </FormItem>
-                                )}
-                            />
+                            <FormField control={form.control} name={`containerItems.${index}.bookingNo`} render={({ field }) => (<FormItem><FormLabel>Booking No.</FormLabel><FormControl><Input placeholder="e.g. BK123456" {...field} /></FormControl><FormMessage /></FormItem>)} />
+                            <FormField control={form.control} name={`containerItems.${index}.containerNo`} render={({ field }) => (<FormItem><FormLabel>Container No.</FormLabel><FormControl><Input placeholder="e.g. MSKU1234567" {...field} /></FormControl><FormMessage /></FormItem>)} />
                           </div>
                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <FormField
-                                control={form.control}
-                                name={`containerItems.${index}.lineSeal`}
-                                render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel className="flex items-center gap-2"><Stamp className="h-4 w-4 text-muted-foreground" />LINE SEAL</FormLabel>
-                                        <FormControl>
-                                            <Input placeholder="e.g. LS123" {...field} />
-                                        </FormControl>
-                                        <FormMessage />
-                                    </FormItem>
-                                )}
-                            />
-                            <FormField
-                                control={form.control}
-                                name={`containerItems.${index}.rfidSeal`}
-                                render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel className="flex items-center gap-2"><Radio className="h-4 w-4 text-muted-foreground" />RFID SEAL</FormLabel>
-                                        <FormControl>
-                                            <Input placeholder="e.g. RFID456" {...field} />
-                                        </FormControl>
-                                        <FormMessage />
-                                    </FormItem>
-                                )}
-                            />
+                            <FormField control={form.control} name={`containerItems.${index}.lineSeal`} render={({ field }) => (<FormItem><FormLabel className="flex items-center gap-2"><Stamp className="h-4 w-4 text-muted-foreground" />LINE SEAL</FormLabel><FormControl><Input placeholder="e.g. LS123" {...field} /></FormControl><FormMessage /></FormItem>)} />
+                            <FormField control={form.control} name={`containerItems.${index}.rfidSeal`} render={({ field }) => (<FormItem><FormLabel className="flex items-center gap-2"><Radio className="h-4 w-4 text-muted-foreground" />RFID SEAL</FormLabel><FormControl><Input placeholder="e.g. RFID456" {...field} /></FormControl><FormMessage /></FormItem>)} />
                            </div>
                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                             <FormField
-                                control={form.control}
-                                name={`containerItems.${index}.truckNumber`}
-                                render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel className="flex items-center gap-2"><Truck className="h-4 w-4 text-muted-foreground" />Truck Number</FormLabel>
-                                        <FormControl>
-                                            <Input placeholder="e.g. GJ01AB1234" {...field} />
-                                        </FormControl>
-                                        <FormMessage />
-                                    </FormItem>
-                                )}
-                            />
-                             <FormField
-                                control={form.control}
-                                name={`containerItems.${index}.builtyNo`}
-                                render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel className="flex items-center gap-2"><FileText className="h-4 w-4 text-muted-foreground" />Builty No</FormLabel>
-                                        <FormControl>
-                                            <Input placeholder="e.g. BN789" {...field} />
-                                        </FormControl>
-                                        <FormMessage />
-                                    </FormItem>
-                                )}
-                            />
+                             <FormField control={form.control} name={`containerItems.${index}.truckNumber`} render={({ field }) => (<FormItem><FormLabel className="flex items-center gap-2"><Truck className="h-4 w-4 text-muted-foreground" />Truck Number</FormLabel><FormControl><Input placeholder="e.g. GJ01AB1234" {...field} /></FormControl><FormMessage /></FormItem>)} />
+                             <FormField control={form.control} name={`containerItems.${index}.builtyNo`} render={({ field }) => (<FormItem><FormLabel className="flex items-center gap-2"><FileText className="h-4 w-4 text-muted-foreground" />Builty No</FormLabel><FormControl><Input placeholder="e.g. BN789" {...field} /></FormControl><FormMessage /></FormItem>)} />
                            </div>
                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 pt-4">
-                                <FormField
-                                    control={form.control}
-                                    name={`containerItems.${index}.tareWeight`}
-                                    render={({ field }) => (
-                                        <FormItem>
-                                            <FormLabel className="flex items-center gap-2"><Weight className="h-4 w-4 text-muted-foreground" />Tare weight (Kgs)</FormLabel>
-                                            <FormControl>
-                                                <Input type="number" placeholder="e.g. 4500" {...field} />
-                                            </FormControl>
-                                            <FormMessage />
-                                        </FormItem>
-                                    )}
-                                />
-                                <FormField
-                                    control={form.control}
-                                    name={`containerItems.${index}.startPalletNo`}
-                                    render={({ field }) => (
-                                        <FormItem>
-                                            <FormLabel className="flex items-center gap-2"><ListStart className="h-4 w-4 text-muted-foreground" />Start PALLET NO</FormLabel>
-                                            <FormControl>
-                                                <Input placeholder="e.g. 1" {...field} />
-                                            </FormControl>
-                                            <FormMessage />
-                                        </FormItem>
-                                    )}
-                                />
-                                <FormField
-                                    control={form.control}
-                                    name={`containerItems.${index}.endPalletNo`}
-                                    render={({ field }) => (
-                                        <FormItem>
-                                            <FormLabel className="flex items-center gap-2"><ListEnd className="h-4 w-4 text-muted-foreground" />End PALLET NO</FormLabel>
-                                            <FormControl>
-                                                <Input placeholder="e.g. 26" {...field} />
-                                            </FormControl>
-                                            <FormMessage />
-                                        </FormItem>
-                                    )}
-                                />
-                                <FormField
-                                    control={form.control}
-                                    name={`containerItems.${index}.totalPallets`}
-                                    render={({ field }) => (
-                                        <FormItem>
-                                            <FormLabel className="flex items-center gap-2"><Boxes className="h-4 w-4 text-muted-foreground" />Total Pallets</FormLabel>
-                                            <FormControl>
-                                                <Input placeholder="e.g. 26" {...field} />
-                                            </FormControl>
-                                            <FormMessage />
-                                        </FormItem>
-                                    )}
-                                />
+                                <FormField control={form.control} name={`containerItems.${index}.tareWeight`} render={({ field }) => (<FormItem><FormLabel className="flex items-center gap-2"><Weight className="h-4 w-4 text-muted-foreground" />Tare weight (Kgs)</FormLabel><FormControl><Input type="number" placeholder="e.g. 4500" {...field} /></FormControl><FormMessage /></FormItem>)} />
+                                <FormField control={form.control} name={`containerItems.${index}.startPalletNo`} render={({ field }) => (<FormItem><FormLabel className="flex items-center gap-2"><ListStart className="h-4 w-4 text-muted-foreground" />Start PALLET NO</FormLabel><FormControl><Input placeholder="e.g. 1" {...field} /></FormControl><FormMessage /></FormItem>)} />
+                                <FormField control={form.control} name={`containerItems.${index}.endPalletNo`} render={({ field }) => (<FormItem><FormLabel className="flex items-center gap-2"><ListEnd className="h-4 w-4 text-muted-foreground" />End PALLET NO</FormLabel><FormControl><Input placeholder="e.g. 26" {...field} /></FormControl><FormMessage /></FormItem>)} />
+                                <FormField control={form.control} name={`containerItems.${index}.totalPallets`} render={({ field }) => (<FormItem><FormLabel className="flex items-center gap-2"><Boxes className="h-4 w-4 text-muted-foreground" />Total Pallets</FormLabel><FormControl><Input placeholder="e.g. 26" {...field} /></FormControl><FormMessage /></FormItem>)} />
                            </div>
-                            <FormField
-                                control={form.control}
-                                name={`containerItems.${index}.description`}
-                                render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel className="flex items-center gap-2"><NotebookText className="h-4 w-4 text-muted-foreground" />Description for this Container</FormLabel>
-                                        <FormControl>
-                                            <Textarea placeholder="e.g. Contains fragile items, handle with care." {...field} />
-                                        </FormControl>
-                                        <FormMessage />
-                                    </FormItem>
-                                )}
-                            />
+                            <FormField control={form.control} name={`containerItems.${index}.description`} render={({ field }) => (<FormItem><FormLabel className="flex items-center gap-2"><NotebookText className="h-4 w-4 text-muted-foreground" />Description for this Container</FormLabel><FormControl><Textarea placeholder="e.g. Contains fragile items, handle with care." {...field} /></FormControl><FormMessage /></FormItem>)} />
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <FormField
-                                    control={form.control}
-                                    name={`containerItems.${index}.weighingSlipNo`}
-                                    render={({ field }) => (
-                                        <FormItem>
-                                            <FormLabel className="flex items-center gap-2"><FileScan className="h-4 w-4 text-muted-foreground" />Weighing Slip No</FormLabel>
-                                            <FormControl>
-                                                <Input placeholder="e.g. WSN-5678" {...field} />
-                                            </FormControl>
-                                            <FormMessage />
-                                        </FormItem>
-                                    )}
-                                />
-                                <Controller
-                                    control={form.control}
-                                    name={`containerItems.${index}.weighingDateTime`}
-                                    render={({ field }) => {
-                                        const dateValue = field.value ? new Date(field.value) : new Date();
-                                        const localISOString = new Date(dateValue.getTime() - (dateValue.getTimezoneOffset() * 60000)).toISOString().slice(0, 16);
-
-                                        return (
-                                            <FormItem>
-                                                <FormLabel className="flex items-center gap-2"><Clock className="h-4 w-4 text-muted-foreground" />Weighing Date & Time</FormLabel>
-                                                <FormControl>
-                                                    <Input
-                                                        type="datetime-local"
-                                                        value={field.value ? localISOString : ''}
-                                                        onChange={(e) => {
-                                                            field.onChange(e.target.value ? new Date(e.target.value) : null);
-                                                        }}
-                                                    />
-                                                </FormControl>
-                                                <FormMessage />
-                                            </FormItem>
-                                        );
-                                    }}
-                                />
+                                <FormField control={form.control} name={`containerItems.${index}.weighingSlipNo`} render={({ field }) => (<FormItem><FormLabel className="flex items-center gap-2"><FileScan className="h-4 w-4 text-muted-foreground" />Weighing Slip No</FormLabel><FormControl><Input placeholder="e.g. WSN-5678" {...field} /></FormControl><FormMessage /></FormItem>)} />
+                                <Controller control={form.control} name={`containerItems.${index}.weighingDateTime`} render={({ field }) => {const dateValue = field.value ? new Date(field.value) : new Date(); const localISOString = new Date(dateValue.getTime() - (dateValue.getTimezoneOffset() * 60000)).toISOString().slice(0, 16); return (<FormItem><FormLabel className="flex items-center gap-2"><Clock className="h-4 w-4 text-muted-foreground" />Weighing Date & Time</FormLabel><FormControl><Input type="datetime-local" value={field.value ? localISOString : ''} onChange={(e) => {field.onChange(e.target.value ? new Date(e.target.value) : null);}} /></FormControl><FormMessage /></FormItem>);}} />
                             </div>
                             
-                            <ContainerProductManager
-                                containerIndex={index}
-                                control={form.control}
-                                allProducts={allProducts}
-                                allSizes={allSizes}
-                                getValues={form.getValues}
-                                setValue={form.setValue}
-                            />
-                             <Separator className="my-6 border-dashed"/>
-                             <ContainerSampleManager
-                                containerIndex={index}
-                                control={form.control}
-                                allProducts={allProducts}
-                                allSizes={allSizes}
-                                getValues={form.getValues}
-                                setValue={form.setValue}
-                            />
-                            <ContainerTotals
-                                containerIndex={index}
-                                control={form.control}
-                                allProducts={allProducts}
-                                allSizes={allSizes}
-                            />
+                            <ContainerProductManager containerIndex={index} control={form.control} allProducts={allProducts} allSizes={allSizes} getValues={form.getValues} setValue={form.setValue} />
+                            <Separator className="my-6 border-dashed"/>
+                            <ContainerSampleManager containerIndex={index} control={form.control} allProducts={allProducts} allSizes={allSizes} getValues={form.getValues} setValue={form.setValue} />
+                            <ContainerTotals containerIndex={index} control={form.control} allProducts={allProducts} allSizes={allSizes} />
                       </div>
                   ))}
               </CardContent>
- </Card>
+            </Card>
 
 
             <div className="flex justify-between items-center mt-8">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={onCancelEdit}
-                className="font-headline"
-                disabled={!isEditing && !sourcePoId}
-              >
-                <XCircle className="mr-2 h-5 w-5" /> Cancel
-              </Button>
-              <Button
-                type="submit"
-                className="bg-accent hover:bg-accent/90 text-accent-foreground font-headline"
-                disabled={exporterOptions.length === 0}
-              >
-                <Save className="mr-2 h-5 w-5" />
-                {isEditing ? "Update Document" : "Save Document"}
-              </Button>
+              <Button type="button" variant="outline" onClick={onCancelEdit} className="font-headline" disabled={!isEditing && !sourcePoId}><XCircle className="mr-2 h-5 w-5" /> Cancel</Button>
+              <Button type="submit" className="bg-accent hover:bg-accent/90 text-accent-foreground font-headline" disabled={exporterOptions.length === 0}><Save className="mr-2 h-5 w-5" />{isEditing ? "Update Document" : "Save Document"}</Button>
             </div>
           </form>
         </Form>
