@@ -178,7 +178,7 @@ function drawPdfCell(
   return y + cellHeight;
 }
 
-export function generatePurchaseOrderPdf(
+export async function generatePurchaseOrderPdf(
   po: PurchaseOrder,
   exporter: Company,
   manufacturer: Manufacturer,
@@ -187,13 +187,58 @@ export function generatePurchaseOrderPdf(
   sourcePi: PerformaInvoice | undefined
 ) {
   const doc = new jsPDF({ unit: 'pt', format: 'a4' });
-  let yPos = PAGE_MARGIN_Y_TOP;
+  const pageWidth = doc.internal.pageSize.getWidth();
+  const pageHeight = doc.internal.pageSize.getHeight();
+  
+  let headerImage: Uint8Array | null = null;
+  let footerImage: Uint8Array | null = null;
+  let signatureImage: Uint8Array | null = null;
+  let headerHeight = 0;
+  let footerHeight = 0;
+
+  try {
+      const headerResponse = await fetch('/Latter-pad-head.png');
+      if (headerResponse.ok) {
+          headerImage = new Uint8Array(await headerResponse.arrayBuffer());
+          headerHeight = 70;
+      } else {
+          console.warn('Header image not found at /Latter-pad-head.png');
+      }
+
+      const footerResponse = await fetch('/Latter-pad-bottom.png');
+      if (footerResponse.ok) {
+          footerImage = new Uint8Array(await footerResponse.arrayBuffer());
+          footerHeight = 80;
+      } else {
+          console.warn('Footer image not found at /Latter-pad-bottom.png');
+      }
+
+      const signatureResponse = await fetch('/signature.png');
+      if (signatureResponse.ok) {
+          signatureImage = new Uint8Array(await signatureResponse.arrayBuffer());
+      } else {
+          console.warn('Signature image not found at /signature.png');
+      }
+  } catch (error) {
+      console.error("Error fetching images for PDF:", error);
+  }
+
+  const addHeaderFooter = () => {
+    if (headerImage) {
+      doc.addImage(headerImage, 'PNG', 0, 0, pageWidth, headerHeight);
+    }
+    if (footerImage) {
+      doc.addImage(footerImage, 'PNG', 0, pageHeight - footerHeight, pageWidth, footerHeight);
+    }
+  };
+
+  addHeaderFooter();
+
+  let yPos = headerHeight > 0 ? headerHeight + 10 : PAGE_MARGIN_Y_TOP;
+
   const halfContentWidth = CONTENT_WIDTH / 2;
   const poDetailBoxWidth = halfContentWidth / 2;
   const threePartBoxWidth = halfContentWidth / 3;
-
-  // Exporter Name (Category 2: 10pt bold, centered, white background)
-  yPos = drawPdfCell(doc, exporter.companyName.toUpperCase(), PAGE_MARGIN_X, yPos, CONTENT_WIDTH, 2, null, 'center', undefined, true);
 
   yPos = drawPdfCell(doc, "PURCHASE ORDER", PAGE_MARGIN_X, yPos, CONTENT_WIDTH, 1);
   yPos += 5;
@@ -221,7 +266,6 @@ export function generatePurchaseOrderPdf(
   const nameLines = doc.splitTextToSize(manufacturerNameText, halfContentWidth - 2 * CELL_PADDING);
   const nameBlockHeight = nameLines.length * manuNameFontStyle.size + (nameLines.length > 0 ? (nameLines.length - 1) * manuNameFontStyle.lineHeightAddition : 0);
 
-  // Space after name: equivalent to ONE line of manufacturer name font
   const spaceAfterNameHeight = (manuNameFontStyle.size + manuNameFontStyle.lineHeightAddition) * 1;
 
 
@@ -354,7 +398,7 @@ export function generatePurchaseOrderPdf(
     foot: tableFooter,
     startY: yPos,
     theme: 'grid',
-    margin: { left: PAGE_MARGIN_X, right: PAGE_MARGIN_X },
+    margin: { left: PAGE_MARGIN_X, right: PAGE_MARGIN_X, top: headerHeight, bottom: footerHeight },
     styles: {
       lineWidth: 0.5,
       lineColor: COLOR_BORDER_RGB,
@@ -391,22 +435,23 @@ export function generatePurchaseOrderPdf(
     didParseCell: function (data) {
       if (data.section === 'foot') {
         if (data.cell.raw === '' || data.cell.raw === undefined || (typeof data.cell.raw === 'object' && data.cell.raw && 'content' in data.cell.raw && data.cell.raw.content === '')) {
-          // For the empty cell in the footer, ensure it has a border but default white background
           data.cell.styles.fillColor = COLOR_WHITE_RGB;
           data.cell.styles.lineWidth = 0.5;
           data.cell.styles.lineColor = COLOR_BORDER_RGB;
         }
       }
        if (data.section === 'body' && (data.cell.raw === ' ' || data.cell.raw === '')) {
-         data.cell.styles.fillColor = COLOR_WHITE_RGB; // Ensure empty body cells are white
+         data.cell.styles.fillColor = COLOR_WHITE_RGB;
       }
     },
     didDrawPage: (data) => {
-      // @ts-ignore
-      yPos = data.cursor?.y ?? yPos;
+      addHeaderFooter();
     }
   });
-  yPos += 10;
+
+  // @ts-ignore
+  let finalY = doc.lastAutoTable.finalY;
+  yPos = finalY + 10;
 
   const termsHeaderH = calculateNaturalCellHeight(doc, "Terms & Conditions:", CONTENT_WIDTH, 2);
   yPos = drawPdfCell(doc, "Terms & Conditions:", PAGE_MARGIN_X, yPos, CONTENT_WIDTH, 2, termsHeaderH, 'left');
@@ -416,40 +461,44 @@ export function generatePurchaseOrderPdf(
   yPos = drawPdfCell(doc, poTermsText.split('\n'), PAGE_MARGIN_X, yPos, CONTENT_WIDTH, 3, poTermsHeight, 'left');
   yPos += 15; 
 
-
-  const signatureBlockHeight = (FONT_CAT2_SIZE + 2 * CELL_PADDING) * 2 + 40; // Approximate height
-  const availableSpace = doc.internal.pageSize.getHeight() - PAGE_MARGIN_Y_BOTTOM - yPos;
-
-  if (availableSpace < signatureBlockHeight) {
+  // Signature Block
+  const signatureBlockHeight = 80;
+  if (yPos + signatureBlockHeight > pageHeight - footerHeight) {
     doc.addPage();
-    yPos = PAGE_MARGIN_Y_TOP;
+    addHeaderFooter();
+    yPos = headerHeight + 10;
   }
   
-  // Position signature block towards the bottom or after current content if space is tight
-  let signatureY = doc.internal.pageSize.getHeight() - PAGE_MARGIN_Y_BOTTOM - signatureBlockHeight;
-  if (signatureY < yPos) { // If content + signature block overflows, place signature after content
-      signatureY = yPos;
-  }
+  const signatureY = pageHeight - footerHeight - signatureBlockHeight;
+  const finalSignatureY = Math.max(yPos, signatureY);
 
+  const signatureTableBody = [
+      [{ content: `FOR, ${exporter.companyName.toUpperCase()}`, styles: { halign: 'center', fontStyle: 'bold', fontSize: FONT_CAT2_SIZE } }],
+      [{ content: '', styles: { minCellHeight: 40 } }], // Cell for signature image
+      [{ content: 'AUTHORISED SIGNATURE', styles: { halign: 'center', fontStyle: 'bold', fontSize: FONT_CAT2_SIZE } }]
+  ];
 
-  const signatureX = PAGE_MARGIN_X + CONTENT_WIDTH / 2; // Position on the right half
-  const signatureWidth = CONTENT_WIDTH / 2;
-
-  const forExporterText = `FOR ${exporter.companyName.toUpperCase()}`;
-  const forExporterLabelStyle = getPdfCellStyle(2).fontStyle; // Use Cat 2 font style (10pt bold)
-  // Calculate height needed for "FOR {Exporter}"
-  const forExporterH = calculateNaturalCellHeight(doc, forExporterText, signatureWidth, 2, forExporterLabelStyle);
-
-  const authSignText = "Authorised Signatory";
-  // Calculate height needed for "Authorised Signatory"
-  const authSignH = calculateNaturalCellHeight(doc, authSignText, signatureWidth, 2, forExporterLabelStyle);
-  
-  // Fixed height for the first signature line cell, allowing space for actual signature above "Authorised Signatory"
-  const fixedSigLineHeight = forExporterH + 20; // 20pt for signing space + text height
-
-  drawPdfCell(doc, forExporterText, signatureX, signatureY, signatureWidth, 2, fixedSigLineHeight, 'center', forExporterLabelStyle, true, true);
-  drawPdfCell(doc, authSignText, signatureX, signatureY + fixedSigLineHeight, signatureWidth, 2, authSignH, 'center', forExporterLabelStyle, true, true);
-
+  autoTable(doc, {
+      startY: finalSignatureY,
+      body: signatureTableBody,
+      theme: 'plain',
+      tableWidth: 'wrap',
+      margin: { left: PAGE_MARGIN_X + CONTENT_WIDTH / 2 },
+      columnStyles: { 0: { cellWidth: CONTENT_WIDTH / 2 } },
+      didDrawCell: (data) => {
+          if (data.section === 'body' && data.row.index === 1) { // The empty cell
+              if (signatureImage) {
+                  const cell = data.cell;
+                  const imgWidth = 80;
+                  const imgHeight = 40;
+                  const imgX = cell.x + (cell.width - imgWidth) / 2;
+                  const imgY = cell.y + (cell.height - imgHeight) / 2;
+                  doc.addImage(signatureImage, 'PNG', imgX, imgY, imgWidth, imgHeight);
+              }
+          }
+      },
+      didDrawPage: addHeaderFooter,
+  });
 
   doc.save(`Purchase_Order_${po.poNumber.replace(/\//g, '_')}.pdf`);
 }
