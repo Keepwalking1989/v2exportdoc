@@ -21,7 +21,7 @@ import React, { useEffect, useMemo, useRef } from "react";
 import type { Company } from "@/types/company"; // For Exporter
 import type { Manufacturer } from "@/types/manufacturer"; // For Manufacturer
 import type { Transporter } from "@/types/transporter";
-import type { ExportDocument } from "@/types/export-document";
+import type { ExportDocument, ManufacturerInfo } from "@/types/export-document";
 import type { Product } from "@/types/product";
 import type { Size } from "@/types/size";
 import { Input } from "@/components/ui/input";
@@ -59,15 +59,16 @@ const formSchema = z.object({
 
   countryOfFinalDestination: z.string().min(1, "Country of Final Destination is required."),
   vesselFlightNo: z.string().optional(),
-  portOfLoading: z.string().optional(),
-  portOfDischarge: z.string().optional(),
-  finalDestination: z.string().optional(),
-  termsOfDeliveryAndPayment: z.string().optional(),
-  conversationRate: z.coerce.number().optional(),
-  exchangeNotification: z.string().optional(),
-  exchangeDate: z.date().optional(),
-  freight: z.coerce.number().optional(),
-  gst: z.string().optional(),
+  portOfLoading: z.string().min(1, "Port of Loading is required."),
+  portOfDischarge: z.string().min(1, "Port of Discharge is required."),
+  finalDestination: z.string().min(1, "Final Destination is required."),
+  termsOfDeliveryAndPayment: z.string().min(1, "Terms are required."),
+  conversationRate: z.coerce.number().min(0, "Conversation Rate is required."),
+  exchangeNotification: z.string().min(1, "Exchange Notification is required."),
+  exchangeDate: z.date({ required_error: "Exchange Date is required." }),
+  freight: z.coerce.number().min(0, "Freight is required."),
+  gst: z.string().min(1, "GST is required."),
+  
   containerItems: z.array(z.object({
     id: z.string().optional(),
     bookingNo: z.string().optional(),
@@ -755,23 +756,23 @@ export function ExportDocumentForm({
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                 <FormField control={form.control} name="countryOfFinalDestination" render={({ field }) => (<FormItem><FormLabel className="flex items-center gap-2"><Globe className="h-4 w-4 text-muted-foreground" />Country of Final Destination *</FormLabel><FormControl><Input placeholder="e.g. United States" {...field} /></FormControl><FormMessage /></FormItem>)}/>
                 <FormField control={form.control} name="vesselFlightNo" render={({ field }) => (<FormItem><FormLabel className="flex items-center gap-2"><Ship className="h-4 w-4 text-muted-foreground" />Vessel / Flight No.</FormLabel><FormControl><Input placeholder="e.g. MAERSK-123" {...field} /></FormControl><FormMessage /></FormItem>)} />
-                <FormField control={form.control} name="portOfLoading" render={({ field }) => (<FormItem><FormLabel className="flex items-center gap-2"><Anchor className="h-4 w-4 text-muted-foreground" />Port Of Loading</FormLabel><FormControl><Input placeholder="e.g. Mundra, India" {...field} /></FormControl><FormMessage /></FormItem>)} />
-                <FormField control={form.control} name="portOfDischarge" render={({ field }) => (<FormItem><FormLabel className="flex items-center gap-2"><Anchor className="h-4 w-4 text-muted-foreground" />Port Of Discharge</FormLabel><FormControl><Input placeholder="e.g. Newark, USA" {...field} /></FormControl><FormMessage /></FormItem>)} />
+                <FormField control={form.control} name="portOfLoading" render={({ field }) => (<FormItem><FormLabel className="flex items-center gap-2"><Anchor className="h-4 w-4 text-muted-foreground" />Port Of Loading *</FormLabel><FormControl><Input placeholder="e.g. Mundra, India" {...field} /></FormControl><FormMessage /></FormItem>)} />
+                <FormField control={form.control} name="portOfDischarge" render={({ field }) => (<FormItem><FormLabel className="flex items-center gap-2"><Anchor className="h-4 w-4 text-muted-foreground" />Port Of Discharge *</FormLabel><FormControl><Input placeholder="e.g. Newark, USA" {...field} /></FormControl><FormMessage /></FormItem>)} />
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                 <FormField control={form.control} name="finalDestination" render={({ field }) => ( <FormItem><FormLabel className="flex items-center gap-2"><Anchor className="h-4 w-4 text-muted-foreground" />Final Destination (Place)</FormLabel><FormControl><Input placeholder="e.g. New York, USA" {...field} /></FormControl><FormMessage /></FormItem>)} />
-                 <FormField control={form.control} name="conversationRate" render={({ field }) => (<FormItem><FormLabel className="flex items-center gap-2"><ArrowLeftRight className="h-4 w-4 text-muted-foreground" />Conversation Rate</FormLabel><FormControl><Input type="number" placeholder="e.g. 83.50" {...field} /></FormControl><FormMessage /></FormItem>)} />
-                 <FormField control={form.control} name="freight" render={({ field }) => (<FormItem><FormLabel className="flex items-center gap-2"><Ship className="h-4 w-4 text-muted-foreground" />Freight</FormLabel><FormControl><Input type="number" placeholder="e.g. 500" {...field} /></FormControl><FormMessage /></FormItem>)} />
-                 <FormField control={form.control} name="gst" render={({ field }) => (<FormItem><FormLabel className="flex items-center gap-2"><Percent className="h-4 w-4 text-muted-foreground" />GST</FormLabel><FormControl><Input placeholder="e.g. 18%" {...field} /></FormControl><FormMessage /></FormItem>)} />
+                 <FormField control={form.control} name="finalDestination" render={({ field }) => ( <FormItem><FormLabel className="flex items-center gap-2"><Anchor className="h-4 w-4 text-muted-foreground" />Final Destination (Place) *</FormLabel><FormControl><Input placeholder="e.g. New York, USA" {...field} /></FormControl><FormMessage /></FormItem>)} />
+                 <FormField control={form.control} name="conversationRate" render={({ field }) => (<FormItem><FormLabel className="flex items-center gap-2"><ArrowLeftRight className="h-4 w-4 text-muted-foreground" />Conversation Rate *</FormLabel><FormControl><Input type="number" placeholder="e.g. 83.50" {...field} /></FormControl><FormMessage /></FormItem>)} />
+                 <FormField control={form.control} name="freight" render={({ field }) => (<FormItem><FormLabel className="flex items-center gap-2"><Ship className="h-4 w-4 text-muted-foreground" />Freight *</FormLabel><FormControl><Input type="number" placeholder="e.g. 500" {...field} /></FormControl><FormMessage /></FormItem>)} />
+                 <FormField control={form.control} name="gst" render={({ field }) => (<FormItem><FormLabel className="flex items-center gap-2"><Percent className="h-4 w-4 text-muted-foreground" />GST *</FormLabel><FormControl><Input placeholder="e.g. 18%" {...field} /></FormControl><FormMessage /></FormItem>)} />
             </div>
             
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <FormField control={form.control} name="exchangeNotification" render={({ field }) => (<FormItem><FormLabel className="flex items-center gap-2"><Bell className="h-4 w-4 text-muted-foreground" />Exchange Notification</FormLabel><FormControl><Input placeholder="e.g. Notif-123" {...field} /></FormControl><FormMessage /></FormItem>)} />
-                <FormField control={form.control} name="exchangeDate" render={({ field }) => (<FormItem className="flex flex-col"><FormLabel className="flex items-center gap-2"><CalendarClock className="h-4 w-4 text-muted-foreground" />Exchange Date</FormLabel><Popover><PopoverTrigger asChild><FormControl><Button variant={"outline"} className={cn("w-full pl-3 text-left font-normal",!field.value && "text-muted-foreground")}>{field.value ? format(field.value, "PPP"): <span>Pick a date</span>}<CalendarIcon className="ml-auto h-4 w-4 opacity-50" /></Button></FormControl></PopoverTrigger><PopoverContent className="w-auto p-0" align="start"><Calendar mode="single" selected={field.value} onSelect={field.onChange} initialFocus /></PopoverContent></Popover><FormMessage /></FormItem>)} />
+                <FormField control={form.control} name="exchangeNotification" render={({ field }) => (<FormItem><FormLabel className="flex items-center gap-2"><Bell className="h-4 w-4 text-muted-foreground" />Exchange Notification *</FormLabel><FormControl><Input placeholder="e.g. Notif-123" {...field} /></FormControl><FormMessage /></FormItem>)} />
+                <FormField control={form.control} name="exchangeDate" render={({ field }) => (<FormItem className="flex flex-col"><FormLabel className="flex items-center gap-2"><CalendarClock className="h-4 w-4 text-muted-foreground" />Exchange Date *</FormLabel><Popover><PopoverTrigger asChild><FormControl><Button variant={"outline"} className={cn("w-full pl-3 text-left font-normal",!field.value && "text-muted-foreground")}>{field.value ? format(field.value, "PPP"): <span>Pick a date</span>}<CalendarIcon className="ml-auto h-4 w-4 opacity-50" /></Button></FormControl></PopoverTrigger><PopoverContent className="w-auto p-0" align="start"><Calendar mode="single" selected={field.value} onSelect={field.onChange} initialFocus /></PopoverContent></Popover><FormMessage /></FormItem>)} />
             </div>
 
-            <FormField control={form.control} name="termsOfDeliveryAndPayment" render={({ field }) => (<FormItem><FormLabel className="flex items-center gap-2"><FileText className="h-4 w-4 text-muted-foreground" />Terms Of Delivery & Payments</FormLabel><FormControl><Textarea placeholder="Terms..." {...field} /></FormControl><FormMessage /></FormItem>)} />
+            <FormField control={form.control} name="termsOfDeliveryAndPayment" render={({ field }) => (<FormItem><FormLabel className="flex items-center gap-2"><FileText className="h-4 w-4 text-muted-foreground" />Terms Of Delivery & Payments *</FormLabel><FormControl><Textarea placeholder="Terms..." {...field} /></FormControl><FormMessage /></FormItem>)} />
 
             <Card>
               <CardHeader>
