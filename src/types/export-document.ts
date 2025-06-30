@@ -38,6 +38,8 @@ export interface ManufacturerInfo {
 export interface ExportDocument {
   id:string; // Unique ID for the Export Document
   exporterId: string; // ID of the selected Exporter
+  clientId: string; // ID of the selected Client
+  performaInvoiceId?: string;
   purchaseOrderId?: string; // ID of the source Purchase Order, if applicable
   transporterId: string; // ID of the selected Transporter
   exportInvoiceNumber: string; // The user-facing invoice number
@@ -47,15 +49,15 @@ export interface ExportDocument {
 
   countryOfFinalDestination: string; // Country of Final Destination
   vesselFlightNo?: string;
-  portOfLoading?: string;
-  portOfDischarge?: string;
-  finalDestination?: string;
-  termsOfDeliveryAndPayment?: string;
-  conversationRate?: number;
-  exchangeNotification?: string;
-  exchangeDate?: Date;
-  freight?: number;
-  gst?: string;
+  portOfLoading: string;
+  portOfDischarge: string;
+  finalDestination: string;
+  termsOfDeliveryAndPayment: string;
+  conversationRate: number;
+  exchangeNotification: string;
+  exchangeDate: Date;
+  freight: number;
+  gst: string;
   containerItems?: ExportDocumentContainerItem[];
 
   // New fields for Eway Bill

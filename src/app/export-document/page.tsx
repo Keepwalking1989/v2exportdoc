@@ -13,6 +13,8 @@ import type { Manufacturer } from "@/types/manufacturer"; // Import Manufacturer
 import type { Transporter } from "@/types/transporter"; // Import Transporter
 import type { Product } from "@/types/product";
 import type { Size } from "@/types/size";
+import type { Client } from "@/types/client";
+import type { PerformaInvoice } from "@/types/performa-invoice";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 
@@ -23,6 +25,8 @@ const LOCAL_STORAGE_MANUFACTURERS_KEY = "bizform_manufacturers"; // Manufacturer
 const LOCAL_STORAGE_TRANSPORTERS_KEY = "bizform_transporters"; // Transporters
 const LOCAL_STORAGE_PRODUCTS_KEY = "bizform_products";
 const LOCAL_STORAGE_SIZES_KEY = "bizform_sizes";
+const LOCAL_STORAGE_CLIENTS_KEY = "bizform_clients";
+const LOCAL_STORAGE_PI_KEY = "bizform_performa_invoices";
 
 function getCurrentIndianFinancialYear(): string {
   const now = new Date();
@@ -65,10 +69,12 @@ export default function ExportDocumentPage() {
   const [nextExportInvoiceNumber, setNextExportInvoiceNumber] = useState<string>("");
   const [allPOs, setAllPOs] = useState<PurchaseOrder[]>([]);
   const [allExporters, setAllExporters] = useState<Company[]>([]);
-  const [allManufacturers, setAllManufacturers] = useState<Manufacturer[]>([]); // State for manufacturers
-  const [allTransporters, setAllTransporters] = useState<Transporter[]>([]); // State for transporters
+  const [allManufacturers, setAllManufacturers] = useState<Manufacturer[]>([]);
+  const [allTransporters, setAllTransporters] = useState<Transporter[]>([]);
   const [allProducts, setAllProducts] = useState<Product[]>([]);
   const [allSizes, setAllSizes] = useState<Size[]>([]);
+  const [allClients, setAllClients] = useState<Client[]>([]);
+  const [allPerformaInvoices, setAllPerformaInvoices] = useState<PerformaInvoice[]>([]);
   
   const [isClient, setIsClient] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
@@ -108,21 +114,16 @@ export default function ExportDocumentPage() {
         setAllManufacturers(JSON.parse(localStorage.getItem(LOCAL_STORAGE_MANUFACTURERS_KEY) || "[]").map((m: any) => ({
             ...m,
             stuffingPermissionDate: m.stuffingPermissionDate ? new Date(m.stuffingPermissionDate) : undefined,
-          }))); // Load manufacturers and parse date
-        setAllTransporters(JSON.parse(localStorage.getItem(LOCAL_STORAGE_TRANSPORTERS_KEY) || "[]")); // Load transporters
+          })));
+        setAllTransporters(JSON.parse(localStorage.getItem(LOCAL_STORAGE_TRANSPORTERS_KEY) || "[]"));
         setAllProducts(JSON.parse(localStorage.getItem(LOCAL_STORAGE_PRODUCTS_KEY) || "[]"));
         setAllSizes(JSON.parse(localStorage.getItem(LOCAL_STORAGE_SIZES_KEY) || "[]"));
+        setAllClients(JSON.parse(localStorage.getItem(LOCAL_STORAGE_CLIENTS_KEY) || "[]"));
+        setAllPerformaInvoices(JSON.parse(localStorage.getItem(LOCAL_STORAGE_PI_KEY) || "[]"));
 
       } catch (error) {
         console.error("Failed to parse data from localStorage", error);
         toast({ variant: "destructive", title: "Error", description: "Could not load data. Check console." });
-        setExportDocuments([]);
-        setAllPOs([]); 
-        setAllExporters([]);
-        setAllManufacturers([]); // Initialize manufacturers on error
-        setAllTransporters([]); // Initialize transporters on error
-        setAllProducts([]);
-        setAllSizes([]);
       } finally {
         setIsLoading(false);
       }
@@ -141,7 +142,7 @@ export default function ExportDocumentPage() {
         setSourcePoIdForNewDoc(poIdFromUrl);
         setDocToEdit(null); 
         formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        toast({ title: "New Export Document", description: `Source Purchase Order ID: ${poIdFromUrl}. Select an exporter and manufacturer.`});
+        toast({ title: "New Export Document", description: `Pre-filling data from Purchase Order ID: ${poIdFromUrl}.`});
       } else {
         toast({ variant: "destructive", title: "Error", description: `Source Purchase Order ID ${poIdFromUrl} not found.` });
         router.replace('/export-document', { scroll: false }); 
@@ -171,7 +172,6 @@ export default function ExportDocumentPage() {
     const finalDocData: ExportDocument = {
         ...formData,
         id: docToEdit ? docToEdit.id : Date.now().toString(),
-        purchaseOrderId: docToEdit ? docToEdit.purchaseOrderId : sourcePoIdForNewDoc || undefined,
         isDeleted: docToEdit ? docToEdit.isDeleted : false,
         manufacturerDetails: formData.manufacturerDetails?.map(md => ({...md, id: md.id || Math.random().toString(36).substring(2,9)})),
         containerItems: formData.containerItems?.map(item => ({
@@ -289,6 +289,10 @@ export default function ExportDocumentPage() {
               allTransporters={allTransporters}
               allProducts={allProducts}
               allSizes={allSizes}
+              allClients={allClients}
+              allPerformaInvoices={allPerformaInvoices}
+              allPurchaseOrders={allPOs}
+              sourcePoId={sourcePoIdForNewDoc}
             />
           ) : !canCreateOrEdit && showForm ? (
              <Card className="w-full max-w-2xl mx-auto shadow-xl mb-8">
