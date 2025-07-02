@@ -99,8 +99,8 @@ export async function generatePackingListPdf(
                 { content: 'Buyer (If Not Consignee)', styles: { ...classOneStyles, halign: 'center' } }
             ],
             [
-                { content: `Davare Floors, Inc.\n19 E 60 TH ST, Hialeah,FL.33013 . USA`, styles: { ...classTwoStyles, minCellHeight: 35, halign: 'left' } },
-                { content: `Davare Floors, Inc.\n19 E 60 TH ST, Hialeah,FL.33013 . USA`, styles: { ...classTwoStyles, minCellHeight: 35, halign: 'left' } }
+                { content: `To The\nOrder.`, styles: { ...classTwoStyles, minCellHeight: 35, halign: 'center' } },
+                { content: `To The\nOrder.`, styles: { ...classTwoStyles, minCellHeight: 35, halign: 'center' } }
             ]
         ],
         margin: { left: pageMargin, right: pageMargin },
@@ -177,7 +177,7 @@ export async function generatePackingListPdf(
             const size = product ? allSizes.find(s => s.id === product.sizeId) : undefined;
             if (!size) return;
 
-            const key = size.id; // Group by size only
+            const key = `${size.id}-${item.rate || 0}`; // Group by size AND rate
 
             if (!grouped.has(key)) {
                 const hsnCode = size.hsnCode || 'N/A';
