@@ -263,7 +263,7 @@ export async function generatePackingListPdf(
         head: [['HSN Code', 'Sr. No.', 'Description Of Goods', 'Boxes', 'Sq.Mtr', 'Net Wt. (Kgs)', 'Gross Wt. (Kgs)']],
         body: tableBody,
         foot: [[
-             { content: 'TOTAL', colSpan: 3, styles: {...classOneStyles, halign: 'left'} },
+             { content: 'TOTAL', colSpan: 3, styles: {...classOneStyles, halign: 'center'} },
              { content: grandTotalBoxes.toString(), styles: {...classTwoStyles, halign: 'right'} },
              { content: grandTotalSqm.toFixed(2), styles: {...classTwoStyles, halign: 'right'} },
              { content: grandTotalNetWt.toFixed(2), styles: {...classTwoStyles, halign: 'right'} },
@@ -327,7 +327,7 @@ export async function generatePackingListPdf(
         body: containerTableBody,
         foot: [
             [
-                { content: 'TOTAL', colSpan: 4, styles: { ...classOneStyles, halign: 'left' } },
+                { content: 'TOTAL', colSpan: 4, styles: { ...classOneStyles, halign: 'center' } },
                 { content: totalContainerBoxes.toString(), styles: { ...classTwoStyles, halign: 'center' } },
                 { content: totalContainerPallets.toString(), styles: { ...classTwoStyles, halign: 'center' } },
                 { content: totalContainerNetWt.toFixed(2), styles: { ...classTwoStyles, halign: 'center' } },
