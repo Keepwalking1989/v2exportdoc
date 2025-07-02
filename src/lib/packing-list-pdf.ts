@@ -290,35 +290,75 @@ export async function generatePackingListPdf(
 
     // --- Container Details Table ---
     const containerTableBody: any[] = [];
-    docData.containerItems?.forEach(container => {
-        const totalBoxes = (container.productItems || []).reduce((sum, item) => sum + (item.boxes || 0), 0) + 
-                           (container.sampleItems || []).reduce((sum, item) => sum + (item.boxes || 0), 0);
-        const totalNetWt = (container.productItems || []).reduce((sum, item) => sum + (item.netWeight || 0), 0) +
-                           (container.sampleItems || []).reduce((sum, item) => sum + (item.netWeight || 0), 0);
-        const totalGrossWt = (container.productItems || []).reduce((sum, item) => sum + (item.grossWeight || 0), 0) +
-                             (container.sampleItems || []).reduce((sum, item) => sum + (item.grossWeight || 0), 0);
+    let totalContainerBoxes = 0;
+    let totalContainerPallets = 0;
+    let totalContainerNetWt = 0;
+    let totalContainerGrossWt = 0;
+
+    (docData.containerItems || []).forEach(container => {
+        const boxes = (container.productItems || []).reduce((sum, item) => sum + (item.boxes || 0), 0) + 
+                       (container.sampleItems || []).reduce((sum, item) => sum + (item.boxes || 0), 0);
+        const pallets = parseInt(container.totalPallets || '0', 10);
+        const netWt = (container.productItems || []).reduce((sum, item) => sum + (item.netWeight || 0), 0) +
+                       (container.sampleItems || []).reduce((sum, item) => sum + (item.netWeight || 0), 0);
+        const grossWt = (container.productItems || []).reduce((sum, item) => sum + (item.grossWeight || 0), 0) +
+                         (container.sampleItems || []).reduce((sum, item) => sum + (item.grossWeight || 0), 0);
+        
+        totalContainerBoxes += boxes;
+        totalContainerPallets += pallets;
+        totalContainerNetWt += netWt;
+        totalContainerGrossWt += grossWt;
 
         containerTableBody.push([
             container.containerNo || 'N/A',
             container.lineSeal || 'N/A',
             container.rfidSeal || 'N/A',
             container.description || 'N/A',
-            totalBoxes.toString(),
-            `${container.startPalletNo || 'N/A'} to ${container.endPalletNo || 'N/A'}`,
-            totalNetWt.toFixed(2),
-            totalGrossWt.toFixed(2),
+            boxes.toString(),
+            container.totalPallets || 'N/A',
+            netWt.toFixed(2),
+            grossWt.toFixed(2),
         ]);
     });
+
     autoTable(doc, {
         startY: yPos,
-        head: [['CONTAINER NO.', 'Line Seal', 'RFID SEAL', 'DISCRIPTION', 'BOXES', 'Pallet No.', 'Net Wt.', 'Gross Wt.']],
+        head: [['CONTAINER NO.', 'Line Seal', 'RFID SEAL', 'DISCRIPTION', 'BOXES', 'Total Pallets', 'Net Wt.', 'Gross Wt.']],
         body: containerTableBody,
+        foot: [
+            [
+                { content: 'TOTAL', colSpan: 4, styles: { ...classOneStyles, halign: 'left' } },
+                { content: totalContainerBoxes.toString(), styles: { ...classTwoStyles, halign: 'center' } },
+                { content: totalContainerPallets.toString(), styles: { ...classTwoStyles, halign: 'center' } },
+                { content: totalContainerNetWt.toFixed(2), styles: { ...classTwoStyles, halign: 'center' } },
+                { content: totalContainerGrossWt.toFixed(2), styles: { ...classTwoStyles, halign: 'center' } },
+            ]
+        ],
         theme: 'grid',
         headStyles: classOneStyles,
         bodyStyles: {...classTwoStyles, halign: 'center', cellPadding: 2},
+        footStyles: { ...classOneStyles, cellPadding: 2 },
         margin: { left: pageMargin, right: pageMargin },
         didDrawPage: data => { yPos = data.cursor?.y ?? yPos; }
     });
+    // @ts-ignore
+    yPos = doc.lastAutoTable.finalY;
+
+    // --- New fixed text lines ---
+    const textLine1 = 'Export Under Duty Drawback Scheme, We shall claim the benefit as admissible under "MEIS" Scheme , RoDTEP , DBK\nLUT Application Reference Number (ARN) AD240324138081L';
+    const textLine2 = 'Certified That Goods Are Of Indian Origin';
+
+    autoTable(doc, {
+        startY: yPos,
+        body: [
+            [{ content: textLine1, styles: { ...classTwoStyles, halign: 'center', fontSize: 8, fontStyle: 'bold' } }],
+            [{ content: textLine2, styles: { ...classTwoStyles, halign: 'center', fontSize: 8, fontStyle: 'bold' } }],
+        ],
+        theme: 'grid',
+        margin: { left: pageMargin, right: pageMargin },
+        didDrawPage: data => { yPos = data.cursor?.y ?? yPos; }
+    });
+
     // @ts-ignore
     yPos = doc.lastAutoTable.finalY;
     
