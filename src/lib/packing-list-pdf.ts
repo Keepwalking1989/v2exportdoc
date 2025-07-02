@@ -325,18 +325,7 @@ export async function generatePackingListPdf(
 
     autoTable(doc, {
         startY: yPos,
-        head: [
-            [
-                { content: 'CONTAINER NO.', rowSpan: 2 },
-                { content: 'Line Seal', rowSpan: 2 },
-                { content: 'RFID SEAL', rowSpan: 2 },
-                { content: 'DISCRIPTION', rowSpan: 2 },
-                { content: 'BOXES', rowSpan: 2 },
-                { content: 'Pallet No.', rowSpan: 2 },
-                { content: 'Net Wt.', rowSpan: 2 },
-                { content: 'Gross Wt.', rowSpan: 2 },
-            ],
-        ],
+        head: [['CONTAINER NO.', 'Line Seal', 'RFID SEAL', 'DISCRIPTION', 'BOXES', 'Pallet No.', 'Net Wt.', 'Gross Wt.']],
         body: containerTableBody,
         foot: [
             [
@@ -361,9 +350,10 @@ export async function generatePackingListPdf(
         margin: { left: pageMargin, right: pageMargin },
         didDrawPage: data => { yPos = data.cursor?.y ?? yPos; }
     });
+
     // @ts-ignore
     yPos = doc.lastAutoTable.finalY;
-
+    
     // --- New fixed text lines ---
     const textLine1 = 'Export Under Duty Drawback Scheme, We shall claim the benefit as admissible under "MEIS" Scheme , RoDTEP , DBK\nLUT Application Reference Number (ARN) AD240324138081L';
     const textLine2 = 'Certified That Goods Are Of Indian Origin';
@@ -448,7 +438,7 @@ export async function generatePackingListPdf(
                     const cell = data.cell;
                     const imgWidth = 80;
                     const imgHeight = 40;
-                    // Center the image in the cell
+                    // Center the image within the cell
                     const imgX = cell.x + (cell.width - imgWidth) / 2;
                     const imgY = cell.y + (cell.height - imgHeight) / 2;
                     doc.addImage(signatureImage, 'PNG', imgX, imgY, imgWidth, imgHeight);
