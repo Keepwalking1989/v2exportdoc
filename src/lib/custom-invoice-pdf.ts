@@ -283,7 +283,7 @@ function drawCustomInvoice(
 
     const tableFooter = [
         [
-            { content: 'TOTAL', colSpan: 3, styles: {...classOneStyles, halign: 'left', fontSize: FONT_CAT2_SIZE} },
+            { content: 'TOTAL', colSpan: 3, styles: {...classOneStyles, halign: 'center', fontSize: FONT_CAT2_SIZE} },
             { content: grandTotalBoxes.toString(), styles: {...classTwoStyles, halign: 'right'} },
             { content: grandTotalSqm.toFixed(2), styles: {...classTwoStyles, halign: 'right'} },
             { content: '', styles: {...classTwoStyles} },
@@ -384,8 +384,8 @@ function drawCustomInvoice(
         startY: yPos,
         theme: 'grid',
         body: [
-            [{ content: lutText1, styles: { ...classTwoStyles, halign: 'center', cellPadding: padding, fontSize: 9 } }],
-            [{ content: lutText2, styles: { ...classTwoStyles, halign: 'center', cellPadding: padding, fontSize: 9 } }]
+            [{ content: lutText1, styles: { ...classTwoStyles, halign: 'center', cellPadding: padding, fontSize: 9, fontStyle: 'bold' } }],
+            [{ content: lutText2, styles: { ...classTwoStyles, halign: 'center', cellPadding: padding, fontSize: 9, fontStyle: 'bold' } }]
         ],
         margin: { left: pageMargin, right: pageMargin },
         didDrawPage: data => { yPos = data.cursor?.y ?? yPos; }
