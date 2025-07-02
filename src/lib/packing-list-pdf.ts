@@ -225,6 +225,7 @@ export async function generatePackingListPdf(
         ]);
     });
 
+    let groupedSamples: any[] = [];
     if (allSampleItems.length > 0) {
         tableBody.push([
             { 
@@ -234,7 +235,7 @@ export async function generatePackingListPdf(
             }
         ]);
 
-        const groupedSamples = groupItems(allSampleItems);
+        groupedSamples = groupItems(allSampleItems);
         groupedSamples.forEach(item => {
             grandTotalBoxes += item.boxes;
             grandTotalSqm += item.sqm;
@@ -253,7 +254,8 @@ export async function generatePackingListPdf(
         });
     }
 
-    const emptyRowCount = 5;
+    const totalItemLines = groupedProducts.length + (groupedSamples.length > 0 ? 1 + groupedSamples.length : 0);
+    const emptyRowCount = totalItemLines > 5 ? 2 : 4;
     for (let i = 0; i < emptyRowCount; i++) {
         tableBody.push(['', '', '', '', '', '', '']);
     }
@@ -346,6 +348,13 @@ export async function generatePackingListPdf(
             ]
         ],
         theme: 'grid',
+        styles: {
+            lineWidth: 1,
+            lineColor: [0, 0, 0],
+            fontSize: 9,
+            valign: 'middle',
+            halign: 'center',
+        },
         headStyles: classOneStyles,
         bodyStyles: {...classTwoStyles, halign: 'center', cellPadding: 2},
         footStyles: { ...classOneStyles, cellPadding: 2 },
