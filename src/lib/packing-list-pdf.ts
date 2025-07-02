@@ -271,7 +271,7 @@ export async function generatePackingListPdf(
         ]],
         theme: 'grid',
         headStyles: classOneStyles,
-        bodyStyles: {...classTwoStyles, cellPadding: 1, valign: 'top' },
+        bodyStyles: {...classTwoStyles, cellPadding: 4, valign: 'top' },
         footStyles: {...classOneStyles, cellPadding: 1 },
         margin: { left: pageMargin, right: pageMargin },
         columnStyles: {
@@ -323,7 +323,18 @@ export async function generatePackingListPdf(
 
     autoTable(doc, {
         startY: yPos,
-        head: [['CONTAINER NO.', 'Line Seal', 'RFID SEAL', 'DISCRIPTION', 'BOXES', 'Total Pallets', 'Net Wt.', 'Gross Wt.']],
+        head: [
+            [
+                { content: 'CONTAINER NO.', rowSpan: 2 },
+                { content: 'Line Seal', rowSpan: 2 },
+                { content: 'RFID SEAL', rowSpan: 2 },
+                { content: 'DISCRIPTION', rowSpan: 2 },
+                { content: 'BOXES', rowSpan: 2 },
+                { content: 'Pallet No.', rowSpan: 2 },
+                { content: 'Net Wt.', rowSpan: 2 },
+                { content: 'Gross Wt.', rowSpan: 2 },
+            ],
+        ],
         body: containerTableBody,
         foot: [
             [
