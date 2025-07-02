@@ -270,7 +270,7 @@ function drawCustomInvoice(
             grandTotalSqm += item.sqm;
             grandTotalAmount += item.total;
             const effectiveRate = item.sqm > 0 ? item.total / item.sqm : 0;
-            tableBody.push([item.hsnCode, srNoCounter++, `${item.description} (Sample)`, item.boxes.toString(), item.sqm.toFixed(2), `$ ${effectiveRate.toFixed(2)}`, `$ ${item.total.toFixed(2)}`]);
+            tableBody.push([item.hsnCode, srNoCounter++, item.description, item.boxes.toString(), item.sqm.toFixed(2), `$ ${effectiveRate.toFixed(2)}`, `$ ${item.total.toFixed(2)}`]);
         });
     }
     const emptyRowCount = 5;
@@ -342,18 +342,6 @@ function drawCustomInvoice(
     // @ts-ignore
     yPos = doc.lastAutoTable.finalY;
 
-    const footerText = 'Export Under GST Circular No. 26/2017 Custom Dt. 01/07/2017';
-    autoTable(doc, {
-        startY: yPos,
-        theme: 'grid',
-        body: [[{ content: footerText, styles: { ...classOneStyles, halign: 'center' }}]],
-        margin: { left: pageMargin, right: pageMargin },
-        styles: { cellPadding: padding },
-        didDrawPage: data => { yPos = data.cursor?.y ?? yPos; }
-    });
-    // @ts-ignore
-    yPos = doc.lastAutoTable.finalY;
-
     autoTable(doc, {
         startY: yPos,
         theme: 'grid',
@@ -388,6 +376,22 @@ function drawCustomInvoice(
         // @ts-ignore
         yPos = doc.lastAutoTable.finalY;
     });
+
+    const lutText1 = 'Export Under GST Circular No. 26/2017 Custom Dt. 01/07/2017';
+    const lutText2 = 'Letter Of Undertaking No. Acknowledgment For LUT Application Reference Number (ARN) AD2404250084791';
+
+    autoTable(doc, {
+        startY: yPos,
+        theme: 'grid',
+        body: [
+            [{ content: lutText1, styles: { ...classTwoStyles, halign: 'center', cellPadding: padding, fontSize: 9 } }],
+            [{ content: lutText2, styles: { ...classTwoStyles, halign: 'center', cellPadding: padding, fontSize: 9 } }]
+        ],
+        margin: { left: pageMargin, right: pageMargin },
+        didDrawPage: data => { yPos = data.cursor?.y ?? yPos; }
+    });
+    // @ts-ignore
+    yPos = doc.lastAutoTable.finalY;
 
     const declarationText = 'We declare that this Invoice shows the actual price of the goods described\nand that all particulars are true and correct.';
     
