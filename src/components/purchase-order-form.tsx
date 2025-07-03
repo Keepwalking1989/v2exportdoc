@@ -134,7 +134,7 @@ export function PurchaseOrderForm({
         ...defaultValuesForNew,
         exporterId: sourcePi.exporterId,
         poNumber: defaultPoNumber, 
-        termsAndConditions: defaultPOTerms, // Ensure default terms for new PO
+        termsAndConditions: defaultPOTerms,
       });
       replace(defaultValuesForNew.items);
     } else if (!isEditing) {
@@ -143,6 +143,38 @@ export function PurchaseOrderForm({
       replace(defaultValues.items);
     }
   }, [isEditing, initialData, sourcePi, defaultPoNumber, form, replace]);
+
+  useEffect(() => {
+    if (isEditing) return; // Only run on new PO creation
+
+    if (!sourcePi || !selectedPoSizeId) {
+      replace([{ productId: "", designImage: "AS PER SAMPLE", weightPerBox: 0, boxes: 1, thickness: "8.5 MM to 9.0 MM" }]);
+      return;
+    }
+    
+    const itemsFromPiForSelectedSize = sourcePi.items.filter(
+      (piItem) => piItem.sizeId === selectedPoSizeId
+    );
+
+    if (itemsFromPiForSelectedSize.length > 0) {
+      const newPoItems = itemsFromPiForSelectedSize.map((piItem) => {
+        const productDetail = globalProducts.find(p => p.id === piItem.productId);
+        const sizeDetail = globalSizes.find(s => s.id === selectedPoSizeId);
+        
+        return {
+          productId: piItem.productId,
+          boxes: piItem.boxes,
+          weightPerBox: productDetail?.boxWeight || sizeDetail?.boxWeight || 0,
+          thickness: "8.5 MM to 9.0 MM",
+          designImage: "AS PER SAMPLE",
+        };
+      });
+      replace(newPoItems);
+    } else {
+      replace([{ productId: "", designImage: "AS PER SAMPLE", weightPerBox: 0, boxes: 1, thickness: "8.5 MM to 9.0 MM" }]);
+    }
+
+  }, [selectedPoSizeId, sourcePi, isEditing, replace, globalProducts, globalSizes]);
 
 
   const exporterOptions: ComboboxOption[] = useMemo(() =>
@@ -171,8 +203,6 @@ export function PurchaseOrderForm({
     
     const options = availableSizes.map(s => ({ value: s.id, label: `${s.size} (HSN: ${s.hsnCode})` }));
 
-    // If editing and the PO's current size was not found in globalSizes (e.g. deleted),
-    // but we have initialData.sizeId, add a placeholder option to show what was saved.
     if (isEditing && initialData && initialData.sizeId && !poCurrentSizeDetails && !options.some(opt => opt.value === initialData.sizeId)) {
         options.unshift({ value: initialData.sizeId, label: `Saved Size ID: ${initialData.sizeId} (Details Missing)` });
     }
@@ -198,7 +228,6 @@ export function PurchaseOrderForm({
     if (globalSizeDetails) {
       form.setValue(`items.${itemIndex}.weightPerBox`, globalSizeDetails.boxWeight);
     } else {
-      // If size details not found (e.g., placeholder size ID), set weight to 0 or handle as needed
       form.setValue(`items.${itemIndex}.weightPerBox`, 0);
     }
 
@@ -337,16 +366,11 @@ export function PurchaseOrderForm({
                      <Combobox
                       options={poSizeOptions}
                       value={field.value}
-                      onChange={(value) => {
-                        field.onChange(value);
-                        const currentItems = form.getValues("items");
-                        const newItems = currentItems.map(it => ({ ...it, productId: "" })); 
-                        replace(newItems.length > 0 ? newItems : [{ productId: "", designImage: "AS PER SAMPLE", weightPerBox: 0, boxes: 1, thickness: "8.5 MM to 9.0 MM" }]);
-                      }}
+                      onChange={field.onChange}
                       placeholder="Select Size for PO..."
                       searchPlaceholder="Search sizes..."
                       emptySearchMessage={poSizeOptions.length === 0 && initialData?.sizeId ? `Original Size ID: ${initialData.sizeId} (Details Missing). Select another if needed.` : "No size found. Ensure sizes exist or PI had sized items."}
-                      disabled={poSizeOptions.length === 0 && !(isEditing && initialData && initialData.sizeId)} // Disable only if truly no options and not just a placeholder
+                      disabled={poSizeOptions.length === 0 && !(isEditing && initialData && initialData.sizeId)}
                     />
                     <FormMessage />
                   </FormItem>
