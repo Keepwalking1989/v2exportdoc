@@ -58,6 +58,7 @@ export interface ExportDocument {
   exchangeDate: Date;
   freight: number;
   gst: string;
+  discount?: number;
   containerItems?: ExportDocumentContainerItem[];
 
   // New fields for Eway Bill
