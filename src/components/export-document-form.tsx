@@ -207,17 +207,34 @@ const ContainerProductItem: React.FC<ItemProps> = ({
     
     const { productId, boxes, rate } = currentItem;
 
-    useEffect(() => {
-        const product = allProducts.find(p => p.id === productId);
+    // This handler is called only on user interaction, preventing overwrites on initial load.
+    const handleProductSelectionChange = (newProductId: string) => {
+        setValue(`containerItems.${containerIndex}.${fieldArrayName}.${productIndex}.productId`, newProductId, { shouldDirty: true });
+        
+        const product = allProducts.find(p => p.id === newProductId);
         if (product) {
             const size = allSizes.find(s => s.id === product.sizeId);
+            
+            // Set Rate
             const newRate = product.salesPrice ?? (size?.salesPrice || 0);
             setValue(`containerItems.${containerIndex}.${fieldArrayName}.${productIndex}.rate`, newRate);
+            
+            // Set Weights
+            const numBoxes = Number(getValues(`containerItems.${containerIndex}.${fieldArrayName}.${productIndex}.boxes`)) || 0;
+            const baseBoxWeight = product.boxWeight ?? (size?.boxWeight || 0);
+            const newNetWeight = numBoxes * baseBoxWeight;
+            setValue(`containerItems.${containerIndex}.${fieldArrayName}.${productIndex}.netWeight`, newNetWeight);
+            // Default gross weight to net weight when product changes
+            setValue(`containerItems.${containerIndex}.${fieldArrayName}.${productIndex}.grossWeight`, newNetWeight);
         }
-    }, [productId, allProducts, allSizes, setValue, containerIndex, productIndex, fieldArrayName]);
-    
+    };
+
+    // This effect updates weights ONLY when the box count changes, preserving manually entered weights.
     useEffect(() => {
-        const product = allProducts.find(p => p.id === productId);
+        const currentProductId = getValues(`containerItems.${containerIndex}.${fieldArrayName}.${productIndex}.productId`);
+        if (!currentProductId) return;
+
+        const product = allProducts.find(p => p.id === currentProductId);
         if (!product) return;
         const size = allSizes.find(s => s.id === product.sizeId);
         if (!size) return;
@@ -232,7 +249,8 @@ const ContainerProductItem: React.FC<ItemProps> = ({
         if (!currentGrossWeightVal || Number(currentGrossWeightVal) < newNetWeight) {
             setValue(`containerItems.${containerIndex}.${fieldArrayName}.${productIndex}.grossWeight`, newNetWeight);
         }
-    }, [productId, boxes, allProducts, allSizes, setValue, getValues, containerIndex, productIndex, fieldArrayName]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [boxes]);
 
 
     const { sqm, amount } = useMemo(() => {
@@ -272,9 +290,7 @@ const ContainerProductItem: React.FC<ItemProps> = ({
                     <Combobox
                         options={productOptions}
                         value={field.value}
-                        onChange={(value) => {
-                            field.onChange(value);
-                        }}
+                        onChange={handleProductSelectionChange}
                         placeholder="Select Product..."
                     />
                     <FormMessage />
@@ -884,3 +900,5 @@ export function ExportDocumentForm({
     </Card>
   );
 }
+
+    
