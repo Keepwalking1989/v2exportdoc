@@ -252,14 +252,14 @@ function drawCustomInvoice(
     const groupedSamples = groupItems(allSampleItems);
     let grandTotalBoxes = 0;
     let grandTotalSqm = 0;
-    let grandTotalAmount = 0;
+    let grandTotalAmountUSD = 0;
     let srNoCounter = 1;
 
     const tableBody: any[] = [];
     groupedProducts.forEach(item => {
         grandTotalBoxes += item.boxes;
         grandTotalSqm += item.sqm;
-        grandTotalAmount += item.total;
+        grandTotalAmountUSD += item.total;
         const effectiveRate = item.sqm > 0 ? item.total / item.sqm : 0;
         tableBody.push([item.hsnCode, srNoCounter++, item.description, item.boxes.toString(), item.sqm.toFixed(2), `$ ${effectiveRate.toFixed(2)}`, `$ ${item.total.toFixed(2)}`]);
     });
@@ -268,27 +268,58 @@ function drawCustomInvoice(
         groupedSamples.forEach(item => {
             grandTotalBoxes += item.boxes;
             grandTotalSqm += item.sqm;
-            grandTotalAmount += item.total;
+            // Samples don't add to total amount
+            // grandTotalAmountUSD += item.total;
             const effectiveRate = item.sqm > 0 ? item.total / item.sqm : 0;
             tableBody.push([item.hsnCode, srNoCounter++, item.description, item.boxes.toString(), item.sqm.toFixed(2), `$ ${effectiveRate.toFixed(2)}`, `$ ${item.total.toFixed(2)}`]);
         });
     }
     const emptyRowCount = 5;
     for (let i = 0; i < emptyRowCount; i++) { tableBody.push(['', '', '', '', '', '', '']); }
+
+    const freightUSD = docData.freight || 0;
+    const discountUSD = docData.discount || 0;
+    const finalTotalUSD = grandTotalAmountUSD + freightUSD - discountUSD;
+
     const conversationRate = docData.conversationRate || 0;
-    const totalAmountInr = grandTotalAmount * conversationRate;
+    const totalAmountInr = finalTotalUSD * conversationRate;
     const gstString = docData.gst || "0";
     const gstRate = parseFloat(gstString.replace('%', '')) / 100 || 0;
     const gstAmount = totalAmountInr * gstRate;
 
-    const tableFooter = [
+    const tableFooter: any[] = [
         [
             { content: 'TOTAL', colSpan: 3, styles: {...classOneStyles, halign: 'center', fontSize: FONT_CAT2_SIZE} },
             { content: grandTotalBoxes.toString(), styles: {...classTwoStyles, halign: 'right'} },
             { content: grandTotalSqm.toFixed(2), styles: {...classTwoStyles, halign: 'right'} },
             { content: '', styles: {...classTwoStyles} },
-            { content: `$ ${grandTotalAmount.toFixed(2)}`, styles: {...classTwoStyles, halign: 'right'} },
+            { content: `$ ${grandTotalAmountUSD.toFixed(2)}`, styles: {...classTwoStyles, halign: 'right'} },
         ],
+    ];
+
+    if (freightUSD > 0.1) {
+        tableFooter.push([
+            { content: 'FREIGHT', colSpan: 6, styles: { ...classTwoStyles, fontStyle: 'bold', halign: 'right' } },
+            { content: `$ ${freightUSD.toFixed(2)}`, styles: { ...classTwoStyles, halign: 'right' } }
+        ]);
+    }
+
+    if (discountUSD > 0.1) {
+        tableFooter.push([
+            { content: 'DISCOUNT', colSpan: 6, styles: { ...classTwoStyles, fontStyle: 'bold', halign: 'right' } },
+            { content: `(-) $ ${discountUSD.toFixed(2)}`, styles: { ...classTwoStyles, halign: 'right' } }
+        ]);
+    }
+
+    // Always show final total if freight/discount is applied
+    if (freightUSD > 0.1 || discountUSD > 0.1) {
+        tableFooter.push([
+            { content: 'TOTAL INVOICE VALUE', colSpan: 6, styles: { ...classOneStyles, halign: 'right' } },
+            { content: `$ ${finalTotalUSD.toFixed(2)}`, styles: { ...classTwoStyles, fontStyle: 'bold', halign: 'right' } }
+        ]);
+    }
+    
+    tableFooter.push(
         [
             { content: 'Total No. Of Pkgs.', colSpan: 3, styles: { ...classOneStyles, halign: 'center', fontSize: 9 } },
             { content: 'EXCHANGE RATE NOTIFICATION NUMBER AND DATE', colSpan: 4, styles: { ...classOneStyles, fontSize: 8, halign: 'center' } }
@@ -303,15 +334,13 @@ function drawCustomInvoice(
             { content: 'EXCHANGE RATE', styles: { ...classOneStyles, fontSize: 8, halign: 'center' } },
             { content: '1 USD', styles: { ...classTwoStyles, halign: 'center' } },
             { content: conversationRate.toFixed(2), colSpan: 2, styles: { ...classTwoStyles, halign: 'center' } }
-        ],
-    ];
+        ]
+    );
     
-    // Dynamically calculate the height of the amount-in-words row
-    const amountInWordsStr = amountToWordsUSD(grandTotalAmount);
+    const amountInWordsStr = amountToWordsUSD(finalTotalUSD);
     const amountInWordsLines = doc.splitTextToSize(amountInWordsStr, (contentWidth * 0.65) - (2 * padding)); // Width of the first cell
     const amountInWordsHeight = (FONT_CAT3_SIZE + 2) * amountInWordsLines.length + (2 * padding);
     
-    // Add the final two rows for the footer
     tableFooter.push(
         [
             { content: amountInWordsStr, rowSpan: 2, colSpan: 3, styles: { ...classTwoStyles, halign: 'left', valign: 'top', cellPadding: padding, minCellHeight: amountInWordsHeight } },
@@ -341,6 +370,18 @@ function drawCustomInvoice(
     });
     // @ts-ignore
     yPos = doc.lastAutoTable.finalY;
+
+    const dutyDrawbackText = 'Export Under Duty Drawback Scheme, We shall claim the benefit as admissible under , RoDTEP , DBK';
+    autoTable(doc, {
+        startY: yPos,
+        theme: 'grid',
+        body: [[{ content: dutyDrawbackText, styles: { ...classTwoStyles, halign: 'center', fontSize: 9, fontStyle: 'bold' } }]],
+        margin: { left: pageMargin, right: pageMargin },
+        didDrawPage: data => { yPos = data.cursor?.y ?? yPos; }
+    });
+    // @ts-ignore
+    yPos = doc.lastAutoTable.finalY;
+
 
     autoTable(doc, {
         startY: yPos,
