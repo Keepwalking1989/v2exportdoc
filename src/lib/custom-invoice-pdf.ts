@@ -443,7 +443,7 @@ function drawCustomInvoice(
             [ // Row 0
                 { 
                     content: `Declaration:\n${declarationText}`, 
-                    rowSpan: 3, 
+                    rowSpan: 4, 
                     styles: { 
                         fontStyle: 'normal', 
                         textColor: [0, 0, 0], 
@@ -455,6 +455,24 @@ function drawCustomInvoice(
                         cellPadding: 2,
                     } 
                 },
+                { 
+                    content: `Signature & Date:`,
+                    styles: {
+                        ...classOneStyles, 
+                        halign: 'left', 
+                        cellPadding: 2,
+                    }
+                },
+                {
+                    content: `${format(new Date(docData.exportInvoiceDate), 'dd/MM/yyyy')}`,
+                    styles: {
+                        ...classTwoStyles,
+                        halign: 'right',
+                        cellPadding: 2,
+                    }
+                }
+            ],
+            [ // Row 1
                 { 
                     content: `FOR, ${exporter.companyName.toUpperCase()}`, 
                     colSpan: 2, 
@@ -468,10 +486,10 @@ function drawCustomInvoice(
                     } 
                 }
             ],
-            [ // Row 1 (New) - for signature image
+            [ // Row 2 - for signature image
                 { content: '', colSpan: 2, styles: {lineWidth: 0.5, lineColor: [0,0,0], minCellHeight: 40} }
             ],
-            [ // Row 2
+            [ // Row 3
                 { 
                     content: 'AUTHORISED SIGNATURE', 
                     colSpan: 2, 
@@ -486,7 +504,11 @@ function drawCustomInvoice(
                 }
             ]
         ],
-        columnStyles: { 0: { cellWidth: contentWidth * 0.65 }, 1: { cellWidth: 'auto' }, 2: { cellWidth: 'auto' } },
+        columnStyles: { 
+            0: { cellWidth: contentWidth * 0.65 }, 
+            1: { cellWidth: (contentWidth * 0.35) / 2 },
+            2: { cellWidth: (contentWidth * 0.35) / 2 } 
+        },
         margin: { left: pageMargin, right: pageMargin },
         didDrawCell: (data) => {
              // Round Seal in Declaration box
@@ -494,7 +516,7 @@ function drawCustomInvoice(
                 if (roundSealImage) { doc.addImage(roundSealImage, 'PNG', data.cell.x + data.cell.width - 50, data.cell.y + 10, 40, 40); }
             }
             // Signature in its own empty box
-            if (data.section === 'body' && data.row.index === 1 && data.column.index === 1) {
+            if (data.section === 'body' && data.row.index === 2 && data.column.index === 1) {
                 if (signatureImage) {
                     const cell = data.cell;
                     const imgWidth = 80;
