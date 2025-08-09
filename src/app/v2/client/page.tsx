@@ -21,7 +21,7 @@ export default function ClientPageV2() {
     const fetchClients = async () => {
       setIsLoading(true);
       try {
-        const response = await fetch('/api/v2/clients');
+        const response = await fetch('/api/v2/client-data');
         if (!response.ok) {
           throw new Error('Failed to fetch clients');
         }
@@ -51,7 +51,7 @@ export default function ClientPageV2() {
     } else {
       // Create new logic
       try {
-        const response = await fetch('/api/v2/clients', {
+        const response = await fetch('/api/v2/client-data', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
