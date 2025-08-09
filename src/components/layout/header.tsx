@@ -14,7 +14,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Separator } from "@/components/ui/separator";
-import { Menu as MenuIcon, X as XIcon, Building, PlusCircle, ShoppingCart, Receipt, Palette, Package, Landmark, Briefcase, FileText, ArrowLeftRight, LayoutDashboard } from "lucide-react";
+import { Menu as MenuIcon, X as XIcon, Building, PlusCircle, ShoppingCart, Receipt, Palette, Package, Landmark, Briefcase, FileText, ArrowLeftRight, LayoutDashboard, Database } from "lucide-react";
 
 export function Header() {
   const [isMobile, setIsMobile] = useState(false);
@@ -109,6 +109,16 @@ export function Header() {
           </Link>
         </MenubarContent>
       </MenubarMenu>
+       <MenubarMenu>
+        <MenubarTrigger className="font-headline text-green-600">
+          <Database className="mr-2 h-4 w-4" /> V2
+        </MenubarTrigger>
+        <MenubarContent>
+           <Link href="/v2/client" passHref>
+            <MenubarItem>Client (MySQL)</MenubarItem>
+          </Link>
+        </MenubarContent>
+      </MenubarMenu>
     </>
   );
 
@@ -158,6 +168,17 @@ export function Header() {
         <Button variant="ghost" className="justify-start font-normal w-full" asChild onClick={() => setIsMobileMenuOpen(false)}><Link href="/transaction">Transactions</Link></Button>
          <Button variant="ghost" className="justify-start font-normal w-full" asChild onClick={() => setIsMobileMenuOpen(false)}><Link href="/gst">GST</Link></Button>
       </div>
+
+      <Separator />
+      <Button variant="ghost" className="justify-start font-headline text-lg text-green-600" onClick={() => {}}>
+        <Database className="mr-2 h-5 w-5" /> V2 (MySQL)
+      </Button>
+      <div className="pl-6">
+        <Button variant="ghost" className="justify-start font-normal w-full" asChild onClick={() => setIsMobileMenuOpen(false)}>
+            <Link href="/v2/client">Client (MySQL)</Link>
+        </Button>
+      </div>
+
 
     </nav>
   );
