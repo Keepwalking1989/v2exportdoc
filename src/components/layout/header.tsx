@@ -14,7 +14,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Separator } from "@/components/ui/separator";
-import { Menu as MenuIcon, X as XIcon, Building, PlusCircle, ShoppingCart, Receipt, Palette, Package, Landmark, Briefcase, FileText, ArrowLeftRight, LayoutDashboard, Database, Factory } from "lucide-react";
+import { Menu as MenuIcon, X as XIcon, Building, PlusCircle, ShoppingCart, Receipt, Palette, Package, Landmark, Briefcase, FileText, ArrowLeftRight, LayoutDashboard, Database, Factory, Truck } from "lucide-react";
 
 export function Header() {
   const [isMobile, setIsMobile] = useState(false);
@@ -120,6 +120,9 @@ export function Header() {
           <Link href="/v2/manufacturer" passHref>
             <MenubarItem>Manufacturer (MySQL)</MenubarItem>
           </Link>
+          <Link href="/v2/transporter" passHref>
+            <MenubarItem>Transporter (MySQL)</MenubarItem>
+          </Link>
         </MenubarContent>
       </MenubarMenu>
     </>
@@ -182,6 +185,9 @@ export function Header() {
         </Button>
         <Button variant="ghost" className="justify-start font-normal w-full" asChild onClick={() => setIsMobileMenuOpen(false)}>
             <Link href="/v2/manufacturer">Manufacturer (MySQL)</Link>
+        </Button>
+        <Button variant="ghost" className="justify-start font-normal w-full" asChild onClick={() => setIsMobileMenuOpen(false)}>
+            <Link href="/v2/transporter">Transporter (MySQL)</Link>
         </Button>
       </div>
 
