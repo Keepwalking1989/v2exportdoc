@@ -60,17 +60,19 @@ export default function ClientPageV2() {
         });
 
         if (!response.ok) {
-          throw new Error('Failed to save client');
+          const errorData = await response.json();
+          throw new Error(errorData.message || 'Failed to save client');
         }
         const newClient: Client = await response.json();
         setClients(prevClients => [newClient, ...prevClients]);
         toast({ title: "Client Saved", description: `${values.companyName} has been successfully saved to the database.` });
-      } catch (error) {
+        formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      } catch (error: any) {
         console.error("Failed to save client via API", error);
         toast({
           variant: "destructive",
-          title: "Error",
-          description: "Could not save the new client.",
+          title: "Error Saving Client",
+          description: error.message || "An unknown error occurred.",
         });
       }
     }
