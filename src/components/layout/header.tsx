@@ -109,6 +109,7 @@ export function Header() {
              <MenubarSubContent>
                  <Link href="/v2/manu-bill" passHref><MenubarItem>Manu Bill</MenubarItem></Link>
                  <Link href="/v2/trans-bill" passHref><MenubarItem>Trans Bill</MenubarItem></Link>
+                 <Link href="/v2/supply-bill" passHref><MenubarItem>Supply Bill</MenubarItem></Link>
              </MenubarSubContent>
           </MenubarSub>
            <MenubarSub>
@@ -153,6 +154,7 @@ export function Header() {
         <Separator />
         <Button variant="ghost" className="justify-start font-normal w-full" asChild onClick={() => setIsMobileMenuOpen(false)}><Link href="/v2/manu-bill">Manu Bill (MySQL)</Link></Button>
         <Button variant="ghost" className="justify-start font-normal w-full" asChild onClick={() => setIsMobileMenuOpen(false)}><Link href="/v2/trans-bill">Trans Bill (MySQL)</Link></Button>
+        <Button variant="ghost" className="justify-start font-normal w-full" asChild onClick={() => setIsMobileMenuOpen(false)}><Link href="/v2/supply-bill">Supply Bill (MySQL)</Link></Button>
 
 
     </nav>
