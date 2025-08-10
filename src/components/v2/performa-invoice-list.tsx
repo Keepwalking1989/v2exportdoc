@@ -54,8 +54,8 @@ export function PerformaInvoiceListV2({
 
   const enrichedInvoices = useMemo(() => {
     return invoices.map((invoice) => {
-      const exporter = exporters.find((e) => e.id === invoice.exporterId);
-      const client = clients.find((c) => c.id === invoice.clientId);
+      const exporter = exporters.find((e) => e.id.toString() === invoice.exporterId.toString());
+      const client = clients.find((c) => c.id.toString() === invoice.clientId.toString());
       return {
         ...invoice,
         exporterName: exporter?.companyName || "N/A",
