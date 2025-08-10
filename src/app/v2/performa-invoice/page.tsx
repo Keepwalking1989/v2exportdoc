@@ -136,12 +136,12 @@ export default function PerformaInvoicePageV2() {
   };
   
   const handleDownloadPdf = async (invoice: PerformaInvoice) => {
-    const exporter = exporters.find(e => e.id === invoice.exporterId);
-    const client = clients.find(c => c.id === invoice.clientId);
-    const selectedBank = banks.find(b => b.id === invoice.selectedBankId);
+    const exporter = exporters.find(e => e.id.toString() === invoice.exporterId.toString());
+    const client = clients.find(c => c.id.toString() === invoice.clientId.toString());
+    const selectedBank = banks.find(b => b.id.toString() === invoice.selectedBankId?.toString());
 
     if (!exporter || !client) {
-      toast({ variant: "destructive", title: "Error", description: "Exporter or Client data missing." });
+      toast({ variant: "destructive", title: "Error", description: "Exporter or Client data missing for this invoice." });
       return;
     }
     await generatePerformaInvoicePdf(invoice, exporter, client, sizes, products, selectedBank);
