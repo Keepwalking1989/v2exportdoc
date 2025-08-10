@@ -176,7 +176,7 @@ export default function DocumentDataPageV2() {
     };
 
     fetchAllData();
-  }, [docId, toast, ewayBillForm, shippingBillForm, blForm, brcForm]);
+  }, [docId, toast]);
 
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>, formSetter: (value: string) => void) => {
