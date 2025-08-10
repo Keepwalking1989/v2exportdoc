@@ -200,8 +200,7 @@ export default function PurchaseOrderPageV2() {
   };
   
   const handleGenerateExportDoc = (poId: string) => {
-     router.push(`/export-document?sourcePoId=${poId}`);
-     toast({title: "Redirecting...", description: "V2 Export Document page not implemented yet. Redirecting to LocalStorage version."})
+     router.push(`/v2/export-document?sourcePoId=${poId}`);
   };
 
   const canCreateOrEdit = allExporters.length > 0 && allManufacturers.length > 0 && allSizes.length > 0 && allProducts.length > 0 && allPerformaInvoices.length > 0;

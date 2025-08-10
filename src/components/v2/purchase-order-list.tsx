@@ -2,6 +2,7 @@
 "use client";
 
 import { useState, useMemo, useEffect } from "react";
+import { useRouter } from "next/navigation"; // Import useRouter
 import type { PurchaseOrder } from "@/types/purchase-order";
 import type { Company } from "@/types/company";
 import type { Manufacturer } from "@/types/manufacturer";
@@ -17,7 +18,7 @@ import {
 } from "@/components/ui/table";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
-import { Search, ChevronLeft, ChevronRight, FileText, FilePenLine, Trash2, Download, FilePlus2 } from "lucide-react";
+import { Search, ChevronLeft, ChevronRight, FileText, FilePenLine, Trash2, Download, FileType, FilePlus2 } from "lucide-react";
 import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
 
@@ -42,6 +43,7 @@ export function PurchaseOrderListV2({
   onDownloadPdf,
   onGenerateExportDoc
 }: PurchaseOrderListProps) {
+  const router = useRouter(); // Initialize useRouter
   const [purchaseOrders, setPurchaseOrders] = useState<PurchaseOrder[]>(initialPurchaseOrders);
   const [searchTerm, setSearchTerm] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
