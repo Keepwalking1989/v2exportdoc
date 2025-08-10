@@ -28,11 +28,17 @@ export async function GET(request: Request) {
             return NextResponse.json({ message: 'Invoice not found' }, { status: 404 });
         }
         const row = rows[0];
+        // Ensure all numeric fields that can be strings are parsed
         const invoice: PerformaInvoice = {
             ...row,
             id: row.id.toString(),
             invoiceDate: new Date(row.invoiceDate),
             items: JSON.parse(row.items_json || '[]'),
+            totalContainer: Number(row.totalContainer),
+            freight: Number(row.freight),
+            discount: Number(row.discount),
+            subTotal: Number(row.subTotal),
+            grandTotal: Number(row.grandTotal),
         };
         return NextResponse.json(invoice);
     } else {
@@ -49,6 +55,11 @@ export async function GET(request: Request) {
                 id: invoiceData.id.toString(),
                 invoiceDate: new Date(invoiceData.invoiceDate),
                 items: JSON.parse(items_json || '[]'),
+                 totalContainer: Number(invoiceData.totalContainer),
+                freight: Number(invoiceData.freight),
+                discount: Number(invoiceData.discount),
+                subTotal: Number(invoiceData.subTotal),
+                grandTotal: Number(invoiceData.grandTotal),
             };
         });
 
