@@ -96,8 +96,8 @@ export function SupplierListV2({ suppliers: initialSuppliers, onEditSupplier, on
                     <TableCell>{supplier.gstNumber}</TableCell>
                     <TableCell className="hidden md:table-cell">{supplier.contactPerson}</TableCell>
                     <TableCell className="text-right space-x-1">
-                      <Button asChild variant="ghost" size="icon" className="hover:text-purple-600">
-                          <Link href={`/party-transactions/supplier/${supplier.id}`}>
+                      <Button asChild variant="ghost" size="icon" className="hover:text-purple-600" title="View Transactions">
+                          <Link href={`/v2/party-transactions/supplier/${supplier.id}`}>
                               <ArrowLeftRight className="h-4 w-4" />
                           </Link>
                       </Button>

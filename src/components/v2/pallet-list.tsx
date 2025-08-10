@@ -96,8 +96,8 @@ export function PalletListV2({ pallets: initialPallets, onEditPallet, onDeletePa
                     <TableCell>{pallet.gstNumber}</TableCell>
                     <TableCell className="hidden md:table-cell">{pallet.contactPerson}</TableCell>
                     <TableCell className="text-right space-x-1">
-                      <Button asChild variant="ghost" size="icon" className="hover:text-purple-600">
-                          <Link href={`/party-transactions/pallet/${pallet.id}`}>
+                      <Button asChild variant="ghost" size="icon" className="hover:text-purple-600" title="View Transactions">
+                          <Link href={`/v2/party-transactions/pallet/${pallet.id}`}>
                               <ArrowLeftRight className="h-4 w-4" />
                           </Link>
                       </Button>
@@ -166,5 +166,3 @@ export function PalletListV2({ pallets: initialPallets, onEditPallet, onDeletePa
     </Card>
   );
 }
-
-    

@@ -96,8 +96,8 @@ export function TransporterListV2({ transporters: initialTransporters, onEditTra
                     <TableCell>{transporter.gstNumber}</TableCell>
                     <TableCell className="hidden md:table-cell">{transporter.contactPerson}</TableCell>
                     <TableCell className="text-right space-x-1">
-                      <Button asChild variant="ghost" size="icon" className="hover:text-purple-600">
-                          <Link href={`/party-transactions/transporter/${transporter.id}`}>
+                      <Button asChild variant="ghost" size="icon" className="hover:text-purple-600" title="View Transactions">
+                          <Link href={`/v2/party-transactions/transporter/${transporter.id}`}>
                               <ArrowLeftRight className="h-4 w-4" />
                           </Link>
                       </Button>

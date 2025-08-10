@@ -102,8 +102,8 @@ export function ManufacturerListV2({ manufacturers: initialManufacturers, onEdit
                       {format(new Date(manufacturer.stuffingPermissionDate), "dd/MM/yyyy")}
                     </TableCell>
                     <TableCell className="text-right space-x-1">
-                      <Button asChild variant="ghost" size="icon" className="hover:text-purple-600">
-                          <Link href={`/party-transactions/manufacturer/${manufacturer.id}`}>
+                       <Button asChild variant="ghost" size="icon" className="hover:text-purple-600" title="View Transactions">
+                          <Link href={`/v2/party-transactions/manufacturer/${manufacturer.id}`}>
                               <ArrowLeftRight className="h-4 w-4" />
                           </Link>
                       </Button>
