@@ -126,7 +126,7 @@ export function PerformaInvoiceListV2({
                     <TableCell>{invoice.exporterName}</TableCell>
                     <TableCell>{invoice.clientName}</TableCell>
                     <TableCell className="hidden md:table-cell">
-                      {invoice.grandTotal?.toFixed(2)} {invoice.currencyType}
+                      {(invoice.grandTotal ?? 0).toFixed(2)} {invoice.currencyType}
                     </TableCell>
                     <TableCell className="text-right space-x-1">
                       <Button variant="ghost" size="icon" onClick={() => onEditInvoice(invoice.id)} className="hover:text-primary">
