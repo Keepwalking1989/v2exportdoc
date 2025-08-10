@@ -101,8 +101,8 @@ export function ClientListV2({ clients: initialClients, onEditClient, onDeleteCl
                     <TableCell>{client.city}</TableCell>
                     <TableCell className="hidden sm:table-cell">{client.country}</TableCell>
                     <TableCell className="text-right space-x-1">
-                       <Button asChild variant="ghost" size="icon" className="hover:text-purple-600">
-                          <Link href={`/party-transactions/client/${client.id}`}>
+                       <Button asChild variant="ghost" size="icon" className="hover:text-purple-600" title="View Transactions">
+                          <Link href={`/v2/party-transactions/client/${client.id}`}>
                               <ArrowLeftRight className="h-4 w-4" />
                           </Link>
                       </Button>
