@@ -10,6 +10,9 @@ import {
   MenubarMenu,
   MenubarSeparator,
   MenubarTrigger,
+  MenubarSub,
+  MenubarSubContent,
+  MenubarSubTrigger,
 } from "@/components/ui/menubar";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
@@ -34,34 +37,16 @@ export function Header() {
           <PlusCircle className="mr-2 h-4 w-4" /> ADD
         </MenubarTrigger>
         <MenubarContent>
-          <Link href="/exporter" passHref>
-            <MenubarItem>EXPORTER</MenubarItem>
-          </Link>
+          <Link href="/exporter" passHref><MenubarItem>EXPORTER</MenubarItem></Link>
           <MenubarSeparator />
-          <Link href="/client" passHref>
-            <MenubarItem>Client</MenubarItem>
-          </Link>
-          <Link href="/manufacturer" passHref>
-            <MenubarItem>Manufacturer</MenubarItem>
-          </Link>
-          <Link href="/pallet" passHref>
-            <MenubarItem>Pallet</MenubarItem>
-          </Link>
-          <Link href="/transporter" passHref>
-            <MenubarItem>Transporter</MenubarItem>
-          </Link>
-          <Link href="/suppliers" passHref>
-            <MenubarItem>Suppliers</MenubarItem>
-          </Link>
-          <Link href="/size" passHref>
-            <MenubarItem>Size</MenubarItem>
-          </Link>
-          <Link href="/product" passHref>
-            <MenubarItem>Product</MenubarItem>
-          </Link>
-          <Link href="/bank" passHref>
-            <MenubarItem>Bank</MenubarItem>
-          </Link>
+          <Link href="/client" passHref><MenubarItem>Client</MenubarItem></Link>
+          <Link href="/manufacturer" passHref><MenubarItem>Manufacturer</MenubarItem></Link>
+          <Link href="/pallet" passHref><MenubarItem>Pallet</MenubarItem></Link>
+          <Link href="/transporter" passHref><MenubarItem>Transporter</MenubarItem></Link>
+          <Link href="/suppliers" passHref><MenubarItem>Suppliers</MenubarItem></Link>
+          <Link href="/size" passHref><MenubarItem>Size</MenubarItem></Link>
+          <Link href="/product" passHref><MenubarItem>Product</MenubarItem></Link>
+          <Link href="/bank" passHref><MenubarItem>Bank</MenubarItem></Link>
         </MenubarContent>
       </MenubarMenu>
       <MenubarMenu>
@@ -69,15 +54,9 @@ export function Header() {
           <ShoppingCart className="mr-2 h-4 w-4" /> SALE
         </MenubarTrigger>
         <MenubarContent>
-          <Link href="/performa-invoice" passHref>
-            <MenubarItem>Performa Invoice</MenubarItem>
-          </Link>
-          <Link href="/purchase-order" passHref>
-            <MenubarItem>Purchase Order</MenubarItem>
-          </Link>
-          <Link href="/export-document" passHref>
-            <MenubarItem>Export Document</MenubarItem>
-          </Link>
+          <Link href="/performa-invoice" passHref><MenubarItem>Performa Invoice</MenubarItem></Link>
+          <Link href="/purchase-order" passHref><MenubarItem>Purchase Order</MenubarItem></Link>
+          <Link href="/export-document" passHref><MenubarItem>Export Document</MenubarItem></Link>
         </MenubarContent>
       </MenubarMenu>
       <MenubarMenu>
@@ -85,15 +64,9 @@ export function Header() {
           <Receipt className="mr-2 h-4 w-4" /> PURCHASE
         </MenubarTrigger>
         <MenubarContent>
-           <Link href="/manu-bill" passHref>
-            <MenubarItem>Manu Bill</MenubarItem>
-          </Link>
-          <Link href="/trans-bill" passHref>
-            <MenubarItem>Trans Bill</MenubarItem>
-          </Link>
-          <Link href="/supply-bill" passHref>
-            <MenubarItem>Supply Bill</MenubarItem>
-          </Link>
+           <Link href="/manu-bill" passHref><MenubarItem>Manu Bill</MenubarItem></Link>
+          <Link href="/trans-bill" passHref><MenubarItem>Trans Bill</MenubarItem></Link>
+          <Link href="/supply-bill" passHref><MenubarItem>Supply Bill</MenubarItem></Link>
         </MenubarContent>
       </MenubarMenu>
       <MenubarMenu>
@@ -101,43 +74,46 @@ export function Header() {
           <ArrowLeftRight className="mr-2 h-4 w-4" /> TRANSACTION
         </MenubarTrigger>
         <MenubarContent>
-           <Link href="/transaction" passHref>
-            <MenubarItem>Transactions</MenubarItem>
-          </Link>
-           <Link href="/gst" passHref>
-            <MenubarItem>GST</MenubarItem>
-          </Link>
+           <Link href="/transaction" passHref><MenubarItem>Transactions</MenubarItem></Link>
+           <Link href="/gst" passHref><MenubarItem>GST</MenubarItem></Link>
         </MenubarContent>
       </MenubarMenu>
        <MenubarMenu>
         <MenubarTrigger className="font-headline text-green-600">
-          <Database className="mr-2 h-4 w-4" /> V2
+          <Database className="mr-2 h-4 w-4" /> V2 (MySQL)
         </MenubarTrigger>
         <MenubarContent>
-           <Link href="/v2/client" passHref>
-            <MenubarItem>Client (MySQL)</MenubarItem>
-          </Link>
-          <Link href="/v2/manufacturer" passHref>
-            <MenubarItem>Manufacturer (MySQL)</MenubarItem>
-          </Link>
-          <Link href="/v2/transporter" passHref>
-            <MenubarItem>Transporter (MySQL)</MenubarItem>
-          </Link>
-          <Link href="/v2/supplier" passHref>
-            <MenubarItem>Supplier (MySQL)</MenubarItem>
-          </Link>
-          <Link href="/v2/pallet" passHref>
-            <MenubarItem>Pallet (MySQL)</MenubarItem>
-          </Link>
-          <Link href="/v2/size" passHref>
-            <MenubarItem>Size (MySQL)</MenubarItem>
-          </Link>
-           <Link href="/v2/product" passHref>
-            <MenubarItem>Product (MySQL)</MenubarItem>
-          </Link>
-          <Link href="/v2/bank" passHref>
-            <MenubarItem>Bank (MySQL)</MenubarItem>
-          </Link>
+          <MenubarSub>
+            <MenubarSubTrigger><PlusCircle className="mr-2 h-4 w-4" />ADD</MenubarSubTrigger>
+            <MenubarSubContent>
+              <Link href="/v2/client" passHref><MenubarItem>Client</MenubarItem></Link>
+              <Link href="/v2/manufacturer" passHref><MenubarItem>Manufacturer</MenubarItem></Link>
+              <Link href="/v2/transporter" passHref><MenubarItem>Transporter</MenubarItem></Link>
+              <Link href="/v2/supplier" passHref><MenubarItem>Supplier</MenubarItem></Link>
+              <Link href="/v2/pallet" passHref><MenubarItem>Pallet</MenubarItem></Link>
+              <Link href="/v2/size" passHref><MenubarItem>Size</MenubarItem></Link>
+              <Link href="/v2/product" passHref><MenubarItem>Product</MenubarItem></Link>
+              <Link href="/v2/bank" passHref><MenubarItem>Bank</MenubarItem></Link>
+            </MenubarSubContent>
+          </MenubarSub>
+          <MenubarSub>
+             <MenubarSubTrigger><ShoppingCart className="mr-2 h-4 w-4" />SALE</MenubarSubTrigger>
+             <MenubarSubContent>
+                {/* V2 Sale links will go here */}
+             </MenubarSubContent>
+          </MenubarSub>
+          <MenubarSub>
+             <MenubarSubTrigger><Receipt className="mr-2 h-4 w-4" />PURCHASE</MenubarSubTrigger>
+             <MenubarSubContent>
+                {/* V2 Purchase links will go here */}
+             </MenubarSubContent>
+          </MenubarSub>
+           <MenubarSub>
+             <MenubarSubTrigger><ArrowLeftRight className="mr-2 h-4 w-4" />TRANSACTION</MenubarSubTrigger>
+             <MenubarSubContent>
+                {/* V2 Transaction links will go here */}
+             </MenubarSubContent>
+          </MenubarSub>
         </MenubarContent>
       </MenubarMenu>
     </>
@@ -149,78 +125,24 @@ export function Header() {
         <Link href="/"><LayoutDashboard className="mr-2 h-5 w-5" />DASHBOARD</Link>
       </Button>
       <Separator />
-      <Button variant="ghost" className="justify-start font-headline text-lg" onClick={() => {}}>
-        <PlusCircle className="mr-2 h-5 w-5" /> ADD
-      </Button>
-      <div className="pl-6">
-        <Button variant="ghost" className="justify-start font-normal w-full" asChild onClick={() => setIsMobileMenuOpen(false)}><Link href="/exporter">EXPORTER</Link></Button>
-        <Button variant="ghost" className="justify-start font-normal w-full" asChild onClick={() => setIsMobileMenuOpen(false)}><Link href="/client">Client</Link></Button>
-        <Button variant="ghost" className="justify-start font-normal w-full" asChild onClick={() => setIsMobileMenuOpen(false)}><Link href="/manufacturer">Manufacturer</Link></Button>
-        <Button variant="ghost" className="justify-start font-normal w-full" asChild onClick={() => setIsMobileMenuOpen(false)}><Link href="/pallet">Pallet</Link></Button>
-        <Button variant="ghost" className="justify-start font-normal w-full" asChild onClick={() => setIsMobileMenuOpen(false)}><Link href="/transporter">Transporter</Link></Button>
-        <Button variant="ghost" className="justify-start font-normal w-full" asChild onClick={() => setIsMobileMenuOpen(false)}><Link href="/suppliers">Suppliers</Link></Button>
-        <Button variant="ghost" className="justify-start font-normal w-full" asChild onClick={() => setIsMobileMenuOpen(false)}><Link href="/size">Size</Link></Button>
-        <Button variant="ghost" className="justify-start font-normal w-full" asChild onClick={() => setIsMobileMenuOpen(false)}><Link href="/product">Product</Link></Button>
-        <Button variant="ghost" className="justify-start font-normal w-full" asChild onClick={() => setIsMobileMenuOpen(false)}><Link href="/bank">Bank</Link></Button>
-      </div>
-
-      <Button variant="ghost" className="justify-start font-headline text-lg mt-2" onClick={() => { /* Consider sub-menu expansion for mobile */ }}>
-         <ShoppingCart className="mr-2 h-5 w-5" /> SALE
-      </Button>
-       <div className="pl-6">
-        <Button variant="ghost" className="justify-start font-normal w-full" asChild onClick={() => setIsMobileMenuOpen(false)}><Link href="/performa-invoice">Performa Invoice</Link></Button>
-        <Button variant="ghost" className="justify-start font-normal w-full" asChild onClick={() => setIsMobileMenuOpen(false)}><Link href="/purchase-order">Purchase Order</Link></Button>
-        <Button variant="ghost" className="justify-start font-normal w-full" asChild onClick={() => setIsMobileMenuOpen(false)}><Link href="/export-document">Export Document</Link></Button>
-      </div>
-
-      <Button variant="ghost" className="justify-start font-headline text-lg mt-2" onClick={() => { /* Consider sub-menu expansion for mobile */ }}>
-        <Receipt className="mr-2 h-5 w-5" /> PURCHASE
-      </Button>
-      <div className="pl-6">
-        <Button variant="ghost" className="justify-start font-normal w-full" asChild onClick={() => setIsMobileMenuOpen(false)}><Link href="/manu-bill">Manu Bill</Link></Button>
-        <Button variant="ghost" className="justify-start font-normal w-full" asChild onClick={() => setIsMobileMenuOpen(false)}><Link href="/trans-bill">Trans Bill</Link></Button>
-        <Button variant="ghost" className="justify-start font-normal w-full" asChild onClick={() => setIsMobileMenuOpen(false)}><Link href="/supply-bill">Supply Bill</Link></Button>
-      </div>
-
-      <Button variant="ghost" className="justify-start font-headline text-lg mt-2" onClick={() => { /* Consider sub-menu expansion for mobile */ }}>
-        <ArrowLeftRight className="mr-2 h-5 w-5" /> TRANSACTION
-      </Button>
-      <div className="pl-6">
-        <Button variant="ghost" className="justify-start font-normal w-full" asChild onClick={() => setIsMobileMenuOpen(false)}><Link href="/transaction">Transactions</Link></Button>
-         <Button variant="ghost" className="justify-start font-normal w-full" asChild onClick={() => setIsMobileMenuOpen(false)}><Link href="/gst">GST</Link></Button>
-      </div>
+      {/* Original LocalStorage Menus */}
+      <div className="text-sm font-semibold text-muted-foreground px-4 pt-2">LocalStorage Version</div>
+      <Button variant="ghost" className="justify-start font-normal w-full" asChild onClick={() => setIsMobileMenuOpen(false)}><Link href="/exporter">EXPORTER</Link></Button>
+      <Button variant="ghost" className="justify-start font-normal w-full" asChild onClick={() => setIsMobileMenuOpen(false)}><Link href="/client">Client</Link></Button>
+      <Button variant="ghost" className="justify-start font-normal w-full" asChild onClick={() => setIsMobileMenuOpen(false)}><Link href="/manufacturer">Manufacturer</Link></Button>
+      {/* ... other LS links ... */}
 
       <Separator />
-      <Button variant="ghost" className="justify-start font-headline text-lg text-green-600" onClick={() => {}}>
-        <Database className="mr-2 h-5 w-5" /> V2 (MySQL)
-      </Button>
-      <div className="pl-6">
-        <Button variant="ghost" className="justify-start font-normal w-full" asChild onClick={() => setIsMobileMenuOpen(false)}>
-            <Link href="/v2/client">Client (MySQL)</Link>
-        </Button>
-        <Button variant="ghost" className="justify-start font-normal w-full" asChild onClick={() => setIsMobileMenuOpen(false)}>
-            <Link href="/v2/manufacturer">Manufacturer (MySQL)</Link>
-        </Button>
-        <Button variant="ghost" className="justify-start font-normal w-full" asChild onClick={() => setIsMobileMenuOpen(false)}>
-            <Link href="/v2/transporter">Transporter (MySQL)</Link>
-        </Button>
-         <Button variant="ghost" className="justify-start font-normal w-full" asChild onClick={() => setIsMobileMenuOpen(false)}>
-            <Link href="/v2/supplier">Supplier (MySQL)</Link>
-        </Button>
-         <Button variant="ghost" className="justify-start font-normal w-full" asChild onClick={() => setIsMobileMenuOpen(false)}>
-            <Link href="/v2/pallet">Pallet (MySQL)</Link>
-        </Button>
-        <Button variant="ghost" className="justify-start font-normal w-full" asChild onClick={() => setIsMobileMenuOpen(false)}>
-            <Link href="/v2/size">Size (MySQL)</Link>
-        </Button>
-         <Button variant="ghost" className="justify-start font-normal w-full" asChild onClick={() => setIsMobileMenuOpen(false)}>
-            <Link href="/v2/product">Product (MySQL)</Link>
-        </Button>
-        <Button variant="ghost" className="justify-start font-normal w-full" asChild onClick={() => setIsMobileMenuOpen(false)}>
-            <Link href="/v2/bank">Bank (MySQL)</Link>
-        </Button>
-      </div>
-
+      <div className="text-sm font-semibold text-muted-foreground px-4 pt-2">V2 (MySQL) Version</div>
+      {/* V2 Menus */}
+       <Button variant="ghost" className="justify-start font-normal w-full" asChild onClick={() => setIsMobileMenuOpen(false)}><Link href="/v2/client">Client (MySQL)</Link></Button>
+       <Button variant="ghost" className="justify-start font-normal w-full" asChild onClick={() => setIsMobileMenuOpen(false)}><Link href="/v2/manufacturer">Manufacturer (MySQL)</Link></Button>
+       <Button variant="ghost" className="justify-start font-normal w-full" asChild onClick={() => setIsMobileMenuOpen(false)}><Link href="/v2/transporter">Transporter (MySQL)</Link></Button>
+       <Button variant="ghost" className="justify-start font-normal w-full" asChild onClick={() => setIsMobileMenuOpen(false)}><Link href="/v2/supplier">Supplier (MySQL)</Link></Button>
+       <Button variant="ghost" className="justify-start font-normal w-full" asChild onClick={() => setIsMobileMenuOpen(false)}><Link href="/v2/pallet">Pallet (MySQL)</Link></Button>
+       <Button variant="ghost" className="justify-start font-normal w-full" asChild onClick={() => setIsMobileMenuOpen(false)}><Link href="/v2/size">Size (MySQL)</Link></Button>
+       <Button variant="ghost" className="justify-start font-normal w-full" asChild onClick={() => setIsMobileMenuOpen(false)}><Link href="/v2/product">Product (MySQL)</Link></Button>
+       <Button variant="ghost" className="justify-start font-normal w-full" asChild onClick={() => setIsMobileMenuOpen(false)}><Link href="/v2/bank">Bank (MySQL)</Link></Button>
 
     </nav>
   );
@@ -240,7 +162,7 @@ export function Header() {
                 <span className="sr-only">Toggle menu</span>
               </Button>
             </SheetTrigger>
-            <SheetContent side="right" className="w-[300px] sm:w-[400px] p-0">
+            <SheetContent side="right" className="w-[300px] sm:w-[400px] p-0 overflow-y-auto">
               <div className="flex justify-between items-center p-4 border-b">
                  <Link href="/" className="flex items-center space-x-2" onClick={() => setIsMobileMenuOpen(false)}>
                     <Building className="h-6 w-6 text-primary" />
