@@ -1,5 +1,6 @@
 
 
+
 export interface ExportDocumentProductItem {
   id: string;
   productId: string;
@@ -49,6 +50,7 @@ export interface ExportDocument {
   manufacturerDetails: ManufacturerInfo[];
   manufacturerId?: string; // legacy support
 
+  countryOfOrigin?: string; // New field
   countryOfFinalDestination: string; // Country of Final Destination
   vesselFlightNo?: string;
   portOfLoading: string;
@@ -62,6 +64,7 @@ export interface ExportDocument {
   gst: string;
   discount?: number;
   containerItems?: ExportDocumentContainerItem[];
+  totalInvoiceValue?: number; // New field
 
   // New fields for Eway Bill
   ewayBillNumber?: string;
