@@ -131,10 +131,8 @@ export default function PerformaInvoicePageV2() {
   const handleCancelEdit = () => setInvoiceToEdit(null);
 
   const handleGeneratePO = (invoiceIdForPO: string) => {
-    // This logic would need to be adapted for V2, likely creating a V2 PO page.
-    // For now, it can still point to the old PO page if that's desired.
-    router.push(`/purchase-order?sourcePiId=${invoiceIdForPO}`); // Placeholder for V2 PO page
-    toast({ title: "Redirecting...", description: "V2 Purchase Order page not yet implemented. Redirecting to old version." });
+    router.push(`/v2/purchase-order?sourcePiId=${invoiceIdForPO}`);
+    toast({ title: "Redirecting...", description: "Opening Purchase Order form." });
   };
   
   const handleDownloadPdf = async (invoice: PerformaInvoice) => {
