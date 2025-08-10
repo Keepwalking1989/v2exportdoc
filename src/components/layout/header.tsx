@@ -101,6 +101,7 @@ export function Header() {
              <MenubarSubContent>
                 <Link href="/v2/performa-invoice" passHref><MenubarItem>Performa Invoice</MenubarItem></Link>
                 <Link href="/v2/purchase-order" passHref><MenubarItem>Purchase Order</MenubarItem></Link>
+                <Link href="/v2/export-document" passHref><MenubarItem>Export Document</MenubarItem></Link>
              </MenubarSubContent>
           </MenubarSub>
           <MenubarSub>
@@ -147,6 +148,7 @@ export function Header() {
        <Separator />
         <Button variant="ghost" className="justify-start font-normal w-full" asChild onClick={() => setIsMobileMenuOpen(false)}><Link href="/v2/performa-invoice">Performa Invoice (MySQL)</Link></Button>
         <Button variant="ghost" className="justify-start font-normal w-full" asChild onClick={() => setIsMobileMenuOpen(false)}><Link href="/v2/purchase-order">Purchase Order (MySQL)</Link></Button>
+        <Button variant="ghost" className="justify-start font-normal w-full" asChild onClick={() => setIsMobileMenuOpen(false)}><Link href="/v2/export-document">Export Document (MySQL)</Link></Button>
         <Separator />
         <Button variant="ghost" className="justify-start font-normal w-full" asChild onClick={() => setIsMobileMenuOpen(false)}><Link href="/v2/manu-bill">Manu Bill (MySQL)</Link></Button>
 

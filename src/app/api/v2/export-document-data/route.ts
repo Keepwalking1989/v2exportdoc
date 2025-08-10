@@ -2,7 +2,7 @@
 import { NextResponse } from 'next/server';
 import { pool } from '@/lib/db';
 import type { ExportDocument } from '@/types/export-document';
-import type { RowDataPacket, OkPacket } from 'mysql2';
+import type { RowDataPacket } from 'mysql2';
 
 interface ExportDocumentRow extends RowDataPacket, Omit<ExportDocument, 'containerItems' | 'manufacturerDetails'> {
     containerItems_json: string | null;
@@ -40,3 +40,4 @@ export async function GET() {
 
 // Note: POST, PUT, DELETE handlers would be needed for full CRUD functionality.
 // They would follow a similar pattern to the other -data routes, handling JSON serialization.
+
