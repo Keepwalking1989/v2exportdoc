@@ -9,26 +9,51 @@ interface PerformaInvoiceRow extends RowDataPacket, Omit<PerformaInvoice, 'items
     items_json: string;
 }
 
-// GET handler to fetch all non-deleted performa invoices
-export async function GET() {
+// GET handler to fetch all non-deleted performa invoices or a single one by ID
+export async function GET(request: Request) {
+  const { searchParams } = new URL(request.url);
+  const id = searchParams.get('id');
+
   try {
     const connection = await pool.getConnection();
-    const [rows] = await connection.query<PerformaInvoiceRow[]>(
-        "SELECT * FROM performa_invoices WHERE isDeleted = FALSE ORDER BY createdAt DESC"
-    );
-    connection.release();
 
-    const invoices: PerformaInvoice[] = rows.map(row => {
-        const { items_json, ...invoiceData } = row;
-        return {
-            ...invoiceData,
-            id: invoiceData.id.toString(),
-            invoiceDate: new Date(invoiceData.invoiceDate),
-            items: JSON.parse(items_json || '[]'),
+    if (id) {
+        // Fetch a single invoice
+        const [rows] = await connection.query<PerformaInvoiceRow[]>(
+            "SELECT * FROM performa_invoices WHERE id = ? AND isDeleted = FALSE",
+            [id]
+        );
+        connection.release();
+        if (rows.length === 0) {
+            return NextResponse.json({ message: 'Invoice not found' }, { status: 404 });
+        }
+        const row = rows[0];
+        const invoice: PerformaInvoice = {
+            ...row,
+            id: row.id.toString(),
+            invoiceDate: new Date(row.invoiceDate),
+            items: JSON.parse(row.items_json || '[]'),
         };
-    });
+        return NextResponse.json(invoice);
+    } else {
+        // Fetch all invoices
+        const [rows] = await connection.query<PerformaInvoiceRow[]>(
+            "SELECT * FROM performa_invoices WHERE isDeleted = FALSE ORDER BY createdAt DESC"
+        );
+        connection.release();
 
-    return NextResponse.json(invoices);
+        const invoices: PerformaInvoice[] = rows.map(row => {
+            const { items_json, ...invoiceData } = row;
+            return {
+                ...invoiceData,
+                id: invoiceData.id.toString(),
+                invoiceDate: new Date(invoiceData.invoiceDate),
+                items: JSON.parse(items_json || '[]'),
+            };
+        });
+
+        return NextResponse.json(invoices);
+    }
   } catch (error) {
     console.error(error);
     return NextResponse.json({ message: 'Error fetching performa invoices' }, { status: 500 });
