@@ -101,7 +101,7 @@ export function ExportDocumentListV2({
                               <Edit className="h-4 w-4" />
                             </Button>
                           </TooltipTrigger>
-                          <TooltipContent><p>Edit Document (V1)</p></TooltipContent>
+                          <TooltipContent><p>Edit Document</p></TooltipContent>
                         </Tooltip>
                         <AlertDialog>
                           <AlertDialogTrigger asChild>
@@ -127,21 +127,13 @@ export function ExportDocumentListV2({
                         </AlertDialog>
                         <Tooltip>
                           <TooltipTrigger asChild>
-                              <Button variant="ghost" size="icon" onClick={() => onDownloadPdf(doc.id)} className="hover:text-blue-600">
-                                <Download className="h-4 w-4" />
-                              </Button>
-                          </TooltipTrigger>
-                          <TooltipContent><p>Download PDF (Coming Soon)</p></TooltipContent>
-                        </Tooltip>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
                               <Button asChild variant="ghost" size="icon" className="hover:text-purple-600">
-                                  <Link href={`/export-document/${doc.id}`}>
+                                  <Link href={`/v2/export-document/${doc.id}`}>
                                       <FileType className="h-4 w-4" />
                                   </Link>
                               </Button>
                           </TooltipTrigger>
-                          <TooltipContent><p>Document Data (V1)</p></TooltipContent>
+                          <TooltipContent><p>Document Data</p></TooltipContent>
                         </Tooltip>
                       </TableCell>
                     </TableRow>
@@ -155,4 +147,3 @@ export function ExportDocumentListV2({
     </Card>
   );
 }
-
