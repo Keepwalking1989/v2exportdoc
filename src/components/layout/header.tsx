@@ -34,6 +34,8 @@ export function Header() {
           <PlusCircle className="mr-2 h-4 w-4" /> ADD
         </MenubarTrigger>
         <MenubarContent>
+            <Link href="/v2/exporter" passHref><MenubarItem>Exporter</MenubarItem></Link>
+            <MenubarSeparator />
             <Link href="/v2/client" passHref><MenubarItem>Client</MenubarItem></Link>
             <Link href="/v2/manufacturer" passHref><MenubarItem>Manufacturer</MenubarItem></Link>
             <Link href="/v2/transporter" passHref><MenubarItem>Transporter</MenubarItem></Link>
@@ -86,6 +88,7 @@ export function Header() {
       <Separator />
 
       <div className="text-sm font-semibold text-muted-foreground px-4 pt-2">ADD</div>
+      <Button variant="ghost" className="justify-start font-normal w-full" asChild onClick={() => setIsMobileMenuOpen(false)}><Link href="/v2/exporter">Exporter</Link></Button>
       <Button variant="ghost" className="justify-start font-normal w-full" asChild onClick={() => setIsMobileMenuOpen(false)}><Link href="/v2/client">Client</Link></Button>
       <Button variant="ghost" className="justify-start font-normal w-full" asChild onClick={() => setIsMobileMenuOpen(false)}><Link href="/v2/manufacturer">Manufacturer</Link></Button>
       <Button variant="ghost" className="justify-start font-normal w-full" asChild onClick={() => setIsMobileMenuOpen(false)}><Link href="/v2/transporter">Transporter</Link></Button>
