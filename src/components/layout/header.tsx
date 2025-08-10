@@ -116,6 +116,7 @@ export function Header() {
              <MenubarSubTrigger><ArrowLeftRight className="mr-2 h-4 w-4" />TRANSACTION</MenubarSubTrigger>
              <MenubarSubContent>
                 <Link href="/v2/transaction" passHref><MenubarItem>Transaction</MenubarItem></Link>
+                <Link href="/v2/gst" passHref><MenubarItem>GST</MenubarItem></Link>
              </MenubarSubContent>
           </MenubarSub>
         </MenubarContent>
@@ -157,6 +158,7 @@ export function Header() {
         <Button variant="ghost" className="justify-start font-normal w-full" asChild onClick={() => setIsMobileMenuOpen(false)}><Link href="/v2/supply-bill">Supply Bill (MySQL)</Link></Button>
         <Separator />
         <Button variant="ghost" className="justify-start font-normal w-full" asChild onClick={() => setIsMobileMenuOpen(false)}><Link href="/v2/transaction">Transaction (MySQL)</Link></Button>
+        <Button variant="ghost" className="justify-start font-normal w-full" asChild onClick={() => setIsMobileMenuOpen(false)}><Link href="/v2/gst">GST (MySQL)</Link></Button>
 
 
     </nav>
