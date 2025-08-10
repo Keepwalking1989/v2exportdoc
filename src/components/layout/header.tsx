@@ -135,6 +135,9 @@ export function Header() {
            <Link href="/v2/product" passHref>
             <MenubarItem>Product (MySQL)</MenubarItem>
           </Link>
+          <Link href="/v2/bank" passHref>
+            <MenubarItem>Bank (MySQL)</MenubarItem>
+          </Link>
         </MenubarContent>
       </MenubarMenu>
     </>
@@ -213,6 +216,9 @@ export function Header() {
          <Button variant="ghost" className="justify-start font-normal w-full" asChild onClick={() => setIsMobileMenuOpen(false)}>
             <Link href="/v2/product">Product (MySQL)</Link>
         </Button>
+        <Button variant="ghost" className="justify-start font-normal w-full" asChild onClick={() => setIsMobileMenuOpen(false)}>
+            <Link href="/v2/bank">Bank (MySQL)</Link>
+        </Button>
       </div>
 
 
@@ -260,5 +266,3 @@ export function Header() {
     </header>
   );
 }
-
-    
