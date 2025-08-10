@@ -14,4 +14,8 @@ export const pool = mysql.createPool({
   queueLimit: 0,
 });
 
+// Helper function to handle potential null values from the database
+export function nullToUndefined<T>(value: T | null): T | undefined {
+    return value === null ? undefined : value;
+}
     

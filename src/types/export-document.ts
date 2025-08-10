@@ -1,4 +1,5 @@
 
+
 export interface ExportDocumentProductItem {
   id: string;
   productId: string;
@@ -46,6 +47,7 @@ export interface ExportDocument {
   exportInvoiceDate: Date; // The date of the export invoice
   
   manufacturerDetails: ManufacturerInfo[];
+  manufacturerId?: string; // legacy support
 
   countryOfFinalDestination: string; // Country of Final Destination
   vesselFlightNo?: string;
