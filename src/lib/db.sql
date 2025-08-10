@@ -1,0 +1,263 @@
+-- Active: 1719541018204@@127.0.0.1@3306@bizform_v2
+CREATE TABLE `companies` (
+  `id` BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  `companyName` VARCHAR(255) NOT NULL,
+  `contactPerson` VARCHAR(255) NOT NULL,
+  `address` TEXT NOT NULL,
+  `phoneNumber` VARCHAR(50) NOT NULL,
+  `iecNumber` VARCHAR(100) NOT NULL,
+  `gstNumber` VARCHAR(15) NOT NULL,
+  `isDeleted` BOOLEAN NOT NULL DEFAULT FALSE,
+  `createdAt` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updatedAt` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);
+
+CREATE TABLE `clients` (
+  `id` BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  `companyName` VARCHAR(255) NOT NULL,
+  `person` VARCHAR(255) NOT NULL,
+  `contactNumber` VARCHAR(50) NOT NULL,
+  `address` TEXT NOT NULL,
+  `city` VARCHAR(100) NOT NULL,
+  `country` VARCHAR(100) NOT NULL,
+  `pinCode` VARCHAR(20) NOT NULL,
+  `isDeleted` BOOLEAN NOT NULL DEFAULT FALSE,
+  `createdAt` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updatedAt` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);
+
+CREATE TABLE `manufacturers` (
+  `id` BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  `companyName` VARCHAR(255) NOT NULL,
+  `contactPerson` VARCHAR(255) NOT NULL,
+  `address` TEXT NOT NULL,
+  `gstNumber` VARCHAR(15) NOT NULL,
+  `stuffingPermissionNumber` VARCHAR(100) NOT NULL,
+  `stuffingPermissionDate` DATE NOT NULL,
+  `pinCode` VARCHAR(10) NOT NULL,
+  `isDeleted` BOOLEAN NOT NULL DEFAULT FALSE,
+  `createdAt` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updatedAt` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);
+
+CREATE TABLE `transporters` (
+  `id` BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  `companyName` VARCHAR(255) NOT NULL,
+  `gstNumber` VARCHAR(15) NOT NULL,
+  `contactPerson` VARCHAR(255) NOT NULL,
+  `contactNumber` VARCHAR(50) NOT NULL,
+  `isDeleted` BOOLEAN NOT NULL DEFAULT FALSE,
+  `createdAt` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updatedAt` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);
+
+CREATE TABLE `suppliers` (
+  `id` BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  `companyName` VARCHAR(255) NOT NULL,
+  `gstNumber` VARCHAR(15) NOT NULL,
+  `contactPerson` VARCHAR(255) NOT NULL,
+  `contactNumber` VARCHAR(50) NOT NULL,
+  `isDeleted` BOOLEAN NOT NULL DEFAULT FALSE,
+  `createdAt` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updatedAt` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);
+
+CREATE TABLE `pallets` (
+  `id` BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  `companyName` VARCHAR(255) NOT NULL,
+  `gstNumber` VARCHAR(15) NOT NULL,
+  `contactPerson` VARCHAR(255) NOT NULL,
+  `contactNumber` VARCHAR(50) NOT NULL,
+  `isDeleted` BOOLEAN NOT NULL DEFAULT FALSE,
+  `createdAt` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updatedAt` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);
+
+CREATE TABLE `sizes` (
+  `id` BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  `size` VARCHAR(100) NOT NULL,
+  `sqmPerBox` DECIMAL(10, 4) NOT NULL,
+  `boxWeight` DECIMAL(10, 2) NOT NULL,
+  `purchasePrice` DECIMAL(10, 2) NOT NULL,
+  `salesPrice` DECIMAL(10, 2) NOT NULL,
+  `hsnCode` VARCHAR(20) NOT NULL,
+  `palletDetails` TEXT NOT NULL,
+  `isDeleted` BOOLEAN NOT NULL DEFAULT FALSE,
+  `createdAt` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updatedAt` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);
+
+CREATE TABLE `products` (
+  `id` BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  `sizeId` BIGINT UNSIGNED NOT NULL,
+  `designName` VARCHAR(255) NOT NULL,
+  `salesPrice` DECIMAL(10, 2),
+  `boxWeight` DECIMAL(10, 2),
+  `isDeleted` BOOLEAN NOT NULL DEFAULT FALSE,
+  `createdAt` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updatedAt` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  FOREIGN KEY (`sizeId`) REFERENCES `sizes`(`id`)
+);
+
+CREATE TABLE `banks` (
+  `id` BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  `bankName` VARCHAR(255) NOT NULL,
+  `bankAddress` TEXT NOT NULL,
+  `accountNumber` VARCHAR(100) NOT NULL,
+  `swiftCode` VARCHAR(20) NOT NULL,
+  `ifscCode` VARCHAR(20) NOT NULL,
+  `isDeleted` BOOLEAN NOT NULL DEFAULT FALSE,
+  `createdAt` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updatedAt` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);
+
+CREATE TABLE `performa_invoices` (
+  `id` BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  `exporterId` BIGINT UNSIGNED NOT NULL,
+  `invoiceNumber` VARCHAR(255) NOT NULL,
+  `invoiceDate` DATETIME NOT NULL,
+  `clientId` BIGINT UNSIGNED NOT NULL,
+  `selectedBankId` BIGINT UNSIGNED,
+  `finalDestination` VARCHAR(255) NOT NULL,
+  `totalContainer` INT NOT NULL,
+  `containerSize` VARCHAR(50) NOT NULL,
+  `currencyType` VARCHAR(10) NOT NULL,
+  `totalGrossWeight` VARCHAR(100) NOT NULL,
+  `freight` DECIMAL(12, 2) NOT NULL DEFAULT 0,
+  `discount` DECIMAL(12, 2) NOT NULL DEFAULT 0,
+  `notifyPartyLine1` VARCHAR(255),
+  `notifyPartyLine2` VARCHAR(255),
+  `termsAndConditions` TEXT,
+  `note` TEXT,
+  `items_json` JSON,
+  `subTotal` DECIMAL(15, 2),
+  `grandTotal` DECIMAL(15, 2),
+  `isDeleted` BOOLEAN NOT NULL DEFAULT FALSE,
+  `createdAt` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updatedAt` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  FOREIGN KEY (`exporterId`) REFERENCES `companies`(`id`),
+  FOREIGN KEY (`clientId`) REFERENCES `clients`(`id`),
+  FOREIGN KEY (`selectedBankId`) REFERENCES `banks`(`id`)
+);
+
+CREATE TABLE `purchase_orders` (
+  `id` BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  `sourcePiId` BIGINT UNSIGNED NOT NULL,
+  `exporterId` BIGINT UNSIGNED NOT NULL,
+  `manufacturerId` BIGINT UNSIGNED NOT NULL,
+  `poNumber` VARCHAR(255) NOT NULL,
+  `poDate` DATETIME NOT NULL,
+  `sizeId` BIGINT UNSIGNED NOT NULL,
+  `numberOfContainers` INT NOT NULL,
+  `items_json` JSON,
+  `termsAndConditions` TEXT,
+  `isDeleted` BOOLEAN NOT NULL DEFAULT FALSE,
+  `createdAt` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updatedAt` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  FOREIGN KEY (`sourcePiId`) REFERENCES `performa_invoices`(`id`),
+  FOREIGN KEY (`exporterId`) REFERENCES `companies`(`id`),
+  FOREIGN KEY (`manufacturerId`) REFERENCES `manufacturers`(`id`),
+  FOREIGN KEY (`sizeId`) REFERENCES `sizes`(`id`)
+);
+
+CREATE TABLE `export_documents` (
+  `id` BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  `exporterId` BIGINT UNSIGNED NOT NULL,
+  `clientId` BIGINT UNSIGNED NOT NULL,
+  `performaInvoiceId` BIGINT UNSIGNED,
+  `purchaseOrderId` BIGINT UNSIGNED,
+  `transporterId` BIGINT UNSIGNED NOT NULL,
+  `exportInvoiceNumber` VARCHAR(255) NOT NULL,
+  `exportInvoiceDate` DATETIME NOT NULL,
+  `manufacturerDetails_json` JSON,
+  `countryOfOrigin` VARCHAR(100),
+  `countryOfFinalDestination` VARCHAR(100) NOT NULL,
+  `vesselFlightNo` VARCHAR(100),
+  `portOfLoading` VARCHAR(100) NOT NULL,
+  `portOfDischarge` VARCHAR(100) NOT NULL,
+  `finalDestination` VARCHAR(255) NOT NULL,
+  `termsOfDeliveryAndPayment` TEXT,
+  `conversationRate` DECIMAL(10, 4) NOT NULL,
+  `exchangeNotification` VARCHAR(255),
+  `exchangeDate` DATETIME,
+  `freight` DECIMAL(12, 2) NOT NULL DEFAULT 0,
+  `gst` VARCHAR(10),
+  `discount` DECIMAL(12, 2) DEFAULT 0,
+  `containerItems_json` JSON,
+  `totalInvoiceValue` DECIMAL(15, 2),
+  `ewayBillNumber` VARCHAR(100),
+  `ewayBillDate` DATE,
+  `ewayBillDocument` MEDIUMTEXT,
+  `shippingBillNumber` VARCHAR(100),
+  `shippingBillDate` DATE,
+  `shippingBillDocument` MEDIUMTEXT,
+  `blNumber` VARCHAR(100),
+  `blDate` DATE,
+  `blDocument` MEDIUMTEXT,
+  `brcDocument` MEDIUMTEXT,
+  `isDeleted` BOOLEAN NOT NULL DEFAULT FALSE,
+  `createdAt` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updatedAt` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  FOREIGN KEY (`exporterId`) REFERENCES `companies`(`id`),
+  FOREIGN KEY (`clientId`) REFERENCES `clients`(`id`),
+  FOREIGN KEY (`transporterId`) REFERENCES `transporters`(`id`)
+);
+
+CREATE TABLE `manu_bills` (
+  `id` BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  `exportDocumentId` BIGINT UNSIGNED NOT NULL,
+  `manufacturerId` BIGINT UNSIGNED NOT NULL,
+  `invoiceNumber` VARCHAR(255) NOT NULL,
+  `invoiceDate` DATETIME NOT NULL,
+  `ackNo` VARCHAR(255),
+  `ackDate` DATETIME,
+  `items_json` JSON NOT NULL,
+  `remarks` TEXT,
+  `subTotal` DECIMAL(15, 2) NOT NULL,
+  `discountAmount` DECIMAL(15, 2) DEFAULT 0,
+  `insuranceAmount` DECIMAL(15, 2) DEFAULT 0,
+  `freightAmount` DECIMAL(15, 2) DEFAULT 0,
+  `finalSubTotal` DECIMAL(15, 2) NOT NULL,
+  `centralTaxRate` DECIMAL(5, 2) NOT NULL,
+  `centralTaxAmount` DECIMAL(15, 2) NOT NULL,
+  `stateTaxRate` DECIMAL(5, 2) NOT NULL,
+  `stateTaxAmount` DECIMAL(15, 2) NOT NULL,
+  `roundOff` DECIMAL(10, 2) DEFAULT 0,
+  `grandTotal` DECIMAL(15, 2) NOT NULL,
+  `billDocumentUri` MEDIUMTEXT,
+  `ewayBillDocumentUri` MEDIUMTEXT,
+  `isDeleted` BOOLEAN NOT NULL DEFAULT FALSE,
+  `createdAt` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updatedAt` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  FOREIGN KEY (`exportDocumentId`) REFERENCES `export_documents`(`id`),
+  FOREIGN KEY (`manufacturerId`) REFERENCES `manufacturers`(`id`)
+);
+
+CREATE TABLE `trans_bills` (
+    `id` BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+    `exportDocumentId` BIGINT UNSIGNED NOT NULL,
+    `transporterId` BIGINT UNSIGNED NOT NULL,
+    `invoiceNumber` VARCHAR(255) NOT NULL,
+    `invoiceDate` DATETIME NOT NULL,
+    `shippingLine` VARCHAR(255),
+    `portOfLoading` VARCHAR(255),
+    `portOfDischarge` VARCHAR(255),
+    `items_json` JSON NOT NULL,
+    `remarks` TEXT,
+    `subTotal` DECIMAL(15, 2) NOT NULL,
+    `cgstRate` DECIMAL(5, 2) NOT NULL,
+    `cgstAmount` DECIMAL(15, 2) NOT NULL,
+    `sgstRate` DECIMAL(5, 2) NOT NULL,
+    `sgstAmount` DECIMAL(15, 2) NOT NULL,
+    `totalTax` DECIMAL(15, 2) NOT NULL,
+    `totalAfterTax` DECIMAL(15, 2) NOT NULL,
+    `roundOff` DECIMAL(10, 2) DEFAULT 0,
+    `totalPayable` DECIMAL(15, 2) NOT NULL,
+    `billDocumentUri` MEDIUMTEXT,
+    `lrDocumentUri` MEDIUMTEXT,
+    `isDeleted` BOOLEAN NOT NULL DEFAULT FALSE,
+    `createdAt` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    `updatedAt` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (`exportDocumentId`) REFERENCES `export_documents`(`id`),
+    FOREIGN KEY (`transporterId`) REFERENCES `transporters`(`id`)
+);
