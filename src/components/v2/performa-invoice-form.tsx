@@ -278,26 +278,30 @@ export function PerformaInvoiceFormV2({
   });
 
   useEffect(() => {
-    if (isEditing && initialDataForForm) {
-      const formData = {
-        ...initialDataForForm,
-        invoiceDate: new Date(initialDataForForm.invoiceDate), // Ensure date is a Date object
-        items: initialDataForForm.items.map(item => ({ // Ensure items match schema
-            id: item.id,
-            sizeId: item.sizeId,
-            productId: item.productId,
-            boxes: item.boxes,
-            ratePerSqmt: item.ratePerSqmt,
-            commission: item.commission || 0,
-        }))
-      };
-      form.reset(formData);
-      replace(formData.items); // Make sure field array is also reset properly
-    } else {
-      form.reset(getDefaultFormValues(nextInvoiceNumber));
-      replace(getDefaultFormValues(nextInvoiceNumber).items);
+    // Only reset form if all dependency data is available, preventing premature resets.
+    if (isEditing && initialDataForForm && exporters.length > 0 && clients.length > 0 && banks.length > 0) {
+        const formData = {
+            ...initialDataForForm,
+            exporterId: initialDataForForm.exporterId.toString(),
+            clientId: initialDataForForm.clientId.toString(),
+            selectedBankId: initialDataForForm.selectedBankId?.toString() || "",
+            invoiceDate: new Date(initialDataForForm.invoiceDate),
+            items: initialDataForForm.items.map(item => ({
+                id: item.id,
+                sizeId: item.sizeId,
+                productId: item.productId,
+                boxes: item.boxes,
+                ratePerSqmt: item.ratePerSqmt,
+                commission: item.commission || 0,
+            }))
+        };
+        form.reset(formData);
+        replace(formData.items);
+    } else if (!isEditing) {
+        form.reset(getDefaultFormValues(nextInvoiceNumber));
+        replace(getDefaultFormValues(nextInvoiceNumber).items);
     }
-  }, [isEditing, initialDataForForm, nextInvoiceNumber, form, replace]);
+}, [isEditing, initialDataForForm, nextInvoiceNumber, form, replace, exporters, clients, banks]);
 
 
   const watchedItemsForTotals = form.watch("items");
