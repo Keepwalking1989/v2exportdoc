@@ -83,6 +83,8 @@ export function Header() {
           <Database className="mr-2 h-4 w-4" /> V2 (MySQL)
         </MenubarTrigger>
         <MenubarContent>
+          <Link href="/v2/dashboard" passHref><MenubarItem><LayoutDashboard className="mr-2 h-4 w-4"/>Dashboard</MenubarItem></Link>
+          <MenubarSeparator />
           <MenubarSub>
             <MenubarSubTrigger><PlusCircle className="mr-2 h-4 w-4" />ADD</MenubarSubTrigger>
             <MenubarSubContent>
@@ -130,17 +132,10 @@ export function Header() {
         <Link href="/"><LayoutDashboard className="mr-2 h-5 w-5" />DASHBOARD</Link>
       </Button>
       <Separator />
-      {/* Original LocalStorage Menus */}
-      <div className="text-sm font-semibold text-muted-foreground px-4 pt-2">LocalStorage Version</div>
-      <Button variant="ghost" className="justify-start font-normal w-full" asChild onClick={() => setIsMobileMenuOpen(false)}><Link href="/exporter">EXPORTER</Link></Button>
-      <Button variant="ghost" className="justify-start font-normal w-full" asChild onClick={() => setIsMobileMenuOpen(false)}><Link href="/client">Client</Link></Button>
-      <Button variant="ghost" className="justify-start font-normal w-full" asChild onClick={() => setIsMobileMenuOpen(false)}><Link href="/manufacturer">Manufacturer</Link></Button>
-      {/* ... other LS links ... */}
-
-      <Separator />
-      <div className="text-sm font-semibold text-muted-foreground px-4 pt-2">V2 (MySQL) Version</div>
       {/* V2 Menus */}
-       <Button variant="ghost" className="justify-start font-normal w-full" asChild onClick={() => setIsMobileMenuOpen(false)}><Link href="/v2/client">Client (MySQL)</Link></Button>
+      <div className="text-sm font-semibold text-muted-foreground px-4 pt-2">V2 (MySQL) Version</div>
+      <Button variant="ghost" className="justify-start font-normal w-full" asChild onClick={() => setIsMobileMenuOpen(false)}><Link href="/v2/dashboard">Dashboard (MySQL)</Link></Button>
+      <Button variant="ghost" className="justify-start font-normal w-full" asChild onClick={() => setIsMobileMenuOpen(false)}><Link href="/v2/client">Client (MySQL)</Link></Button>
        <Button variant="ghost" className="justify-start font-normal w-full" asChild onClick={() => setIsMobileMenuOpen(false)}><Link href="/v2/manufacturer">Manufacturer (MySQL)</Link></Button>
        <Button variant="ghost" className="justify-start font-normal w-full" asChild onClick={() => setIsMobileMenuOpen(false)}><Link href="/v2/transporter">Transporter (MySQL)</Link></Button>
        <Button variant="ghost" className="justify-start font-normal w-full" asChild onClick={() => setIsMobileMenuOpen(false)}><Link href="/v2/supplier">Supplier (MySQL)</Link></Button>
@@ -159,6 +154,14 @@ export function Header() {
         <Separator />
         <Button variant="ghost" className="justify-start font-normal w-full" asChild onClick={() => setIsMobileMenuOpen(false)}><Link href="/v2/transaction">Transaction (MySQL)</Link></Button>
         <Button variant="ghost" className="justify-start font-normal w-full" asChild onClick={() => setIsMobileMenuOpen(false)}><Link href="/v2/gst">GST (MySQL)</Link></Button>
+      <Separator />
+
+      {/* Original LocalStorage Menus */}
+      <div className="text-sm font-semibold text-muted-foreground px-4 pt-4">LocalStorage Version</div>
+      <Button variant="ghost" className="justify-start font-normal w-full" asChild onClick={() => setIsMobileMenuOpen(false)}><Link href="/exporter">EXPORTER</Link></Button>
+      <Button variant="ghost" className="justify-start font-normal w-full" asChild onClick={() => setIsMobileMenuOpen(false)}><Link href="/client">Client</Link></Button>
+      <Button variant="ghost" className="justify-start font-normal w-full" asChild onClick={() => setIsMobileMenuOpen(false)}><Link href="/manufacturer">Manufacturer</Link></Button>
+      {/* ... other LS links ... */}
 
 
     </nav>
