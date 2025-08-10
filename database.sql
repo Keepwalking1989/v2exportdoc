@@ -1,60 +1,79 @@
 
--- Create the database if it doesn't exist
+-- Create a new database if it doesn't exist
 CREATE DATABASE IF NOT EXISTS bizform_v2;
 
 -- Use the newly created database
 USE bizform_v2;
 
--- Create the clients table
-CREATE TABLE IF NOT EXISTS clients (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    companyName VARCHAR(255) NOT NULL,
-    person VARCHAR(255) NOT NULL,
-    contactNumber VARCHAR(255),
-    address TEXT,
-    city VARCHAR(255),
-    country VARCHAR(255),
-    pinCode VARCHAR(255),
-    isDeleted BOOLEAN DEFAULT FALSE,
-    createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-);
+-- Table structure for table `clients`
+CREATE TABLE `clients` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `companyName` varchar(255) NOT NULL,
+  `person` varchar(255) NOT NULL,
+  `contactNumber` varchar(50) NOT NULL,
+  `address` text NOT NULL,
+  `city` varchar(100) NOT NULL,
+  `country` varchar(100) NOT NULL,
+  `pinCode` varchar(20) NOT NULL,
+  `isDeleted` tinyint(1) NOT NULL DEFAULT 0,
+  `createdAt` timestamp NOT NULL DEFAULT current_timestamp(),
+  `updatedAt` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
--- Create the manufacturers table
-CREATE TABLE IF NOT EXISTS manufacturers (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    companyName VARCHAR(255) NOT NULL,
-    contactPerson VARCHAR(255) NOT NULL,
-    address TEXT NOT NULL,
-    gstNumber VARCHAR(15) NOT NULL,
-    stuffingPermissionNumber VARCHAR(255) NOT NULL,
-    stuffingPermissionDate DATE NOT NULL,
-    pinCode VARCHAR(10) NOT NULL,
-    isDeleted BOOLEAN DEFAULT FALSE,
-    createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-);
+-- Table structure for table `manufacturers`
+CREATE TABLE `manufacturers` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `companyName` varchar(255) NOT NULL,
+  `contactPerson` varchar(255) NOT NULL,
+  `address` text NOT NULL,
+  `gstNumber` varchar(15) NOT NULL,
+  `stuffingPermissionNumber` varchar(100) NOT NULL,
+  `stuffingPermissionDate` date NOT NULL,
+  `pinCode` varchar(10) NOT NULL,
+  `isDeleted` tinyint(1) NOT NULL DEFAULT 0,
+  `createdAt` timestamp NOT NULL DEFAULT current_timestamp(),
+  `updatedAt` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
--- Create the transporters table
-CREATE TABLE IF NOT EXISTS transporters (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    companyName VARCHAR(255) NOT NULL,
-    gstNumber VARCHAR(15) NOT NULL,
-    contactPerson VARCHAR(255) NOT NULL,
-    contactNumber VARCHAR(20) NOT NULL,
-    isDeleted BOOLEAN DEFAULT FALSE,
-    createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-);
+-- Table structure for table `transporters`
+CREATE TABLE `transporters` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `companyName` varchar(255) NOT NULL,
+  `gstNumber` varchar(15) NOT NULL,
+  `contactPerson` varchar(255) NOT NULL,
+  `contactNumber` varchar(50) NOT NULL,
+  `isDeleted` tinyint(1) NOT NULL DEFAULT 0,
+  `createdAt` timestamp NOT NULL DEFAULT current_timestamp(),
+  `updatedAt` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
--- Create the suppliers table
-CREATE TABLE IF NOT EXISTS suppliers (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    companyName VARCHAR(255) NOT NULL,
-    gstNumber VARCHAR(15) NOT NULL,
-    contactPerson VARCHAR(255) NOT NULL,
-    contactNumber VARCHAR(20) NOT NULL,
-    isDeleted BOOLEAN DEFAULT FALSE,
-    createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-);
+-- Table structure for table `suppliers`
+CREATE TABLE `suppliers` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `companyName` varchar(255) NOT NULL,
+  `gstNumber` varchar(15) NOT NULL,
+  `contactPerson` varchar(255) NOT NULL,
+  `contactNumber` varchar(50) NOT NULL,
+  `isDeleted` tinyint(1) NOT NULL DEFAULT 0,
+  `createdAt` timestamp NOT NULL DEFAULT current_timestamp(),
+  `updatedAt` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+-- Table structure for table `pallets`
+CREATE TABLE `pallets` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `companyName` varchar(255) NOT NULL,
+  `gstNumber` varchar(15) NOT NULL,
+  `contactPerson` varchar(255) NOT NULL,
+  `contactNumber` varchar(50) NOT NULL,
+  `isDeleted` tinyint(1) NOT NULL DEFAULT 0,
+  `createdAt` timestamp NOT NULL DEFAULT current_timestamp(),
+  `updatedAt` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+    
