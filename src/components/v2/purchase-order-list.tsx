@@ -58,8 +58,9 @@ export function PurchaseOrderListV2({
 
   const enrichedPurchaseOrders = useMemo(() => {
     return purchaseOrders.map((po) => {
-      const exporter = allExporters.find((e) => e.id === po.exporterId);
-      const manufacturer = allManufacturers.find((m) => m.id === po.manufacturerId);
+      // Ensure IDs are compared as strings to avoid type mismatch issues
+      const exporter = allExporters.find((e) => e.id.toString() === po.exporterId.toString());
+      const manufacturer = allManufacturers.find((m) => m.id.toString() === po.manufacturerId.toString());
       return {
         ...po,
         exporterName: exporter?.companyName || "N/A",
