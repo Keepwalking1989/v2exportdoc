@@ -186,19 +186,24 @@ export function PurchaseOrderFormV2({
   );
 
   const poSizeOptions: ComboboxOption[] = useMemo(() => {
-    const availableSizeIds = new Set<string>();
-
-    if (sourcePi) {
-        sourcePi.items.forEach(item => { if(item.sizeId) availableSizeIds.add(item.sizeId) });
+    if (!sourcePi && !initialData) {
+      return allSizes.map(s => ({ value: s.id, label: `${s.size} (HSN: ${s.hsnCode})` }));
     }
     
+    const availableSizeIds = new Set<string>();
+
+    if(sourcePi) {
+      sourcePi.items.forEach(item => { if(item.sizeId) availableSizeIds.add(item.sizeId) });
+    }
+
     if (isEditing && initialData?.sizeId) {
-        availableSizeIds.add(initialData.sizeId);
+      availableSizeIds.add(initialData.sizeId);
     }
 
     return allSizes
         .filter(s => availableSizeIds.has(s.id))
         .map(s => ({ value: s.id, label: `${s.size} (HSN: ${s.hsnCode})` }));
+
   }, [sourcePi, isEditing, initialData, allSizes]);
 
 
@@ -237,8 +242,8 @@ export function PurchaseOrderFormV2({
   function onSubmit(values: PurchaseOrderFormValues) {
     const poToSave: PurchaseOrder = {
       ...values,
-      id: isEditing && initialData ? initialData.id : '',
-      sourcePiId: (isEditing && initialData ? initialData.sourcePiId : sourcePi?.id) || "", 
+      id: isEditing && initialData ? initialData.id : '', // Pass empty for new, DB will generate
+      sourcePiId: (isEditing && initialData ? initialData.sourcePiId : sourcePi?.id) || "",
     };
     onSave(poToSave);
   }
