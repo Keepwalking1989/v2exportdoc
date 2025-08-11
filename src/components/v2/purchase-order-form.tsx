@@ -186,13 +186,20 @@ export function PurchaseOrderFormV2({
   );
 
   const poSizeOptions: ComboboxOption[] = useMemo(() => {
-    let sizeSet = new Set<string>();
+    const availableSizeIds = new Set<string>();
+
     if (sourcePi) {
-        sourcePi.items.forEach(item => { if(item.sizeId) sizeSet.add(item.sizeId) });
+        sourcePi.items.forEach(item => { if(item.sizeId) availableSizeIds.add(item.sizeId) });
     }
-    const distinctPiSizes = allSizes.filter(s => sizeSet.has(s.id));
-    return distinctPiSizes.map(s => ({ value: s.id, label: `${s.size} (HSN: ${s.hsnCode})` }));
-  }, [sourcePi, allSizes]);
+    
+    if (isEditing && initialData?.sizeId) {
+        availableSizeIds.add(initialData.sizeId);
+    }
+
+    return allSizes
+        .filter(s => availableSizeIds.has(s.id))
+        .map(s => ({ value: s.id, label: `${s.size} (HSN: ${s.hsnCode})` }));
+  }, [sourcePi, isEditing, initialData, allSizes]);
 
 
   const getProductOptionsForPoSize = useCallback((poSizeIdForOptions: string): ComboboxOption[] => {
@@ -346,7 +353,7 @@ export function PurchaseOrderFormV2({
                       placeholder="Select Size for PO..."
                       searchPlaceholder="Search sizes..."
                       emptySearchMessage={poSizeOptions.length === 0 && initialData?.sizeId ? `Original Size ID: ${initialData.sizeId} (Details Missing). Select another if needed.` : "No size found. Ensure sizes exist or PI had sized items."}
-                      disabled={poSizeOptions.length === 0 && !(isEditing && initialData && initialData.sizeId)}
+                      disabled={poSizeOptions.length === 0}
                     />
                     <FormMessage />
                   </FormItem>
@@ -499,3 +506,5 @@ export function PurchaseOrderFormV2({
     </Card>
   );
 }
+
+    
