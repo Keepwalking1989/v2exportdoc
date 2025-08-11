@@ -4,8 +4,6 @@
 import { useState, useMemo, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import type { PurchaseOrder } from "@/types/purchase-order";
-import type { Company } from "@/types/company";
-import type { Manufacturer } from "@/types/manufacturer";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import {
@@ -28,9 +26,7 @@ type EnrichedPurchaseOrder = PurchaseOrder & {
 };
 
 interface PurchaseOrderListProps {
-  purchaseOrders: PurchaseOrder[];
-  allExporters: Company[];
-  allManufacturers: Manufacturer[];
+  purchaseOrders: EnrichedPurchaseOrder[];
   onEditPo: (poId: string) => void;
   onDeletePo: (poId: string) => void;
   onDownloadPdf: (poId: string) => void; 
@@ -41,38 +37,25 @@ const ITEMS_PER_PAGE = 5;
 
 export function PurchaseOrderListV2({
   purchaseOrders: initialPurchaseOrders,
-  allExporters,
-  allManufacturers,
   onEditPo,
   onDeletePo,
   onDownloadPdf,
   onGenerateExportDoc
 }: PurchaseOrderListProps) {
+  const router = useRouter(); 
+  const { toast } = useToast();
   const [searchTerm, setSearchTerm] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
-  const { toast } = useToast();
-
-  const enrichedPurchaseOrders = useMemo(() => {
-    return initialPurchaseOrders.map((po) => {
-      const exporter = allExporters.find((e) => e.id.toString() === po.exporterId.toString());
-      const manufacturer = allManufacturers.find((m) => m.id.toString() === po.manufacturerId.toString());
-      return {
-        ...po,
-        exporterName: exporter?.companyName || "N/A",
-        manufacturerName: manufacturer?.companyName || "N/A",
-      };
-    });
-  }, [initialPurchaseOrders, allExporters, allManufacturers]);
 
   const filteredPurchaseOrders = useMemo(() => {
-    if (!searchTerm) return enrichedPurchaseOrders;
-    return enrichedPurchaseOrders.filter(
+    if (!searchTerm) return initialPurchaseOrders;
+    return initialPurchaseOrders.filter(
       (po) =>
         po.poNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
         po.exporterName.toLowerCase().includes(searchTerm.toLowerCase()) ||
         po.manufacturerName.toLowerCase().includes(searchTerm.toLowerCase())
     );
-  }, [enrichedPurchaseOrders, searchTerm]);
+  }, [initialPurchaseOrders, searchTerm]);
 
   useEffect(() => {
     if (filteredPurchaseOrders.length <= (currentPage - 1) * ITEMS_PER_PAGE && currentPage > 1) {
