@@ -1,6 +1,6 @@
 
 export interface PurchaseOrderItem {
-  id: string; // Unique ID for this item in the purchase order
+  id?: string; // Unique ID for this item in the purchase order
   productId: string; // ID of the product (from the source PI's items, filtered by PO's selected size)
   designImage: string; // Text field, "AS PER SAMPLE" or future image reference
   weightPerBox: number; // Auto-filled from Size data based on selected product, editable

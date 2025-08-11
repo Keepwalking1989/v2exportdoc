@@ -186,24 +186,21 @@ export function PurchaseOrderFormV2({
   );
 
   const poSizeOptions: ComboboxOption[] = useMemo(() => {
-    if (!sourcePi && !initialData) {
-      return allSizes.map(s => ({ value: s.id, label: `${s.size} (HSN: ${s.hsnCode})` }));
-    }
-    
-    const availableSizeIds = new Set<string>();
-
-    if(sourcePi) {
-      sourcePi.items.forEach(item => { if(item.sizeId) availableSizeIds.add(item.sizeId) });
-    }
+    const availableSizes: Size[] = sourcePi
+      ? allSizes.filter(s => sourcePi.items.some(i => i.sizeId === s.id))
+      : [];
 
     if (isEditing && initialData?.sizeId) {
-      availableSizeIds.add(initialData.sizeId);
+        const poCurrentSizeIsAlreadyAnOption = availableSizes.some(s => s.id === initialData.sizeId);
+        if (!poCurrentSizeIsAlreadyAnOption) {
+            const poCurrentSizeDetails = allSizes.find(s => s.id === initialData.sizeId);
+            if (poCurrentSizeDetails) {
+                availableSizes.push(poCurrentSizeDetails);
+            }
+        }
     }
-
-    return allSizes
-        .filter(s => availableSizeIds.has(s.id))
-        .map(s => ({ value: s.id, label: `${s.size} (HSN: ${s.hsnCode})` }));
-
+    
+    return availableSizes.map(s => ({ value: s.id, label: `${s.size} (HSN: ${s.hsnCode})` }));
   }, [sourcePi, isEditing, initialData, allSizes]);
 
 
@@ -244,6 +241,10 @@ export function PurchaseOrderFormV2({
       ...values,
       id: isEditing && initialData ? initialData.id : '', // Pass empty for new, DB will generate
       sourcePiId: (isEditing && initialData ? initialData.sourcePiId : sourcePi?.id) || "",
+      items: values.items.map(item => ({
+        ...item,
+        id: item.id || '', // Ensure id is always a string
+      }))
     };
     onSave(poToSave);
   }
@@ -511,5 +512,4 @@ export function PurchaseOrderFormV2({
     </Card>
   );
 }
-
     

@@ -202,6 +202,18 @@ export default function PurchaseOrderPageV2() {
   const handleGenerateExportDoc = (poId: string) => {
      router.push(`/v2/export-document?sourcePoId=${poId}`);
   };
+  
+  const enrichedPurchaseOrders = useMemo(() => {
+    return purchaseOrders.map((po) => {
+      const exporter = allExporters.find((e) => e.id.toString() === po.exporterId.toString());
+      const manufacturer = allManufacturers.find((m) => m.id.toString() === po.manufacturerId.toString());
+      return {
+        ...po,
+        exporterName: exporter?.companyName || "N/A",
+        manufacturerName: manufacturer?.companyName || "N/A",
+      };
+    });
+  }, [purchaseOrders, allExporters, allManufacturers]);
 
   const canCreateOrEdit = allExporters.length > 0 && allManufacturers.length > 0 && allSizes.length > 0 && allProducts.length > 0 && allPerformaInvoices.length > 0;
   const showForm = !!poToEdit || !!sourcePiIdForNewPo;
@@ -251,9 +263,7 @@ export default function PurchaseOrderPageV2() {
           )}
         </div>
         <PurchaseOrderListV2
-          purchaseOrders={purchaseOrders}
-          allExporters={allExporters}
-          allManufacturers={allManufacturers}
+          purchaseOrders={enrichedPurchaseOrders}
           onEditPo={(id) => router.push(`/v2/purchase-order?editPoId=${id}`)}
           onDeletePo={handleDeletePurchaseOrder}
           onDownloadPdf={handleDownloadPdf}

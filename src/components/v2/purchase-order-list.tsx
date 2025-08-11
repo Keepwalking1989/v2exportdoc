@@ -4,8 +4,6 @@
 import { useState, useMemo, useEffect } from "react";
 import { useRouter } from "next/navigation"; // Import useRouter
 import type { PurchaseOrder } from "@/types/purchase-order";
-import type { Company } from "@/types/company";
-import type { Manufacturer } from "@/types/manufacturer";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import {
@@ -22,10 +20,14 @@ import { Search, ChevronLeft, ChevronRight, FileText, FilePenLine, Trash2, Downl
 import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
 
+// Enriched type that includes names
+type EnrichedPurchaseOrder = PurchaseOrder & {
+  exporterName: string;
+  manufacturerName: string;
+};
+
 interface PurchaseOrderListProps {
-  purchaseOrders: PurchaseOrder[];
-  allExporters: Company[];
-  allManufacturers: Manufacturer[];
+  purchaseOrders: EnrichedPurchaseOrder[]; // Expects the enriched data now
   onEditPo: (poId: string) => void;
   onDeletePo: (poId: string) => void;
   onDownloadPdf: (poId: string) => void; 
@@ -36,48 +38,31 @@ const ITEMS_PER_PAGE = 5;
 
 export function PurchaseOrderListV2({
   purchaseOrders: initialPurchaseOrders,
-  allExporters,
-  allManufacturers,
   onEditPo,
   onDeletePo,
   onDownloadPdf,
   onGenerateExportDoc
 }: PurchaseOrderListProps) {
-  const router = useRouter(); // Initialize useRouter
-  const [purchaseOrders, setPurchaseOrders] = useState<PurchaseOrder[]>(initialPurchaseOrders);
+  const router = useRouter();
   const [searchTerm, setSearchTerm] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const { toast } = useToast();
 
-  useEffect(() => {
-    setPurchaseOrders(initialPurchaseOrders);
-    if (initialPurchaseOrders.length <= (currentPage - 1) * ITEMS_PER_PAGE && currentPage > 1) {
-      setCurrentPage(1);
-    }
-  }, [initialPurchaseOrders, currentPage]);
-
-  const enrichedPurchaseOrders = useMemo(() => {
-    return purchaseOrders.map((po) => {
-      // Ensure IDs are compared as strings to avoid type mismatch issues
-      const exporter = allExporters.find((e) => e.id.toString() === po.exporterId.toString());
-      const manufacturer = allManufacturers.find((m) => m.id.toString() === po.manufacturerId.toString());
-      return {
-        ...po,
-        exporterName: exporter?.companyName || "N/A",
-        manufacturerName: manufacturer?.companyName || "N/A",
-      };
-    });
-  }, [purchaseOrders, allExporters, allManufacturers]);
-
   const filteredPurchaseOrders = useMemo(() => {
-    if (!searchTerm) return enrichedPurchaseOrders;
-    return enrichedPurchaseOrders.filter(
+    if (!searchTerm) return initialPurchaseOrders;
+    return initialPurchaseOrders.filter(
       (po) =>
         po.poNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
         po.exporterName.toLowerCase().includes(searchTerm.toLowerCase()) ||
         po.manufacturerName.toLowerCase().includes(searchTerm.toLowerCase())
     );
-  }, [enrichedPurchaseOrders, searchTerm]);
+  }, [initialPurchaseOrders, searchTerm]);
+
+  useEffect(() => {
+    if (filteredPurchaseOrders.length <= (currentPage - 1) * ITEMS_PER_PAGE && currentPage > 1) {
+      setCurrentPage(1);
+    }
+  }, [filteredPurchaseOrders, currentPage]);
 
   const paginatedPurchaseOrders = useMemo(() => {
     const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
@@ -88,6 +73,10 @@ export function PurchaseOrderListV2({
 
   const handleDelete = (poId: string, poNumber: string) => {
     onDeletePo(poId);
+    toast({
+      title: "Purchase Order Deleted",
+      description: `PO ${poNumber} has been successfully deleted.`,
+    });
   };
   
   return (
