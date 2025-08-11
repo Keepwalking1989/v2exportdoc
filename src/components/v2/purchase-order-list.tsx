@@ -2,8 +2,10 @@
 "use client";
 
 import { useState, useMemo, useEffect } from "react";
-import { useRouter } from "next/navigation"; // Import useRouter
+import { useRouter } from "next/navigation";
 import type { PurchaseOrder } from "@/types/purchase-order";
+import type { Company } from "@/types/company";
+import type { Manufacturer } from "@/types/manufacturer";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import {
@@ -16,18 +18,19 @@ import {
 } from "@/components/ui/table";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
-import { Search, ChevronLeft, ChevronRight, FileText, FilePenLine, Trash2, Download, FileType, FilePlus2 } from "lucide-react"; // Added FilePlus2
+import { Search, ChevronLeft, ChevronRight, FileText, FilePenLine, Trash2, Download, FilePlus2 } from "lucide-react";
 import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
 
-// Enriched type that includes names
 type EnrichedPurchaseOrder = PurchaseOrder & {
   exporterName: string;
   manufacturerName: string;
 };
 
 interface PurchaseOrderListProps {
-  purchaseOrders: EnrichedPurchaseOrder[]; // Expects the enriched data now
+  purchaseOrders: PurchaseOrder[];
+  allExporters: Company[];
+  allManufacturers: Manufacturer[];
   onEditPo: (poId: string) => void;
   onDeletePo: (poId: string) => void;
   onDownloadPdf: (poId: string) => void; 
@@ -38,25 +41,38 @@ const ITEMS_PER_PAGE = 5;
 
 export function PurchaseOrderListV2({
   purchaseOrders: initialPurchaseOrders,
+  allExporters,
+  allManufacturers,
   onEditPo,
   onDeletePo,
   onDownloadPdf,
   onGenerateExportDoc
 }: PurchaseOrderListProps) {
-  const router = useRouter();
   const [searchTerm, setSearchTerm] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const { toast } = useToast();
 
+  const enrichedPurchaseOrders = useMemo(() => {
+    return initialPurchaseOrders.map((po) => {
+      const exporter = allExporters.find((e) => e.id.toString() === po.exporterId.toString());
+      const manufacturer = allManufacturers.find((m) => m.id.toString() === po.manufacturerId.toString());
+      return {
+        ...po,
+        exporterName: exporter?.companyName || "N/A",
+        manufacturerName: manufacturer?.companyName || "N/A",
+      };
+    });
+  }, [initialPurchaseOrders, allExporters, allManufacturers]);
+
   const filteredPurchaseOrders = useMemo(() => {
-    if (!searchTerm) return initialPurchaseOrders;
-    return initialPurchaseOrders.filter(
+    if (!searchTerm) return enrichedPurchaseOrders;
+    return enrichedPurchaseOrders.filter(
       (po) =>
         po.poNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
         po.exporterName.toLowerCase().includes(searchTerm.toLowerCase()) ||
         po.manufacturerName.toLowerCase().includes(searchTerm.toLowerCase())
     );
-  }, [initialPurchaseOrders, searchTerm]);
+  }, [enrichedPurchaseOrders, searchTerm]);
 
   useEffect(() => {
     if (filteredPurchaseOrders.length <= (currentPage - 1) * ITEMS_PER_PAGE && currentPage > 1) {
@@ -78,7 +94,7 @@ export function PurchaseOrderListV2({
       description: `PO ${poNumber} has been successfully deleted.`,
     });
   };
-  
+
   return (
     <Card className="w-full shadow-xl mt-8">
       <CardHeader>

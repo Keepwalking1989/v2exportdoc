@@ -60,7 +60,7 @@ export type PurchaseOrderFormValues = z.infer<typeof purchaseOrderFormSchema>;
 
 interface PurchaseOrderFormProps {
   initialData?: PurchaseOrder | null;
-  sourcePi?: PerformaInvoice | null;
+  sourcePiId?: string | null;
   isEditing: boolean;
   onSave: (poData: PurchaseOrder) => void;
   onCancelEdit?: () => void;
@@ -86,7 +86,7 @@ const getDefaultFormValues = (poNumber: string): PurchaseOrderFormValues => ({
 
 export function PurchaseOrderFormV2({
   initialData,
-  sourcePi,
+  sourcePiId,
   isEditing,
   onSave,
   onCancelEdit,
@@ -109,6 +109,8 @@ export function PurchaseOrderFormV2({
   });
 
   const selectedPoSizeId = form.watch("sizeId");
+  const sourcePi = useMemo(() => allPerformaInvoices.find(pi => pi.id === sourcePiId), [sourcePiId, allPerformaInvoices]);
+
 
   useEffect(() => {
     if (isEditing && initialData) {
@@ -124,11 +126,7 @@ export function PurchaseOrderFormV2({
             weightPerBox: item.weightPerBox || 0 
         }))
       });
-      if (initialData.items && initialData.items.length > 0) {
-        replace(initialData.items.map(item => ({ ...item, weightPerBox: item.weightPerBox || 0 })));
-      } else {
-        replace([{ productId: "", designImage: "AS PER SAMPLE", weightPerBox: 0, boxes: 1, thickness: "8.5 MM to 9.0 MM" }]);
-      }
+      replace(initialData.items.map(item => ({ ...item, weightPerBox: item.weightPerBox || 0 })));
     } else if (!isEditing && sourcePi) {
       const defaultValuesForNew = getDefaultFormValues(defaultPoNumber);
       form.reset({
@@ -174,7 +172,9 @@ export function PurchaseOrderFormV2({
     } else {
       replace([{ productId: "", designImage: "AS PER SAMPLE", weightPerBox: 0, boxes: 1, thickness: "8.5 MM to 9.0 MM" }]);
     }
+
   }, [selectedPoSizeId, sourcePi, isEditing, replace, allProducts, allSizes]);
+
 
   const exporterOptions: ComboboxOption[] = useMemo(() =>
     allExporters.map(e => ({ value: e.id.toString(), label: e.companyName })),
@@ -187,18 +187,9 @@ export function PurchaseOrderFormV2({
   );
 
   const poSizeOptions: ComboboxOption[] = useMemo(() => {
-    let availableSizes: Size[] = [];
-    if (isEditing) {
-        // In edit mode, all sizes should be available.
-        availableSizes = [...allSizes];
-    } else if (sourcePi) {
-        // In create mode (from a PI), only sizes from that PI are relevant.
-        const sizeIdsInPi = new Set(sourcePi.items.map(item => item.sizeId));
-        availableSizes = allSizes.filter(s => sizeIdsInPi.has(s.id));
-    } else {
-        // In create mode (without a PI), show all sizes.
-        availableSizes = [...allSizes];
-    }
+    const availableSizes: Size[] = (sourcePi && !isEditing) 
+        ? allSizes.filter(s => new Set(sourcePi.items.map(item => item.sizeId.toString())).has(s.id.toString()))
+        : allSizes;
     return availableSizes.map(s => ({ value: s.id.toString(), label: `${s.size} (HSN: ${s.hsnCode})` }));
   }, [allSizes, sourcePi, isEditing]);
 
@@ -244,8 +235,6 @@ export function PurchaseOrderFormV2({
     onSave(poToSave);
   }
   
-  const currentPoNumberForDisplay = form.watch("poNumber") || defaultPoNumber;
-
   return (
     <Card className="w-full max-w-3xl mx-auto shadow-xl mb-8">
       <CardHeader>
@@ -353,7 +342,7 @@ export function PurchaseOrderFormV2({
                       onChange={field.onChange}
                       placeholder="Select Size for PO..."
                       searchPlaceholder="Search sizes..."
-                      emptySearchMessage="No size found."
+                      emptySearchMessage="No applicable sizes found."
                       disabled={poSizeOptions.length === 0}
                     />
                     <FormMessage />

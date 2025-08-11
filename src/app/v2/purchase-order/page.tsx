@@ -114,16 +114,13 @@ export default function PurchaseOrderPageV2() {
       if (foundPO) {
         setPoToEdit(foundPO);
         setSourcePiIdForNewPo(null);
-        toast({ title: "Editing Purchase Order", description: `Editing PO: ${foundPO.poNumber}.` });
         formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
       } else {
-        toast({ variant: "destructive", title: "Error", description: "Purchase Order not found for editing." });
         router.replace('/v2/purchase-order', { scroll: false });
       }
     } else if (piIdFromUrl) {
         setSourcePiIdForNewPo(piIdFromUrl);
         setPoToEdit(null);
-        toast({ title: "New Purchase Order", description: `Generating from Performa Invoice.` });
         formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
     } else {
         setPoToEdit(null);
@@ -152,7 +149,7 @@ export default function PurchaseOrderPageV2() {
       setPoToEdit(null);
       setSourcePiIdForNewPo(null);
       router.replace('/v2/purchase-order', { scroll: false });
-      await fetchData(); // Refetch data to show the new/updated PO
+      await fetchData(); 
     } catch (error: any) {
       toast({ variant: "destructive", title: "Save Error", description: error.message });
     }
@@ -227,7 +224,7 @@ export default function PurchaseOrderPageV2() {
               <PurchaseOrderFormV2
                 key={poToEdit?.id || sourcePiIdForNewPo || 'new'}
                 initialData={poToEdit}
-                sourcePi={allPerformaInvoices.find(pi => pi.id.toString() === sourcePiIdForNewPo)}
+                sourcePiId={sourcePiIdForNewPo}
                 isEditing={!!poToEdit}
                 onSave={handleSavePurchaseOrder}
                 onCancelEdit={handleCancelEdit}
