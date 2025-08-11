@@ -14,6 +14,7 @@ import type { Size } from "@/types/size";
 import type { Product } from "@/types/product";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
+import { generatePurchaseOrderPdf } from "@/lib/purchase-order-pdf";
 
 const PO_PREFIX = "HEM/PO/";
 

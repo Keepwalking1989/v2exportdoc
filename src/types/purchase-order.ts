@@ -1,5 +1,6 @@
 
 
+
 export interface PurchaseOrderItem {
   id?: string; // Optional because a new item doesn't have an ID yet
   productId: string; // ID of the product (from the source PI's items, filtered by PO's selected size)

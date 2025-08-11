@@ -126,7 +126,7 @@ export function PurchaseOrderFormV2({
             weightPerBox: item.weightPerBox || 0 
         }))
       });
-      replace(initialData.items.map(item => ({ ...item, weightPerBox: item.weightPerBox || 0 })));
+      replace(initialData.items.map(item => ({ ...item, id: item.id || undefined, weightPerBox: item.weightPerBox || 0 })));
     } else if (!isEditing && sourcePi) {
       const defaultValuesForNew = getDefaultFormValues(defaultPoNumber);
       form.reset({
@@ -187,9 +187,13 @@ export function PurchaseOrderFormV2({
   );
 
   const poSizeOptions: ComboboxOption[] = useMemo(() => {
-    const availableSizes: Size[] = (sourcePi && !isEditing) 
-        ? allSizes.filter(s => new Set(sourcePi.items.map(item => item.sizeId.toString())).has(s.id.toString()))
-        : allSizes;
+    let availableSizes: Size[] = [];
+    if (sourcePi && !isEditing) {
+        const sizeIdsInPi = new Set(sourcePi.items.map(item => item.sizeId.toString()));
+        availableSizes = allSizes.filter(s => sizeIdsInPi.has(s.id.toString()));
+    } else {
+        availableSizes = allSizes;
+    }
     return availableSizes.map(s => ({ value: s.id.toString(), label: `${s.size} (HSN: ${s.hsnCode})` }));
   }, [allSizes, sourcePi, isEditing]);
 

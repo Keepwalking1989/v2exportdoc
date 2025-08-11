@@ -36,26 +36,25 @@ interface PurchaseOrderListProps {
 const ITEMS_PER_PAGE = 5;
 
 export function PurchaseOrderListV2({
-  purchaseOrders: initialPurchaseOrders,
+  purchaseOrders,
   onEditPo,
   onDeletePo,
   onDownloadPdf,
   onGenerateExportDoc
 }: PurchaseOrderListProps) {
-  const router = useRouter(); 
   const { toast } = useToast();
   const [searchTerm, setSearchTerm] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
 
   const filteredPurchaseOrders = useMemo(() => {
-    if (!searchTerm) return initialPurchaseOrders;
-    return initialPurchaseOrders.filter(
+    if (!searchTerm) return purchaseOrders;
+    return purchaseOrders.filter(
       (po) =>
         po.poNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
         po.exporterName.toLowerCase().includes(searchTerm.toLowerCase()) ||
         po.manufacturerName.toLowerCase().includes(searchTerm.toLowerCase())
     );
-  }, [initialPurchaseOrders, searchTerm]);
+  }, [purchaseOrders, searchTerm]);
 
   useEffect(() => {
     if (filteredPurchaseOrders.length <= (currentPage - 1) * ITEMS_PER_PAGE && currentPage > 1) {
