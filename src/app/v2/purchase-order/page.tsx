@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useEffect, useCallback, useRef, useMemo } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { Header } from "@/components/layout/header";
 import { PurchaseOrderFormV2 } from "@/components/v2/purchase-order-form";
@@ -110,7 +110,7 @@ export default function PurchaseOrderPageV2() {
     const piIdFromUrl = searchParams.get("sourcePiId");
 
     if (poIdFromUrl) {
-      const foundPO = purchaseOrders.find(po => po.id === poIdFromUrl);
+      const foundPO = purchaseOrders.find(po => po.id.toString() === poIdFromUrl);
       if (foundPO) {
         setPoToEdit(foundPO);
         setSourcePiIdForNewPo(null);
@@ -164,7 +164,7 @@ export default function PurchaseOrderPageV2() {
         if (!response.ok) throw new Error('Failed to delete Purchase Order.');
 
         toast({ title: "Purchase Order Deleted", description: "The PO has been marked as deleted." });
-        if (poToEdit?.id === poId) {
+        if (poToEdit?.id.toString() === poId) {
             setPoToEdit(null);
             router.replace('/v2/purchase-order', { scroll: false });
         }
@@ -181,15 +181,15 @@ export default function PurchaseOrderPageV2() {
   };
   
   const handleDownloadPdf = (poId: string) => {
-    const poToPrint = purchaseOrders.find(po => po.id === poId);
+    const poToPrint = purchaseOrders.find(po => po.id.toString() === poId);
     if (!poToPrint) {
       toast({ variant: "destructive", title: "Error", description: "Purchase Order not found." });
       return;
     }
-    const exporter = allExporters.find(e => e.id === poToPrint.exporterId);
-    const manufacturer = allManufacturers.find(m => m.id === poToPrint.manufacturerId);
-    const poSizeDetails = allSizes.find(s => s.id === poToPrint.sizeId);
-    const sourcePiDetails = allPerformaInvoices.find(pi => pi.id === poToPrint.sourcePiId);
+    const exporter = allExporters.find(e => e.id.toString() === poToPrint.exporterId.toString());
+    const manufacturer = allManufacturers.find(m => m.id.toString() === poToPrint.manufacturerId.toString());
+    const poSizeDetails = allSizes.find(s => s.id.toString() === poToPrint.sizeId.toString());
+    const sourcePiDetails = allPerformaInvoices.find(pi => pi.id.toString() === poToPrint.sourcePiId.toString());
 
     if (!exporter || !manufacturer) {
       toast({ variant: "destructive", title: "Error Generating PDF", description: "Missing Exporter or Manufacturer data." });
@@ -202,18 +202,6 @@ export default function PurchaseOrderPageV2() {
   const handleGenerateExportDoc = (poId: string) => {
      router.push(`/v2/export-document?sourcePoId=${poId}`);
   };
-  
-  const enrichedPurchaseOrders = useMemo(() => {
-    return purchaseOrders.map((po) => {
-      const exporter = allExporters.find((e) => e.id.toString() === po.exporterId.toString());
-      const manufacturer = allManufacturers.find((m) => m.id.toString() === po.manufacturerId.toString());
-      return {
-        ...po,
-        exporterName: exporter?.companyName || "N/A",
-        manufacturerName: manufacturer?.companyName || "N/A",
-      };
-    });
-  }, [purchaseOrders, allExporters, allManufacturers]);
 
   const canCreateOrEdit = allExporters.length > 0 && allManufacturers.length > 0 && allSizes.length > 0 && allProducts.length > 0 && allPerformaInvoices.length > 0;
   const showForm = !!poToEdit || !!sourcePiIdForNewPo;
@@ -239,7 +227,7 @@ export default function PurchaseOrderPageV2() {
               <PurchaseOrderFormV2
                 key={poToEdit?.id || sourcePiIdForNewPo || 'new'}
                 initialData={poToEdit}
-                sourcePi={allPerformaInvoices.find(pi => pi.id === sourcePiIdForNewPo)}
+                sourcePi={allPerformaInvoices.find(pi => pi.id.toString() === sourcePiIdForNewPo)}
                 isEditing={!!poToEdit}
                 onSave={handleSavePurchaseOrder}
                 onCancelEdit={handleCancelEdit}
@@ -263,7 +251,9 @@ export default function PurchaseOrderPageV2() {
           )}
         </div>
         <PurchaseOrderListV2
-          purchaseOrders={enrichedPurchaseOrders}
+          purchaseOrders={purchaseOrders}
+          allExporters={allExporters}
+          allManufacturers={allManufacturers}
           onEditPo={(id) => router.push(`/v2/purchase-order?editPoId=${id}`)}
           onDeletePo={handleDeletePurchaseOrder}
           onDownloadPdf={handleDownloadPdf}
