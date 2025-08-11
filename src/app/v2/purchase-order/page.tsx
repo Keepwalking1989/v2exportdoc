@@ -211,7 +211,7 @@ export default function PurchaseOrderPageV2() {
       <div className="flex flex-col min-h-screen">
         <Header />
         <main className="flex-grow container mx-auto px-4 py-8">
-          <div className="text-center text-muted-foreground">Loading Purchase Order data...</div>
+          <div className="text-center text-muted-foreground">Loading purchase order data...</div>
         </main>
       </div>
     );

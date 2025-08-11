@@ -18,7 +18,7 @@ import {
 } from "@/components/ui/table";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
-import { Search, ChevronLeft, ChevronRight, FileText, FilePenLine, Trash2, Download, FileType, FilePlus2 } from "lucide-react";
+import { Search, ChevronLeft, ChevronRight, FileText, FilePenLine, Trash2, Download, FileType, FilePlus2 } from "lucide-react"; // Added FilePlus2
 import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
 
@@ -85,6 +85,10 @@ export function PurchaseOrderListV2({
 
   const totalPages = Math.ceil(filteredPurchaseOrders.length / ITEMS_PER_PAGE);
 
+  const handleDelete = (poId: string, poNumber: string) => {
+    onDeletePo(poId);
+  };
+  
   return (
     <Card className="w-full shadow-xl mt-8">
       <CardHeader>
@@ -142,11 +146,15 @@ export function PurchaseOrderListV2({
                         <AlertDialogContent>
                           <AlertDialogHeader>
                             <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-                            <AlertDialogDescription>This action will mark PO "{po.poNumber}" as deleted.</AlertDialogDescription>
+                            <AlertDialogDescription>
+                              This action cannot be undone. This will permanently delete Purchase Order "{po.poNumber}".
+                            </AlertDialogDescription>
                           </AlertDialogHeader>
                           <AlertDialogFooter>
                             <AlertDialogCancel>Cancel</AlertDialogCancel>
-                            <AlertDialogAction onClick={() => onDeletePo(po.id)}>Delete</AlertDialogAction>
+                            <AlertDialogAction onClick={() => handleDelete(po.id, po.poNumber)}>
+                              Delete
+                            </AlertDialogAction>
                           </AlertDialogFooter>
                         </AlertDialogContent>
                       </AlertDialog>

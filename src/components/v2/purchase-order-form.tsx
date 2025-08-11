@@ -2,7 +2,7 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useForm, useFieldArray, Controller, useWatch } from "react-hook-form";
+import { useForm, useFieldArray, Controller } from "react-hook-form";
 import * as z from "zod";
 import { Button } from "@/components/ui/button";
 import {
@@ -133,7 +133,6 @@ export function PurchaseOrderFormV2({
         exporterId: sourcePi.exporterId,
         poNumber: defaultPoNumber, 
         termsAndConditions: defaultPOTerms,
-        numberOfContainers: sourcePi.totalContainer
       });
       replace(defaultValuesForNew.items);
     } else if (!isEditing) {
@@ -195,19 +194,36 @@ export function PurchaseOrderFormV2({
     return distinctPiSizes.map(s => ({ value: s.id, label: `${s.size} (HSN: ${s.hsnCode})` }));
   }, [sourcePi, allSizes]);
 
+
   const getProductOptionsForPoSize = useCallback((poSizeIdForOptions: string): ComboboxOption[] => {
     if (!poSizeIdForOptions || !allProducts) return [];
     return allProducts
         .filter(p => p.sizeId === poSizeIdForOptions)
-        .map(p => ({ value: p.id, label: p.designName || "Unknown Product" }));
+        .map(p => ({ value: p.id, label: p.designName || "Unknown Product" }))
+        .filter((option, index, self) => index === self.findIndex(o => o.value === option.value)); 
   }, [allProducts]);
+
 
   const handleProductChange = (itemIndex: number, newProductId: string) => {
     form.setValue(`items.${itemIndex}.productId`, newProductId);
+    const productSizeId = selectedPoSizeId; 
     const product = allProducts.find(p => p.id === newProductId);
     const size = product ? allSizes.find(s => s.id === product.sizeId) : undefined;
     if (size) {
-        form.setValue(`items.${itemIndex}.weightPerBox`, product?.boxWeight || size.boxWeight);
+      form.setValue(`items.${itemIndex}.weightPerBox`, product?.boxWeight || size.boxWeight);
+    } else {
+      form.setValue(`items.${itemIndex}.weightPerBox`, 0);
+    }
+
+    if (!isEditing && sourcePi && newProductId) { 
+        const piItem = sourcePi.items.find(piItm => piItm.productId === newProductId && piItm.sizeId === productSizeId);
+        if (piItem) {
+            form.setValue(`items.${itemIndex}.boxes`, piItem.boxes);
+        } else {
+            form.setValue(`items.${itemIndex}.boxes`, 1);
+        }
+    } else if (!isEditing) { 
+        form.setValue(`items.${itemIndex}.boxes`, 1);
     }
   };
 
@@ -220,6 +236,8 @@ export function PurchaseOrderFormV2({
     onSave(poToSave);
   }
   
+  const currentPoNumberForDisplay = form.getValues("poNumber") || defaultPoNumber;
+
   return (
     <Card className="w-full max-w-3xl mx-auto shadow-xl mb-8">
       <CardHeader>
@@ -236,48 +254,244 @@ export function PurchaseOrderFormV2({
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <FormField control={form.control} name="exporterId" render={({ field }) => ( <FormItem><FormLabel className="flex items-center gap-2"><Package className="h-4 w-4 text-muted-foreground" />Exporter</FormLabel><Combobox options={exporterOptions} {...field} placeholder="Select Exporter..."/><FormMessage /></FormItem> )} />
-              <FormField control={form.control} name="manufacturerId" render={({ field }) => ( <FormItem><FormLabel className="flex items-center gap-2"><Factory className="h-4 w-4 text-muted-foreground" />Manufacturer</FormLabel><Combobox options={manufacturerOptions} {...field} placeholder="Select Manufacturer..."/><FormMessage /></FormItem> )} />
+              <FormField
+                control={form.control}
+                name="exporterId"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="flex items-center gap-2"><Package className="h-4 w-4 text-muted-foreground" />Exporter</FormLabel>
+                    <Combobox
+                      options={exporterOptions}
+                      value={field.value}
+                      onChange={field.onChange}
+                      placeholder="Select Exporter..."
+                      disabled={exporterOptions.length === 0}
+                    />
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="manufacturerId"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="flex items-center gap-2"><Factory className="h-4 w-4 text-muted-foreground" />Manufacturer</FormLabel>
+                    <Combobox
+                      options={manufacturerOptions}
+                      value={field.value}
+                      onChange={field.onChange}
+                      placeholder="Select Manufacturer..."
+                      disabled={manufacturerOptions.length === 0}
+                    />
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-               <FormField control={form.control} name="poNumber" render={({ field }) => ( <FormItem><FormLabel className="flex items-center gap-2">PO Number</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem> )}/>
-              <FormField control={form.control} name="poDate" render={({ field }) => ( <FormItem className="flex flex-col"><FormLabel className="flex items-center gap-2">PO Date</FormLabel><Popover><PopoverTrigger asChild><FormControl><Button variant={"outline"} className={cn("w-full pl-3 text-left font-normal",!field.value && "text-muted-foreground")}>{field.value ? format(field.value, "PPP") : <span>Pick a date</span>}<CalendarIcon className="ml-auto h-4 w-4 opacity-50" /></Button></FormControl></PopoverTrigger><PopoverContent className="w-auto p-0" align="start"><Calendar mode="single" selected={field.value} onSelect={field.onChange} initialFocus /></PopoverContent></Popover><FormMessage /></FormItem>)}/>
+               <FormField
+                control={form.control}
+                name="poNumber"
+                render={({ field }) => (
+                    <FormItem>
+                        <FormLabel className="flex items-center gap-2">PO Number</FormLabel>
+                        <FormControl>
+                        <Input {...field} placeholder="e.g. HEM/PO/25-26/001" />
+                        </FormControl>
+                        <FormMessage />
+                    </FormItem>
+                )}
+                />
+              <FormField
+                control={form.control}
+                name="poDate"
+                render={({ field }) => (
+                  <FormItem className="flex flex-col">
+                    <FormLabel className="flex items-center gap-2">PO Date</FormLabel>
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <FormControl>
+                          <Button
+                            variant={"outline"}
+                            className={cn("w-full pl-3 text-left font-normal",!field.value && "text-muted-foreground")}
+                          >
+                            {field.value ? format(field.value, "PPP") : <span>Pick a date</span>}
+                            <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                          </Button>
+                        </FormControl>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0" align="start">
+                        <Calendar mode="single" selected={field.value} onSelect={field.onChange} initialFocus />
+                      </PopoverContent>
+                    </Popover>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <FormField control={form.control} name="sizeId" render={({ field }) => ( <FormItem><FormLabel className="flex items-center gap-2"><Rss className="h-4 w-4 text-muted-foreground" />Size (for this PO)</FormLabel><Combobox options={poSizeOptions} {...field} placeholder="Select Size for PO..."/><FormMessage /></FormItem> )}/>
-              <FormField control={form.control} name="numberOfContainers" render={({ field }) => ( <FormItem><FormLabel className="flex items-center gap-2"><Package className="h-4 w-4 text-muted-foreground" />Number Of Containers</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormMessage /></FormItem> )}/>
+              <FormField
+                control={form.control}
+                name="sizeId"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="flex items-center gap-2"><Rss className="h-4 w-4 text-muted-foreground" />Size (for this PO)</FormLabel>
+                     <Combobox
+                      options={poSizeOptions}
+                      value={field.value}
+                      onChange={field.onChange}
+                      placeholder="Select Size for PO..."
+                      searchPlaceholder="Search sizes..."
+                      emptySearchMessage={poSizeOptions.length === 0 && initialData?.sizeId ? `Original Size ID: ${initialData.sizeId} (Details Missing). Select another if needed.` : "No size found. Ensure sizes exist or PI had sized items."}
+                      disabled={poSizeOptions.length === 0 && !(isEditing && initialData && initialData.sizeId)}
+                    />
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="numberOfContainers"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="flex items-center gap-2"><Package className="h-4 w-4 text-muted-foreground" />Number Of Containers</FormLabel>
+                    <FormControl><Input type="number" {...field} /></FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
             </div>
 
             <Card>
               <CardHeader>
-                <CardTitle className="flex items-center justify-between">Product Items<Button type="button" size="sm" onClick={() => append({ productId: "", designImage: "AS PER SAMPLE", weightPerBox: 0, boxes: 1, thickness: "8.5 MM to 9.0 MM" })} disabled={!selectedPoSizeId}><PlusCircle className="mr-2 h-4 w-4"/> Add Product</Button></CardTitle>
-                {!selectedPoSizeId && <CardDescription className="text-destructive">Please select a Size for the PO to add products.</CardDescription>}
+                <CardTitle className="flex items-center justify-between">
+                  Product Items
+                  <Button type="button" size="sm" onClick={() => append({ productId: "", designImage: "AS PER SAMPLE", weightPerBox: 0, boxes: 1, thickness: "8.5 MM to 9.0 MM" })} disabled={!selectedPoSizeId || (poSizeOptions.find(opt => opt.value === selectedPoSizeId)?.label.includes("(Details Missing)"))}>
+                    <PlusCircle className="mr-2 h-4 w-4" /> Add Product
+                  </Button>
+                </CardTitle>
+                 {!selectedPoSizeId && <CardDescription className="text-destructive">Please select a Size for the PO above to add products.</CardDescription>}
+                 {selectedPoSizeId && poSizeOptions.find(opt => opt.value === selectedPoSizeId)?.label.includes("(Details Missing)") && <CardDescription className="text-destructive">Cannot add products for a size with missing details. Please select a valid size.</CardDescription>}
               </CardHeader>
               <CardContent className="space-y-4">
-                {fields.map((item, index) => (
+                {fields.map((item, index) => {
+                  const productOptions = getProductOptionsForPoSize(selectedPoSizeId);
+                  return (
                     <div key={item.id} className="p-4 border rounded-md space-y-4 relative bg-card/50">
-                       <Button type="button" variant="destructive" size="icon" onClick={() => remove(index)} className="absolute top-2 right-2 h-7 w-7" disabled={fields.length <= 1}><Trash2 className="h-4 w-4" /></Button>
-                      <FormField control={form.control} name={`items.${index}.productId`} render={({ field }) => ( <FormItem><FormLabel className="flex items-center gap-2"><PackagePlus/>Product</FormLabel><Combobox options={getProductOptionsForPoSize(selectedPoSizeId)} value={field.value} onChange={(value) => handleProductChange(index, value)} placeholder="Select Product..." disabled={!selectedPoSizeId}/><FormMessage /></FormItem> )}/>
+                       <Button
+                          type="button"
+                          variant="destructive"
+                          size="icon"
+                          onClick={() => remove(index)}
+                          className="absolute top-2 right-2 h-7 w-7"
+                          disabled={fields.length <= 1}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      
+                      <FormField
+                        control={form.control}
+                        name={`items.${index}.productId`}
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel className="flex items-center gap-2"><PackagePlus className="h-4 w-4 text-muted-foreground"/>Product</FormLabel>
+                            <Combobox
+                              options={productOptions}
+                              value={field.value}
+                              onChange={(value) => handleProductChange(index, value)}
+                              placeholder="Select Product..."
+                              searchPlaceholder="Search products..."
+                              emptySearchMessage="No product found for this size."
+                              disabled={productOptions.length === 0 || !selectedPoSizeId || (poSizeOptions.find(opt => opt.value === selectedPoSizeId)?.label.includes("(Details Missing)"))}
+                            />
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <FormField control={form.control} name={`items.${index}.designImage`} render={({ field }) => ( <FormItem><FormLabel><ImageOff/>Design Image Ref.</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem> )}/>
-                        <FormField control={form.control} name={`items.${index}.weightPerBox`} render={({ field }) => ( <FormItem><FormLabel><Scale/>Weight/Box (kg)</FormLabel><FormControl><Input type="number" step="0.01" {...field} /></FormControl><FormMessage /></FormItem> )}/>
+                        <FormField
+                          control={form.control}
+                          name={`items.${index}.designImage`}
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel className="flex items-center gap-2"><ImageOff className="h-4 w-4 text-muted-foreground"/>Design Image Ref.</FormLabel>
+                              <FormControl><Input {...field} /></FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        <FormField
+                          control={form.control}
+                          name={`items.${index}.weightPerBox`}
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel className="flex items-center gap-2"><Scale className="h-4 w-4 text-muted-foreground"/>Weight/Box (kg)</FormLabel>
+                              <FormControl><Input type="number" step="0.01" {...field} /></FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
                       </div>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                         <FormField control={form.control} name={`items.${index}.boxes`} render={({ field }) => ( <FormItem><FormLabel><Box/>Boxes</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormMessage /></FormItem> )}/>
-                        <FormField control={form.control} name={`items.${index}.thickness`} render={({ field }) => ( <FormItem><FormLabel><CheckSquare/>Thickness</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem> )}/>
+                         <FormField
+                          control={form.control}
+                          name={`items.${index}.boxes`}
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel className="flex items-center gap-2"><Box className="h-4 w-4 text-muted-foreground"/>Boxes</FormLabel>
+                              <FormControl><Input type="number" {...field} /></FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        <FormField
+                          control={form.control}
+                          name={`items.${index}.thickness`}
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel className="flex items-center gap-2"><CheckSquare className="h-4 w-4 text-muted-foreground"/>Thickness</FormLabel>
+                              <FormControl><Input {...field} /></FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
                       </div>
                     </div>
-                ))}
+                  );
+                })}
               </CardContent>
             </Card>
 
-            <FormField control={form.control} name="termsAndConditions" render={({ field }) => ( <FormItem><FormLabel><Edit3/>Terms & Conditions:</FormLabel><FormControl><Textarea rows={5} {...field}/></FormControl><FormMessage /></FormItem> )}/>
+            <FormField
+              control={form.control}
+              name="termsAndConditions"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="flex items-center gap-2"><Edit3 className="h-4 w-4 text-muted-foreground" />Terms & Conditions:</FormLabel>
+                  <FormControl>
+                    <Textarea
+                      rows={5}
+                      placeholder="Enter terms and conditions..."
+                      {...field}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
 
             <div className="flex space-x-4">
-              <Button type="submit" className="flex-grow bg-accent hover:bg-accent/90 text-accent-foreground font-headline text-lg py-3">{isEditing ? "Update Purchase Order" : "Save Purchase Order"}</Button>
-              {onCancelEdit && ( <Button type="button" variant="outline" onClick={onCancelEdit} className="flex-grow font-headline text-lg py-3"><XCircle/> Cancel</Button> )}
+              <Button type="submit" className="flex-grow bg-accent hover:bg-accent/90 text-accent-foreground font-headline text-lg py-3">
+                {isEditing ? "Update Purchase Order" : "Save Purchase Order"}
+              </Button>
+              {onCancelEdit && (
+                <Button type="button" variant="outline" onClick={onCancelEdit} className="flex-grow font-headline text-lg py-3">
+                   <XCircle className="mr-2 h-5 w-5" /> Cancel
+                </Button>
+              )}
             </div>
           </form>
         </Form>
