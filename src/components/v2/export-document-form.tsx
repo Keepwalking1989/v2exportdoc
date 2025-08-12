@@ -690,10 +690,10 @@ export function ExportDocumentFormV2({
           : [defaultNewContainerItem],
       });
     } else if (!isEditing && sourcePoId) {
-      const po = allPurchaseOrders.find(p => p.id.toString() === sourcePoId);
+      const po = allPurchaseOrders.find(p => p.id === sourcePoId);
       if (!po) return;
 
-      const pi = allPerformaInvoices.find(p => p.id.toString() === po.sourcePiId);
+      const pi = allPerformaInvoices.find(p => p.id === po.sourcePiId);
       if (!pi) return;
       
       form.reset({
@@ -729,14 +729,14 @@ export function ExportDocumentFormV2({
   const piOptions = useMemo(() => {
     if (!watchedClientId) return [];
     return allPerformaInvoices
-      .filter(pi => pi.clientId.toString() === watchedClientId.toString())
+      .filter(pi => pi.clientId === watchedClientId)
       .map(pi => ({ value: pi.id, label: pi.invoiceNumber }));
   }, [watchedClientId, allPerformaInvoices]);
 
   const poOptions = useMemo(() => {
     if (!watchedPerformaInvoiceId) return [];
     return allPurchaseOrders
-      .filter(po => po.sourcePiId.toString() === watchedPerformaInvoiceId.toString())
+      .filter(po => po.sourcePiId === watchedPerformaInvoiceId)
       .map(po => ({ value: po.id, label: po.poNumber }));
   }, [watchedPerformaInvoiceId, allPurchaseOrders]);
 
@@ -890,9 +890,9 @@ export function ExportDocumentFormV2({
             </Card>
 
 
-            <div className="flex justify-between items-center mt-8">
-              <Button type="button" variant="outline" onClick={onCancelEdit} className="font-headline" disabled={!isEditing && !sourcePoId}><XCircle className="mr-2 h-5 w-5" /> Cancel</Button>
-              <Button type="submit" className="bg-accent hover:bg-accent/90 text-accent-foreground font-headline" disabled={exporterOptions.length === 0}><Save className="mr-2 h-5 w-5" />{isEditing ? "Update Document" : "Save Document"}</Button>
+            <div className="flex justify-end space-x-4">
+              <Button type="button" variant="ghost" onClick={onCancelEdit} className="font-headline"><XCircle className="mr-2 h-5 w-5" /> Cancel</Button>
+              <Button type="submit" className="bg-accent hover:bg-accent/90 text-accent-foreground font-headline"><Save className="mr-2 h-5 w-5" />{isEditing ? "Update Document" : "Save Document"}</Button>
             </div>
           </form>
         </Form>

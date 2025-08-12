@@ -79,15 +79,37 @@ export default function ExportDocumentPageV2() {
       
       const [docs, exporters, manufacturers, transporters, products, sizes, clients, performaInvoices, purchaseOrders] = data;
       
-      setExportDocuments(docs);
-      setAllExporters(exporters);
-      setAllManufacturers(manufacturers);
-      setAllTransporters(transporters);
-      setAllProducts(products);
-      setAllSizes(sizes);
-      setAllClients(clients);
-      setAllPerformaInvoices(performaInvoices);
-      setAllPurchaseOrders(purchaseOrders);
+      // Standardize all IDs to strings upon fetching
+      const standardizeDoc = (doc: any) => ({
+        ...doc,
+        id: doc.id.toString(),
+        exporterId: doc.exporterId?.toString(),
+        clientId: doc.clientId?.toString(),
+        purchaseOrderId: doc.purchaseOrderId?.toString(),
+        transporterId: doc.transporterId?.toString(),
+        performaInvoiceId: doc.performaInvoiceId?.toString(),
+        manufacturerDetails: (doc.manufacturerDetails || []).map((md: any) => ({
+            ...md,
+            id: md.id?.toString(),
+            manufacturerId: md.manufacturerId?.toString()
+        })),
+        containerItems: (doc.containerItems || []).map((ci: any) => ({
+            ...ci,
+            id: ci.id?.toString(),
+            productItems: (ci.productItems || []).map((pi: any) => ({ ...pi, id: pi.id?.toString(), productId: pi.productId?.toString() })),
+            sampleItems: (ci.sampleItems || []).map((si: any) => ({ ...si, id: si.id?.toString(), productId: si.productId?.toString() })),
+        }))
+      });
+
+      setExportDocuments(docs.map(standardizeDoc));
+      setAllExporters(exporters.map((d: any) => ({...d, id: d.id.toString()})));
+      setAllManufacturers(manufacturers.map((d: any) => ({...d, id: d.id.toString()})));
+      setAllTransporters(transporters.map((d: any) => ({...d, id: d.id.toString()})));
+      setAllProducts(products.map((d: any) => ({...d, id: d.id.toString(), sizeId: d.sizeId.toString()})));
+      setAllSizes(sizes.map((d: any) => ({...d, id: d.id.toString()})));
+      setAllClients(clients.map((d: any) => ({...d, id: d.id.toString()})));
+      setAllPerformaInvoices(performaInvoices.map((d: any) => ({...d, id: d.id.toString(), clientId: d.clientId.toString(), exporterId: d.exporterId.toString()})));
+      setAllPurchaseOrders(purchaseOrders.map((d: any) => ({...d, id: d.id.toString(), sourcePiId: d.sourcePiId.toString(), exporterId: d.exporterId.toString(), manufacturerId: d.manufacturerId.toString(), sizeId: d.sizeId.toString()})));
 
       setNextExportInvoiceNumber(getNextExportInvoiceNumberInternal(docs, getCurrentIndianFinancialYear()));
 
@@ -119,15 +141,19 @@ export default function ExportDocumentPageV2() {
         setShowForm(true);
         formRef.current?.scrollIntoView({ behavior: 'smooth' });
       } else {
-        toast({ variant: "destructive", title: "Not Found", description: "Export document to edit was not found." });
-        router.replace('/v2/export-document');
+        // This might happen if the data hasn't loaded yet when the effect runs
+        // We let the loading state handle this case.
+        if(!isLoading) {
+            toast({ variant: "destructive", title: "Not Found", description: "Export document to edit was not found." });
+            router.replace('/v2/export-document');
+        }
       }
     } else {
       setDocToEdit(null);
       setSourcePoIdForNew(null);
       setShowForm(false);
     }
-  }, [searchParams, exportDocuments, router, toast]);
+  }, [searchParams, exportDocuments, router, toast, isLoading]);
 
   const handleSaveDocument = async (doc: ExportDocument) => {
     const isEditing = !!docToEdit;
@@ -139,8 +165,9 @@ export default function ExportDocumentPageV2() {
       if (!response.ok) throw new Error((await response.json()).message || 'Failed to save document');
       
       toast({ title: `Document ${isEditing ? 'Updated' : 'Created'}`, description: `Document ${doc.exportInvoiceNumber} saved successfully.` });
-      router.replace('/v2/export-document', { scroll: false });
+      setShowForm(false);
       await fetchData(); // Refresh data
+      router.replace('/v2/export-document', { scroll: false });
     } catch (error: any) {
       toast({ variant: "destructive", title: "Save Failed", description: error.message });
     }
@@ -203,6 +230,7 @@ export default function ExportDocumentPageV2() {
                 <CardHeader><CardTitle className="font-headline text-2xl">Cannot Create Export Document</CardTitle></CardHeader>
                 <CardContent>
                   <p className="text-muted-foreground">To create an Export Document, please ensure you have added at least one Exporter and one Manufacturer in the V2 sections.</p>
+                  <Button onClick={handleCancelForm} variant="outline" className="mt-4">Back to List</Button>
                 </CardContent>
               </Card>
             )
@@ -232,3 +260,5 @@ export default function ExportDocumentPageV2() {
     </div>
   );
 }
+
+    

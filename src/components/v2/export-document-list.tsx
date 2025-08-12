@@ -88,12 +88,12 @@ export function ExportDocumentListV2({
                   
                   return (
                     <TableRow key={doc.id}>
-                      <TableCell className="font-medium">ED-{doc.id.toString().slice(-6)}</TableCell>
+                      <TableCell className="font-medium">ED-{doc.id.slice(-6)}</TableCell>
                       <TableCell>{doc.exportInvoiceNumber}</TableCell>
                       <TableCell>{exporterName}</TableCell>
                       <TableCell>{manufacturerNames}</TableCell>
                       <TableCell>{transporterName}</TableCell>
-                      <TableCell>{doc.purchaseOrderId ? `PO-${String(doc.purchaseOrderId).slice(-6)}` : "N/A"}</TableCell>
+                      <TableCell>{doc.purchaseOrderId ? `PO-${doc.purchaseOrderId.slice(-6)}` : "N/A"}</TableCell>
                       <TableCell className="text-right space-x-0.5">
                         <Tooltip>
                           <TooltipTrigger asChild>
@@ -114,7 +114,7 @@ export function ExportDocumentListV2({
                             <AlertDialogHeader>
                               <AlertDialogTitle>Are you sure?</AlertDialogTitle>
                               <AlertDialogDescription>
-                                This action will mark Export Document ED-{doc.id.toString().slice(-6)} as deleted.
+                                This action will mark Export Document ED-{doc.id.slice(-6)} as deleted.
                               </AlertDialogDescription>
                             </AlertDialogHeader>
                             <AlertDialogFooter>
@@ -147,3 +147,5 @@ export function ExportDocumentListV2({
     </Card>
   );
 }
+
+    
