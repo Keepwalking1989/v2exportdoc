@@ -93,7 +93,7 @@ export function ExportDocumentListV2({
                       <TableCell>{exporterName}</TableCell>
                       <TableCell>{manufacturerNames}</TableCell>
                       <TableCell>{transporterName}</TableCell>
-                      <TableCell>{doc.purchaseOrderId ? `PO-${doc.purchaseOrderId.slice(-6)}` : "N/A"}</TableCell>
+                      <TableCell>{doc.purchaseOrderId ? `PO-${String(doc.purchaseOrderId).slice(-6)}` : "N/A"}</TableCell>
                       <TableCell className="text-right space-x-0.5">
                         <Tooltip>
                           <TooltipTrigger asChild>
