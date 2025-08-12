@@ -110,20 +110,20 @@ export default function DashboardPageV2() {
                 
                 const data = await Promise.all(responses.map(res => res.json()));
                 
-                setTransactions(data[0]);
-                setExportDocuments(data[1]);
-                setManuBills(data[2]);
-                setTransBills(data[3]);
-                setSupplyBills(data[4]);
-                setProducts(data[5]);
-                setSizes(data[6]);
-                setClients(data[7]);
-                setPerformaInvoices(data[8]);
-                setPurchaseOrders(data[9]);
-                setManufacturers(data[10]);
-                setTransporters(data[11]);
-                setSuppliers(data[12]);
-                setPallets(data[13]);
+                setTransactions(data[0] || []);
+                setExportDocuments(data[1] || []);
+                setManuBills(data[2] || []);
+                setTransBills(data[3] || []);
+                setSupplyBills(data[4] || []);
+                setProducts(data[5] || []);
+                setSizes(data[6] || []);
+                setClients(data[7] || []);
+                setPerformaInvoices(data[8] || []);
+                setPurchaseOrders(data[9] || []);
+                setManufacturers(data[10] || []);
+                setTransporters(data[11] || []);
+                setSuppliers(data[12] || []);
+                setPallets(data[13] || []);
                 
             } catch (error: any) {
                 toast({ variant: "destructive", title: "Dashboard Error", description: `Could not load data: ${error.message}` });
@@ -140,7 +140,7 @@ export default function DashboardPageV2() {
         const toDate = date?.to ? new Date(date.to.setHours(23, 59, 59, 999)) : undefined;
 
         const isWithinRange = (checkDateStr: Date | string) => {
-            if (!fromDate || !toDate) return true;
+            if (!checkDateStr || !fromDate || !toDate) return true;
             const d = new Date(checkDateStr);
             return d >= fromDate && d <= toDate;
         };
@@ -225,7 +225,7 @@ export default function DashboardPageV2() {
         const exportValueBreakdown = relevantExportDocs.map(doc => {
             const piId = poToPiMap.get(doc.purchaseOrderId || '');
             const clientId = piId ? piToClientMap.get(piId) : undefined;
-            const client = clientId ? clients.find(c => c.id === clientId) : undefined;
+            const client = clientId ? clients.find(c => c.id.toString() === clientId.toString()) : undefined;
             return { id: doc.id, invoiceNumber: doc.exportInvoiceNumber, clientName: client?.companyName || 'N/A', value: calculateDocTotal(doc) };
         });
 
