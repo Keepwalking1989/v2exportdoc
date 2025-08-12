@@ -14,7 +14,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { FileText, Edit, Trash2, Download, FileType } from "lucide-react";
 
-interface ExportDocumentListV2Props {
+interface ExportDocumentListProps {
   documents: ExportDocument[];
   allExporters: Company[];
   allManufacturers: Manufacturer[];
@@ -24,7 +24,7 @@ interface ExportDocumentListV2Props {
   onDownloadPdf: (docId: string) => void;
 }
 
-export function ExportDocumentListV2({
+export function ExportDocumentList({
   documents,
   allExporters,
   allManufacturers,
@@ -32,7 +32,7 @@ export function ExportDocumentListV2({
   onEditDocument,
   onDeleteDocument,
   onDownloadPdf,
-}: ExportDocumentListV2Props) {
+}: ExportDocumentListProps) {
 
   if (!documents || documents.length === 0) {
     return (
@@ -85,7 +85,8 @@ export function ExportDocumentListV2({
                     .filter(Boolean)
                     .join(", ") || "N/A";
                   const transporterName = doc.transporterId ? (allTransporters.find(t => t.id === doc.transporterId)?.companyName || "N/A") : "N/A";
-                  
+                  const poId = doc.purchaseOrderId ? doc.purchaseOrderId.toString() : '';
+
                   return (
                     <TableRow key={doc.id}>
                       <TableCell className="font-medium">ED-{doc.id.slice(-6)}</TableCell>
@@ -93,7 +94,7 @@ export function ExportDocumentListV2({
                       <TableCell>{exporterName}</TableCell>
                       <TableCell>{manufacturerNames}</TableCell>
                       <TableCell>{transporterName}</TableCell>
-                      <TableCell>{doc.purchaseOrderId ? `PO-${doc.purchaseOrderId.slice(-6)}` : "N/A"}</TableCell>
+                      <TableCell>{poId ? `PO-${poId.slice(-6)}` : "N/A"}</TableCell>
                       <TableCell className="text-right space-x-0.5">
                         <Tooltip>
                           <TooltipTrigger asChild>
@@ -147,5 +148,3 @@ export function ExportDocumentListV2({
     </Card>
   );
 }
-
-    

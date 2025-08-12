@@ -640,7 +640,7 @@ const PalletCalculator: React.FC<{
 };
 
 
-export function ExportDocumentFormV2({
+export function ExportDocumentForm({
   initialData,
   isEditing,
   onSave,
@@ -672,50 +672,48 @@ export function ExportDocumentFormV2({
     name: "manufacturerDetails",
   });
 
-
   useEffect(() => {
     if (isEditing && initialData) {
-      form.reset({
-        ...initialData,
-        exportInvoiceDate: new Date(initialData.exportInvoiceDate),
-        exchangeDate: initialData.exchangeDate ? new Date(initialData.exchangeDate) : new Date(),
-        manufacturerDetails: initialData.manufacturerDetails?.map(md => ({...md, invoiceDate: md.invoiceDate ? new Date(md.invoiceDate) : new Date()})) || [defaultNewManufacturerItem],
-        containerItems: initialData.containerItems && initialData.containerItems.length > 0 
-          ? initialData.containerItems.map(item => ({
-              ...item,
-              weighingDateTime: item.weighingDateTime ? new Date(item.weighingDateTime) : new Date(),
-              productItems: item.productItems || [],
-              sampleItems: item.sampleItems || [],
-            }))
-          : [defaultNewContainerItem],
-      });
+        form.reset({
+            ...initialData,
+            exportInvoiceDate: new Date(initialData.exportInvoiceDate),
+            exchangeDate: initialData.exchangeDate ? new Date(initialData.exchangeDate) : new Date(),
+            manufacturerDetails: initialData.manufacturerDetails?.map(md => ({...md, invoiceDate: md.invoiceDate ? new Date(md.invoiceDate) : new Date()})) || [defaultNewManufacturerItem],
+            containerItems: initialData.containerItems && initialData.containerItems.length > 0 
+                ? initialData.containerItems.map(item => ({
+                    ...item,
+                    weighingDateTime: item.weighingDateTime ? new Date(item.weighingDateTime) : new Date(),
+                    productItems: item.productItems || [],
+                    sampleItems: item.sampleItems || [],
+                }))
+                : [defaultNewContainerItem],
+        });
     } else if (!isEditing && sourcePoId) {
-      const po = allPurchaseOrders.find(p => p.id === sourcePoId);
-      if (!po) return;
+        const po = allPurchaseOrders.find(p => p.id === sourcePoId);
+        if (!po) return;
 
-      const pi = allPerformaInvoices.find(p => p.id === po.sourcePiId);
-      if (!pi) return;
-      
-      form.reset({
-          ...getDefaultFormValues(nextExportInvoiceNumber),
-          clientId: pi.clientId,
-          performaInvoiceId: pi.id,
-          purchaseOrderId: po.id,
-          exporterId: po.exporterId,
-          manufacturerDetails: [{
-            id: Date.now().toString(),
-            manufacturerId: po.manufacturerId,
-            invoiceNumber: "",
-            invoiceDate: new Date(),
-            permissionNumber: allManufacturers.find(m => m.id === po.manufacturerId)?.stuffingPermissionNumber || ''
-          }],
-          countryOfFinalDestination: allClients.find(c => c.id === pi.clientId)?.country || '',
-      });
-
+        const pi = allPerformaInvoices.find(p => p.id === po.sourcePiId);
+        if (!pi) return;
+        
+        form.reset({
+            ...getDefaultFormValues(nextExportInvoiceNumber),
+            clientId: pi.clientId,
+            performaInvoiceId: pi.id,
+            purchaseOrderId: po.id,
+            exporterId: po.exporterId,
+            manufacturerDetails: [{
+                id: Date.now().toString(),
+                manufacturerId: po.manufacturerId,
+                invoiceNumber: "",
+                invoiceDate: new Date(),
+                permissionNumber: allManufacturers.find(m => m.id === po.manufacturerId)?.stuffingPermissionNumber || ''
+            }],
+            countryOfFinalDestination: allClients.find(c => c.id === pi.clientId)?.country || '',
+        });
     } else {
-      form.reset(getDefaultFormValues(nextExportInvoiceNumber));
+        form.reset(getDefaultFormValues(nextExportInvoiceNumber));
     }
-  }, [isEditing, initialData, form, nextExportInvoiceNumber, sourcePoId, allPurchaseOrders, allPerformaInvoices, allClients, allManufacturers]);
+}, [isEditing, initialData, form, nextExportInvoiceNumber, sourcePoId, allPurchaseOrders, allPerformaInvoices, allClients, allManufacturers]);
 
   const watchedClientId = useWatch({ control: form.control, name: 'clientId' });
   const watchedPerformaInvoiceId = useWatch({ control: form.control, name: 'performaInvoiceId' });
@@ -729,14 +727,14 @@ export function ExportDocumentFormV2({
   const piOptions = useMemo(() => {
     if (!watchedClientId) return [];
     return allPerformaInvoices
-      .filter(pi => pi.clientId === watchedClientId)
+      .filter(pi => pi.clientId.toString() === watchedClientId.toString())
       .map(pi => ({ value: pi.id, label: pi.invoiceNumber }));
   }, [watchedClientId, allPerformaInvoices]);
 
   const poOptions = useMemo(() => {
     if (!watchedPerformaInvoiceId) return [];
     return allPurchaseOrders
-      .filter(po => po.sourcePiId === watchedPerformaInvoiceId)
+      .filter(po => po.sourcePiId.toString() === watchedPerformaInvoiceId.toString())
       .map(po => ({ value: po.id, label: po.poNumber }));
   }, [watchedPerformaInvoiceId, allPurchaseOrders]);
 
@@ -900,5 +898,3 @@ export function ExportDocumentFormV2({
     </Card>
   );
 }
-
-    

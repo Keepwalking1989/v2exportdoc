@@ -4,8 +4,8 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { Header } from "@/components/layout/header";
-import { ExportDocumentFormV2 } from "@/components/v2/export-document-form";
-import { ExportDocumentListV2 } from "@/components/v2/export-document-list";
+import { ExportDocumentForm } from "@/components/v2/export-document-form";
+import { ExportDocumentList } from "@/components/v2/export-document-list";
 import type { ExportDocument } from "@/types/export-document";
 import type { PurchaseOrder } from "@/types/purchase-order";
 import type { Company } from "@/types/company";
@@ -79,8 +79,7 @@ export default function ExportDocumentPageV2() {
       
       const [docs, exporters, manufacturers, transporters, products, sizes, clients, performaInvoices, purchaseOrders] = data;
       
-      // Standardize all IDs to strings upon fetching
-      const standardizeDoc = (doc: any) => ({
+      const standardizeDoc = (doc: any): ExportDocument => ({
         ...doc,
         id: doc.id.toString(),
         exporterId: doc.exporterId?.toString(),
@@ -141,8 +140,6 @@ export default function ExportDocumentPageV2() {
         setShowForm(true);
         formRef.current?.scrollIntoView({ behavior: 'smooth' });
       } else {
-        // This might happen if the data hasn't loaded yet when the effect runs
-        // We let the loading state handle this case.
         if(!isLoading) {
             toast({ variant: "destructive", title: "Not Found", description: "Export document to edit was not found." });
             router.replace('/v2/export-document');
@@ -208,7 +205,7 @@ export default function ExportDocumentPageV2() {
         <div ref={formRef}>
           {showForm ? (
             canCreateOrEdit ? (
-              <ExportDocumentFormV2
+              <ExportDocumentForm
                 key={docToEdit?.id || sourcePoIdForNew || 'new-export-doc-v2'}
                 initialData={docToEdit}
                 isEditing={!!docToEdit}
@@ -244,13 +241,13 @@ export default function ExportDocumentPageV2() {
           )}
         </div>
 
-        <ExportDocumentListV2
+        <ExportDocumentList
           documents={exportDocuments}
           allExporters={allExporters}
           allManufacturers={allManufacturers}
           allTransporters={allTransporters}
           onDeleteDocument={handleDeleteDocument}
-          onEditDocument={(docId) => router.push(`/v2/export-document?editDocId=${docId}`)}
+          onEditDocument={(docId: string) => router.push(`/v2/export-document?editDocId=${docId}`)}
           onDownloadPdf={() => toast({ title: "PDF Generation", description: "PDF generation is handled on the Document Data page." })}
         />
       </main>
@@ -260,5 +257,3 @@ export default function ExportDocumentPageV2() {
     </div>
   );
 }
-
-    
