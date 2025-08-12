@@ -34,11 +34,11 @@ export async function GET(request: Request) {
             id: row.id.toString(),
             invoiceDate: new Date(row.invoiceDate),
             items: JSON.parse(row.items_json || '[]'),
-            totalContainer: Number(row.totalContainer),
-            freight: Number(row.freight),
-            discount: Number(row.discount),
-            subTotal: Number(row.subTotal),
-            grandTotal: Number(row.grandTotal),
+            totalContainer: Number(row.totalContainer || 0),
+            freight: Number(row.freight || 0),
+            discount: Number(row.discount || 0),
+            subTotal: Number(row.subTotal || 0),
+            grandTotal: Number(row.grandTotal || 0),
         };
         return NextResponse.json(invoice);
     } else {
@@ -55,11 +55,11 @@ export async function GET(request: Request) {
                 id: invoiceData.id.toString(),
                 invoiceDate: new Date(invoiceData.invoiceDate),
                 items: JSON.parse(items_json || '[]'),
-                 totalContainer: Number(invoiceData.totalContainer),
-                freight: Number(invoiceData.freight),
-                discount: Number(invoiceData.discount),
-                subTotal: Number(invoiceData.subTotal),
-                grandTotal: Number(invoiceData.grandTotal),
+                totalContainer: Number(invoiceData.totalContainer || 0),
+                freight: Number(invoiceData.freight || 0),
+                discount: Number(invoiceData.discount || 0),
+                subTotal: Number(invoiceData.subTotal || 0),
+                grandTotal: Number(invoiceData.grandTotal || 0),
             };
         });
 

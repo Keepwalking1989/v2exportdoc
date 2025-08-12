@@ -25,6 +25,7 @@ export async function GET() {
             id: orderData.id.toString(),
             poDate: new Date(orderData.poDate),
             items: JSON.parse(items_json || '[]'),
+            termsAndConditions: orderData.termsAndConditions || '',
         };
     });
 
@@ -46,7 +47,7 @@ export async function POST(request: Request) {
 
     const formattedPoDate = format(new Date(orderData.poDate), 'yyyy-MM-dd HH:mm:ss');
     const items_json = JSON.stringify(items);
-    const termsAndConditions = order.termsAndConditions;
+    const termsAndConditions = order.termsAndConditions || '';
 
     const [result] = await connection.query<OkPacket>(
       'INSERT INTO purchase_orders SET ?',
@@ -90,7 +91,7 @@ export async function PUT(request: Request) {
 
         const formattedPoDate = format(new Date(orderData.poDate), 'yyyy-MM-dd HH:mm:ss');
         const items_json = JSON.stringify(items);
-        const termsAndConditions = order.termsAndConditions;
+        const termsAndConditions = order.termsAndConditions || '';
 
         await connection.query<OkPacket>(
             'UPDATE purchase_orders SET ? WHERE id = ?',
