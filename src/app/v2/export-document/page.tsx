@@ -4,7 +4,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { Header } from "@/components/layout/header";
-import { ExportDocumentForm } from "@/components/v2/export-document-form";
+import { ExportDocumentForm, type ExportDocumentFormValues } from "@/components/v2/export-document-form";
 import { ExportDocumentList } from "@/components/v2/export-document-list";
 import type { ExportDocument } from "@/types/export-document";
 import type { PurchaseOrder } from "@/types/purchase-order";
@@ -75,10 +75,14 @@ export default function ExportDocumentPageV2() {
         fetch('/api/v2/client-data'), fetch('/api/v2/performa-invoice-data'),
         fetch('/api/v2/purchase-order-data')
       ]);
-      const data = await Promise.all(responses.map(res => res.json()));
+      const data = await Promise.all(responses.map(res => {
+          if (!res.ok) throw new Error(`Failed to fetch from ${res.url}`);
+          return res.json();
+      }));
       
       const [docs, exporters, manufacturers, transporters, products, sizes, clients, performaInvoices, purchaseOrders] = data;
       
+      // Standardize all incoming data to ensure IDs are strings
       const standardizeDoc = (doc: any): ExportDocument => ({
         ...doc,
         id: doc.id.toString(),
@@ -152,16 +156,22 @@ export default function ExportDocumentPageV2() {
     }
   }, [searchParams, exportDocuments, router, toast, isLoading]);
 
-  const handleSaveDocument = async (doc: ExportDocument) => {
+  const handleSaveDocument = async (formValues: ExportDocumentFormValues) => {
     const isEditing = !!docToEdit;
     const url = isEditing ? `/api/v2/export-document-data?id=${docToEdit!.id}` : '/api/v2/export-document-data';
     const method = isEditing ? 'PUT' : 'POST';
 
+    // Construct the final object here, ensuring all required fields are present
+    const docToSave: ExportDocument = {
+      ...formValues,
+      id: isEditing ? docToEdit!.id : '', // Let DB handle new IDs
+    };
+
     try {
-      const response = await fetch(url, { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(doc) });
+      const response = await fetch(url, { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(docToSave) });
       if (!response.ok) throw new Error((await response.json()).message || 'Failed to save document');
       
-      toast({ title: `Document ${isEditing ? 'Updated' : 'Created'}`, description: `Document ${doc.exportInvoiceNumber} saved successfully.` });
+      toast({ title: `Document ${isEditing ? 'Updated' : 'Created'}`, description: `Document ${docToSave.exportInvoiceNumber} saved successfully.` });
       setShowForm(false);
       await fetchData(); // Refresh data
       router.replace('/v2/export-document', { scroll: false });

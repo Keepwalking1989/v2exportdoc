@@ -102,7 +102,7 @@ export type ExportDocumentFormValues = z.infer<typeof formSchema>;
 interface ExportDocumentFormProps {
   initialData?: ExportDocument | null;
   isEditing: boolean;
-  onSave: (data: ExportDocument) => void;
+  onSave: (data: ExportDocumentFormValues) => void;
   onCancelEdit: () => void;
   allExporters: Company[];
   allManufacturers: Manufacturer[];
@@ -676,9 +676,14 @@ export function ExportDocumentForm({
     if (isEditing && initialData) {
         form.reset({
             ...initialData,
+            exporterId: initialData.exporterId?.toString(),
+            clientId: initialData.clientId?.toString(),
+            performaInvoiceId: initialData.performaInvoiceId?.toString(),
+            purchaseOrderId: initialData.purchaseOrderId?.toString(),
+            transporterId: initialData.transporterId?.toString(),
             exportInvoiceDate: new Date(initialData.exportInvoiceDate),
             exchangeDate: initialData.exchangeDate ? new Date(initialData.exchangeDate) : new Date(),
-            manufacturerDetails: initialData.manufacturerDetails?.map(md => ({...md, invoiceDate: md.invoiceDate ? new Date(md.invoiceDate) : new Date()})) || [defaultNewManufacturerItem],
+            manufacturerDetails: initialData.manufacturerDetails?.map(md => ({...md, manufacturerId: md.manufacturerId.toString(), invoiceDate: md.invoiceDate ? new Date(md.invoiceDate) : new Date()})) || [defaultNewManufacturerItem],
             containerItems: initialData.containerItems && initialData.containerItems.length > 0 
                 ? initialData.containerItems.map(item => ({
                     ...item,
@@ -697,13 +702,13 @@ export function ExportDocumentForm({
         
         form.reset({
             ...getDefaultFormValues(nextExportInvoiceNumber),
-            clientId: pi.clientId,
-            performaInvoiceId: pi.id,
-            purchaseOrderId: po.id,
-            exporterId: po.exporterId,
+            clientId: pi.clientId.toString(),
+            performaInvoiceId: pi.id.toString(),
+            purchaseOrderId: po.id.toString(),
+            exporterId: po.exporterId.toString(),
             manufacturerDetails: [{
                 id: Date.now().toString(),
-                manufacturerId: po.manufacturerId,
+                manufacturerId: po.manufacturerId.toString(),
                 invoiceNumber: "",
                 invoiceDate: new Date(),
                 permissionNumber: allManufacturers.find(m => m.id === po.manufacturerId)?.stuffingPermissionNumber || ''
@@ -754,18 +759,7 @@ export function ExportDocumentForm({
   );
 
   function onSubmit(values: ExportDocumentFormValues) {
-    const finalDocData: ExportDocument = {
-        ...values,
-        id: isEditing && initialData ? initialData.id : '',
-        manufacturerDetails: values.manufacturerDetails?.map(md => ({...md, id: md.id || Math.random().toString(36).substring(2,9)})),
-        containerItems: values.containerItems?.map(item => ({
-            ...item, 
-            id: item.id || Math.random().toString(36).substring(2,9),
-            productItems: item.productItems?.map(p => ({...p, id: p.id || Math.random().toString(36).substring(2,9)})),
-            sampleItems: item.sampleItems?.map(s => ({...s, id: s.id || Math.random().toString(36).substring(2,9)})),
-        })) || [],
-    };
-    onSave(finalDocData);
+    onSave(values);
   }
 
   const formTitle = isEditing ? "Edit Export Document (DB)" :
