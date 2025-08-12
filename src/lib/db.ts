@@ -1,6 +1,6 @@
 
+import 'dotenv/config';
 import mysql from 'mysql2/promise';
-import 'dotenv/config'
 
 // Create a connection pool instead of a single connection for better performance
 // The pool manages multiple connections and reuses them, which is more efficient.

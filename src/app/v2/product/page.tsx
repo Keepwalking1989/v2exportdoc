@@ -8,7 +8,7 @@ import { ProductListV2 } from "@/components/v2/product-list";
 import type { Product } from "@/types/product";
 import type { Size } from "@/types/size";
 import { useToast } from "@/hooks/use-toast";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 
 export default function ProductPageV2() {
   const { toast } = useToast();
@@ -132,14 +132,14 @@ export default function ProductPageV2() {
               onCancelEdit={handleCancelEdit}
             />
           ) : (
-            <Card className="w-full max-w-2xl mx-auto shadow-xl">
+            <Card className="w-full max-w-2xl mx-auto shadow-xl mb-8">
               <CardHeader>
                 <CardTitle className="font-headline text-2xl">Cannot Add Products</CardTitle>
               </CardHeader>
               <CardContent>
-                <p className="text-muted-foreground">
-                  There are no sizes defined in the database. Please go to the "V2 &gt; Size (MySQL)" page to create product sizes before adding products.
-                </p>
+                <CardDescription>
+                  There are no sizes defined in the database. Please go to the "V2 &gt; ADD &gt; Size" page to create product sizes before adding products.
+                </CardDescription>
               </CardContent>
             </Card>
           )}
