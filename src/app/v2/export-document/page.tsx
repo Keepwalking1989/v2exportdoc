@@ -4,8 +4,8 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { Header } from "@/components/layout/header";
-import { ExportDocumentForm, type ExportDocumentFormValues } from "@/components/v2/export-document-form";
-import { ExportDocumentList } from "@/components/v2/export-document-list";
+import { ExportDocumentFormV2 } from "@/components/v2/export-document-form";
+import { ExportDocumentListV2 } from "@/components/v2/export-document-list";
 import type { ExportDocument } from "@/types/export-document";
 import type { PurchaseOrder } from "@/types/purchase-order";
 import type { Company } from "@/types/company";
@@ -75,44 +75,19 @@ export default function ExportDocumentPageV2() {
         fetch('/api/v2/client-data'), fetch('/api/v2/performa-invoice-data'),
         fetch('/api/v2/purchase-order-data')
       ]);
-      const data = await Promise.all(responses.map(res => {
-          if (!res.ok) throw new Error(`Failed to fetch from ${res.url}`);
-          return res.json();
-      }));
+      const data = await Promise.all(responses.map(res => res.json()));
       
       const [docs, exporters, manufacturers, transporters, products, sizes, clients, performaInvoices, purchaseOrders] = data;
       
-      // Standardize all incoming data to ensure IDs are strings
-      const standardizeDoc = (doc: any): ExportDocument => ({
-        ...doc,
-        id: doc.id.toString(),
-        exporterId: doc.exporterId?.toString(),
-        clientId: doc.clientId?.toString(),
-        purchaseOrderId: doc.purchaseOrderId?.toString(),
-        transporterId: doc.transporterId?.toString(),
-        performaInvoiceId: doc.performaInvoiceId?.toString(),
-        manufacturerDetails: (doc.manufacturerDetails || []).map((md: any) => ({
-            ...md,
-            id: md.id?.toString(),
-            manufacturerId: md.manufacturerId?.toString()
-        })),
-        containerItems: (doc.containerItems || []).map((ci: any) => ({
-            ...ci,
-            id: ci.id?.toString(),
-            productItems: (ci.productItems || []).map((pi: any) => ({ ...pi, id: pi.id?.toString(), productId: pi.productId?.toString() })),
-            sampleItems: (ci.sampleItems || []).map((si: any) => ({ ...si, id: si.id?.toString(), productId: si.productId?.toString() })),
-        }))
-      });
-
-      setExportDocuments(docs.map(standardizeDoc));
-      setAllExporters(exporters.map((d: any) => ({...d, id: d.id.toString()})));
-      setAllManufacturers(manufacturers.map((d: any) => ({...d, id: d.id.toString()})));
-      setAllTransporters(transporters.map((d: any) => ({...d, id: d.id.toString()})));
-      setAllProducts(products.map((d: any) => ({...d, id: d.id.toString(), sizeId: d.sizeId.toString()})));
-      setAllSizes(sizes.map((d: any) => ({...d, id: d.id.toString()})));
-      setAllClients(clients.map((d: any) => ({...d, id: d.id.toString()})));
-      setAllPerformaInvoices(performaInvoices.map((d: any) => ({...d, id: d.id.toString(), clientId: d.clientId.toString(), exporterId: d.exporterId.toString()})));
-      setAllPurchaseOrders(purchaseOrders.map((d: any) => ({...d, id: d.id.toString(), sourcePiId: d.sourcePiId.toString(), exporterId: d.exporterId.toString(), manufacturerId: d.manufacturerId.toString(), sizeId: d.sizeId.toString()})));
+      setExportDocuments(docs);
+      setAllExporters(exporters);
+      setAllManufacturers(manufacturers);
+      setAllTransporters(transporters);
+      setAllProducts(products);
+      setAllSizes(sizes);
+      setAllClients(clients);
+      setAllPerformaInvoices(performaInvoices);
+      setAllPurchaseOrders(purchaseOrders);
 
       setNextExportInvoiceNumber(getNextExportInvoiceNumberInternal(docs, getCurrentIndianFinancialYear()));
 
@@ -144,37 +119,28 @@ export default function ExportDocumentPageV2() {
         setShowForm(true);
         formRef.current?.scrollIntoView({ behavior: 'smooth' });
       } else {
-        if(!isLoading) {
-            toast({ variant: "destructive", title: "Not Found", description: "Export document to edit was not found." });
-            router.replace('/v2/export-document');
-        }
+        toast({ variant: "destructive", title: "Not Found", description: "Export document to edit was not found." });
+        router.replace('/v2/export-document');
       }
     } else {
       setDocToEdit(null);
       setSourcePoIdForNew(null);
       setShowForm(false);
     }
-  }, [searchParams, exportDocuments, router, toast, isLoading]);
+  }, [searchParams, exportDocuments, router, toast]);
 
-  const handleSaveDocument = async (formValues: ExportDocumentFormValues) => {
+  const handleSaveDocument = async (doc: ExportDocument) => {
     const isEditing = !!docToEdit;
     const url = isEditing ? `/api/v2/export-document-data?id=${docToEdit!.id}` : '/api/v2/export-document-data';
     const method = isEditing ? 'PUT' : 'POST';
 
-    // Construct the final object here, ensuring all required fields are present
-    const docToSave: ExportDocument = {
-      ...formValues,
-      id: isEditing ? docToEdit!.id : '', // Let DB handle new IDs
-    };
-
     try {
-      const response = await fetch(url, { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(docToSave) });
+      const response = await fetch(url, { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(doc) });
       if (!response.ok) throw new Error((await response.json()).message || 'Failed to save document');
       
-      toast({ title: `Document ${isEditing ? 'Updated' : 'Created'}`, description: `Document ${docToSave.exportInvoiceNumber} saved successfully.` });
-      setShowForm(false);
-      await fetchData(); // Refresh data
+      toast({ title: `Document ${isEditing ? 'Updated' : 'Created'}`, description: `Document ${doc.exportInvoiceNumber} saved successfully.` });
       router.replace('/v2/export-document', { scroll: false });
+      await fetchData(); // Refresh data
     } catch (error: any) {
       toast({ variant: "destructive", title: "Save Failed", description: error.message });
     }
@@ -215,7 +181,7 @@ export default function ExportDocumentPageV2() {
         <div ref={formRef}>
           {showForm ? (
             canCreateOrEdit ? (
-              <ExportDocumentForm
+              <ExportDocumentFormV2
                 key={docToEdit?.id || sourcePoIdForNew || 'new-export-doc-v2'}
                 initialData={docToEdit}
                 isEditing={!!docToEdit}
@@ -237,7 +203,6 @@ export default function ExportDocumentPageV2() {
                 <CardHeader><CardTitle className="font-headline text-2xl">Cannot Create Export Document</CardTitle></CardHeader>
                 <CardContent>
                   <p className="text-muted-foreground">To create an Export Document, please ensure you have added at least one Exporter and one Manufacturer in the V2 sections.</p>
-                  <Button onClick={handleCancelForm} variant="outline" className="mt-4">Back to List</Button>
                 </CardContent>
               </Card>
             )
@@ -251,13 +216,13 @@ export default function ExportDocumentPageV2() {
           )}
         </div>
 
-        <ExportDocumentList
+        <ExportDocumentListV2
           documents={exportDocuments}
           allExporters={allExporters}
           allManufacturers={allManufacturers}
           allTransporters={allTransporters}
           onDeleteDocument={handleDeleteDocument}
-          onEditDocument={(docId: string) => router.push(`/v2/export-document?editDocId=${docId}`)}
+          onEditDocument={(docId) => router.push(`/v2/export-document?editDocId=${docId}`)}
           onDownloadPdf={() => toast({ title: "PDF Generation", description: "PDF generation is handled on the Document Data page." })}
         />
       </main>
