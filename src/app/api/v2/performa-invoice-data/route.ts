@@ -28,17 +28,17 @@ export async function GET(request: Request) {
             return NextResponse.json({ message: 'Invoice not found' }, { status: 404 });
         }
         const row = rows[0];
-        // Ensure all numeric fields that can be strings are parsed
+        // Ensure all numeric fields that can be strings are parsed safely
         const invoice: PerformaInvoice = {
             ...row,
             id: row.id.toString(),
             invoiceDate: new Date(row.invoiceDate),
             items: JSON.parse(row.items_json || '[]'),
-            totalContainer: Number(row.totalContainer || 0),
-            freight: Number(row.freight || 0),
-            discount: Number(row.discount || 0),
-            subTotal: Number(row.subTotal || 0),
-            grandTotal: Number(row.grandTotal || 0),
+            totalContainer: parseFloat(String(row.totalContainer)) || 0,
+            freight: parseFloat(String(row.freight)) || 0,
+            discount: parseFloat(String(row.discount)) || 0,
+            subTotal: parseFloat(String(row.subTotal)) || 0,
+            grandTotal: parseFloat(String(row.grandTotal)) || 0,
         };
         return NextResponse.json(invoice);
     } else {
@@ -55,11 +55,11 @@ export async function GET(request: Request) {
                 id: invoiceData.id.toString(),
                 invoiceDate: new Date(invoiceData.invoiceDate),
                 items: JSON.parse(items_json || '[]'),
-                totalContainer: Number(invoiceData.totalContainer || 0),
-                freight: Number(invoiceData.freight || 0),
-                discount: Number(invoiceData.discount || 0),
-                subTotal: Number(invoiceData.subTotal || 0),
-                grandTotal: Number(invoiceData.grandTotal || 0),
+                totalContainer: parseFloat(String(invoiceData.totalContainer)) || 0,
+                freight: parseFloat(String(invoiceData.freight)) || 0,
+                discount: parseFloat(String(invoiceData.discount)) || 0,
+                subTotal: parseFloat(String(invoiceData.subTotal)) || 0,
+                grandTotal: parseFloat(String(invoiceData.grandTotal)) || 0,
             };
         });
 
@@ -160,13 +160,25 @@ export async function DELETE(request: Request) {
         return NextResponse.json({ message: 'Invoice ID is required' }, { status: 400 });
     }
 
+    const connection = await pool.getConnection();
     try {
-        const connection = await pool.getConnection();
+        // Check for dependencies in purchase_orders table
+        const [rows] = await connection.query<RowDataPacket[]>(
+            'SELECT id FROM purchase_orders WHERE sourcePiId = ? AND isDeleted = FALSE',
+            [id]
+        );
+
+        if (rows.length > 0) {
+            connection.release();
+            return NextResponse.json({ message: 'Cannot delete: This Performa Invoice is linked to one or more Purchase Orders.' }, { status: 400 });
+        }
+
         await connection.query('UPDATE performa_invoices SET isDeleted = TRUE WHERE id = ?', [id]);
         connection.release();
         return NextResponse.json({ message: 'Performa Invoice marked as deleted' }, { status: 200 });
     } catch (error) {
         console.error(error);
+        connection.release();
         return NextResponse.json({ message: 'Error deleting performa invoice' }, { status: 500 });
     }
 }

@@ -32,12 +32,11 @@ export async function GET(request: Request) {
         const document: ExportDocument = {
             ...row,
             id: row.id.toString(),
-            purchaseOrderId: row.purchaseOrderId?.toString(),
             containerItems: JSON.parse(row.containerItems_json || '[]'),
             manufacturerDetails: JSON.parse(row.manufacturerDetails_json || '[]'),
             exportInvoiceDate: new Date(row.exportInvoiceDate),
-            exchangeDate: row.exchangeDate ? new Date(row.exchangeDate) : new Date(), // Provide default for safety
-            // Ensure nested dates are parsed safely
+            exchangeDate: new Date(row.exchangeDate),
+            // Ensure nested dates are parsed
             ewayBillDate: row.ewayBillDate ? new Date(row.ewayBillDate) : undefined,
             shippingBillDate: row.shippingBillDate ? new Date(row.shippingBillDate) : undefined,
             blDate: row.blDate ? new Date(row.blDate) : undefined,
@@ -54,7 +53,6 @@ export async function GET(request: Request) {
             return {
                 ...docData,
                 id: docData.id.toString(),
-                purchaseOrderId: docData.purchaseOrderId?.toString(),
                 containerItems: JSON.parse(containerItems_json || '[]'),
                 manufacturerDetails: JSON.parse(manufacturerDetails_json || '[]'),
                 exportInvoiceDate: new Date(docData.exportInvoiceDate),
@@ -107,13 +105,7 @@ export async function POST(request: Request) {
         await connection.commit();
         const newDocId = result.insertId;
 
-        const savedDoc: ExportDocument = {
-            ...doc, 
-            id: newDocId.toString(),
-            purchaseOrderId: doc.purchaseOrderId?.toString(),
-        };
-
-        return NextResponse.json(savedDoc, { status: 201 });
+        return NextResponse.json({ ...doc, id: newDocId.toString() }, { status: 201 });
 
     } catch (error) {
         await connection.rollback();
@@ -164,14 +156,8 @@ export async function PUT(request: Request) {
         );
         
         await connection.commit();
-        
-        const updatedDoc: ExportDocument = { 
-            ...doc, 
-            id,
-            purchaseOrderId: doc.purchaseOrderId?.toString(),
-        };
 
-        return NextResponse.json(updatedDoc, { status: 200 });
+        return NextResponse.json({ ...doc, id }, { status: 200 });
 
     } catch (error) {
         await connection.rollback();

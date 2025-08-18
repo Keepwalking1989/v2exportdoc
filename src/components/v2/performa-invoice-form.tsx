@@ -278,30 +278,25 @@ export function PerformaInvoiceFormV2({
   });
 
   useEffect(() => {
-    // Only reset form if all dependency data is available, preventing premature resets.
-    if (isEditing && initialDataForForm && exporters.length > 0 && clients.length > 0 && banks.length > 0) {
-        const formData = {
-            ...initialDataForForm,
-            exporterId: initialDataForForm.exporterId.toString(),
-            clientId: initialDataForForm.clientId.toString(),
-            selectedBankId: initialDataForForm.selectedBankId?.toString() || "",
-            invoiceDate: new Date(initialDataForForm.invoiceDate),
-            items: initialDataForForm.items.map(item => ({
-                id: item.id,
-                sizeId: item.sizeId,
-                productId: item.productId,
-                boxes: item.boxes,
-                ratePerSqmt: item.ratePerSqmt,
-                commission: item.commission || 0,
-            }))
-        };
-        form.reset(formData);
-        replace(formData.items);
-    } else if (!isEditing) {
-        form.reset(getDefaultFormValues(nextInvoiceNumber));
-        replace(getDefaultFormValues(nextInvoiceNumber).items);
+    if (isEditing && initialDataForForm) {
+      const formData = {
+        ...initialDataForForm,
+        invoiceDate: new Date(initialDataForForm.invoiceDate),
+        selectedBankId: initialDataForForm.selectedBankId?.toString() || "",
+        items: initialDataForForm.items.map(item => ({
+          id: item.id,
+          sizeId: item.sizeId,
+          productId: item.productId,
+          boxes: item.boxes,
+          ratePerSqmt: item.ratePerSqmt,
+          commission: item.commission || 0,
+        }))
+      };
+      form.reset(formData);
+    } else {
+      form.reset(getDefaultFormValues(nextInvoiceNumber));
     }
-}, [isEditing, initialDataForForm, nextInvoiceNumber, form, replace, exporters, clients, banks]);
+  }, [isEditing, initialDataForForm, nextInvoiceNumber, form]);
 
 
   const watchedItemsForTotals = form.watch("items");
@@ -731,3 +726,4 @@ export function PerformaInvoiceFormV2({
     </Card>
   );
 }
+
