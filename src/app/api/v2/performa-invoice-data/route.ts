@@ -34,11 +34,11 @@ export async function GET(request: Request) {
             id: row.id.toString(),
             invoiceDate: new Date(row.invoiceDate),
             items: JSON.parse(row.items_json || '[]'),
-            totalContainer: parseFloat(String(row.totalContainer)) || 0,
-            freight: parseFloat(String(row.freight)) || 0,
-            discount: parseFloat(String(row.discount)) || 0,
-            subTotal: parseFloat(String(row.subTotal)) || 0,
-            grandTotal: parseFloat(String(row.grandTotal)) || 0,
+            totalContainer: parseFloat(String(row.totalContainer || 0)),
+            freight: parseFloat(String(row.freight || 0)),
+            discount: parseFloat(String(row.discount || 0)),
+            subTotal: parseFloat(String(row.subTotal || 0)),
+            grandTotal: parseFloat(String(row.grandTotal || 0)),
         };
         return NextResponse.json(invoice);
     } else {
@@ -55,11 +55,11 @@ export async function GET(request: Request) {
                 id: invoiceData.id.toString(),
                 invoiceDate: new Date(invoiceData.invoiceDate),
                 items: JSON.parse(items_json || '[]'),
-                totalContainer: parseFloat(String(invoiceData.totalContainer)) || 0,
-                freight: parseFloat(String(invoiceData.freight)) || 0,
-                discount: parseFloat(String(invoiceData.discount)) || 0,
-                subTotal: parseFloat(String(invoiceData.subTotal)) || 0,
-                grandTotal: parseFloat(String(invoiceData.grandTotal)) || 0,
+                totalContainer: parseFloat(String(invoiceData.totalContainer || 0)),
+                freight: parseFloat(String(invoiceData.freight || 0)),
+                discount: parseFloat(String(invoiceData.discount || 0)),
+                subTotal: parseFloat(String(invoiceData.subTotal || 0)),
+                grandTotal: parseFloat(String(invoiceData.grandTotal || 0)),
             };
         });
 
