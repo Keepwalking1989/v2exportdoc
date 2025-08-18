@@ -640,7 +640,7 @@ const PalletCalculator: React.FC<{
 };
 
 
-export function ExportDocumentForm({
+export function ExportDocumentFormV2({
   initialData,
   isEditing,
   onSave,
@@ -722,7 +722,7 @@ export function ExportDocumentForm({
 
   const watchedClientId = useWatch({ control: form.control, name: 'clientId' });
   const watchedPerformaInvoiceId = useWatch({ control: form.control, name: 'performaInvoiceId' });
-
+  const watchedManufacturerId = useWatch({ control: form.control, name: 'manufacturerDetails.0.manufacturerId' });
 
   const clientOptions: ComboboxOption[] = useMemo(() =>
     allClients.map(c => ({ value: c.id, label: c.companyName })),
@@ -732,16 +732,19 @@ export function ExportDocumentForm({
   const piOptions = useMemo(() => {
     if (!watchedClientId) return [];
     return allPerformaInvoices
-      .filter(pi => pi.clientId.toString() === watchedClientId.toString())
+      .filter(pi => pi.clientId.toString() === watchedClientId)
       .map(pi => ({ value: pi.id, label: pi.invoiceNumber }));
   }, [watchedClientId, allPerformaInvoices]);
 
   const poOptions = useMemo(() => {
-    if (!watchedPerformaInvoiceId) return [];
+    if (!watchedPerformaInvoiceId || !watchedManufacturerId) return [];
     return allPurchaseOrders
-      .filter(po => po.sourcePiId.toString() === watchedPerformaInvoiceId.toString())
+      .filter(po => 
+        po.sourcePiId.toString() === watchedPerformaInvoiceId &&
+        po.manufacturerId.toString() === watchedManufacturerId
+      )
       .map(po => ({ value: po.id, label: po.poNumber }));
-  }, [watchedPerformaInvoiceId, allPurchaseOrders]);
+  }, [watchedPerformaInvoiceId, watchedManufacturerId, allPurchaseOrders]);
 
   const exporterOptions: ComboboxOption[] = useMemo(() =>
     allExporters.map(e => ({ value: e.id, label: e.companyName })),
@@ -789,7 +792,7 @@ export function ExportDocumentForm({
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <FormField control={form.control} name="clientId" render={({ field }) => ( <FormItem><FormLabel className="flex items-center gap-2"><Users className="h-4 w-4 text-muted-foreground" />Client *</FormLabel><Combobox options={clientOptions} value={field.value} onChange={field.onChange} placeholder="Select Client..."/><FormMessage /></FormItem>)} />
                 <FormField control={form.control} name="performaInvoiceId" render={({ field }) => ( <FormItem><FormLabel className="flex items-center gap-2"><ShoppingCart className="h-4 w-4 text-muted-foreground" />Performa Invoice *</FormLabel><Combobox options={piOptions} value={field.value} onChange={field.onChange} placeholder="Select PI..." disabled={!watchedClientId} /><FormMessage /></FormItem>)} />
-                <FormField control={form.control} name="purchaseOrderId" render={({ field }) => ( <FormItem><FormLabel className="flex items-center gap-2"><ReceiptText className="h-4 w-4 text-muted-foreground" />Purchase Order *</FormLabel><Combobox options={poOptions} value={field.value} onChange={field.onChange} placeholder="Select PO..." disabled={!watchedPerformaInvoiceId} /><FormMessage /></FormItem>)} />
+                <FormField control={form.control} name="purchaseOrderId" render={({ field }) => ( <FormItem><FormLabel className="flex items-center gap-2"><ReceiptText className="h-4 w-4 text-muted-foreground" />Purchase Order *</FormLabel><Combobox options={poOptions} value={field.value} onChange={field.onChange} placeholder="Select PO..." disabled={!watchedPerformaInvoiceId || !watchedManufacturerId} /><FormMessage /></FormItem>)} />
             </div>
             
             <Card>
@@ -892,3 +895,6 @@ export function ExportDocumentForm({
     </Card>
   );
 }
+
+
+    
