@@ -1,3 +1,4 @@
+
 import type {Metadata} from 'next';
 import './globals.css';
 import { Toaster } from "@/components/ui/toaster";
@@ -17,8 +18,8 @@ const spaceGrotesk = SpaceGrotesk({
 
 
 export const metadata: Metadata = {
-  title: 'BizForm - Company Management',
-  description: 'Manage company information easily with BizForm.',
+  title: 'HEMITH ERP - V2',
+  description: 'HEMITH ERP Application',
 };
 
 export default function RootLayout({
