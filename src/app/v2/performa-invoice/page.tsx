@@ -32,6 +32,11 @@ export default function PerformaInvoicePageV2() {
   const [nextInvoiceNumber, setNextInvoiceNumber] = useState("");
   const [invoiceToEdit, setInvoiceToEdit] = useState<PerformaInvoice | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isClient, setIsClient] = useState(false);
+
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
 
   const getNextInvoiceNumberInternal = useCallback((invoices: PerformaInvoice[]): string => {
     if (invoices.length === 0) return `${INVOICE_PREFIX}1`;
@@ -109,14 +114,12 @@ export default function PerformaInvoicePageV2() {
   
   const handleDeleteInvoice = async (invoiceId: string) => {
     const originalInvoices = [...performaInvoices];
-    // Optimistically update the UI
     setPerformaInvoices(prev => prev.filter(inv => inv.id !== invoiceId));
 
     try {
       const response = await fetch(`/api/v2/performa-invoice-data?id=${invoiceId}`, { method: 'DELETE' });
       
       if (!response.ok) {
-        // If the API call fails, revert the UI and show an error
         setPerformaInvoices(originalInvoices);
         const errorData = await response.json();
         throw new Error(errorData.message || 'Failed to delete invoice.');
@@ -124,9 +127,9 @@ export default function PerformaInvoicePageV2() {
       
       toast({ title: "Invoice Deleted", description: "The performa invoice has been marked as deleted." });
       if (invoiceToEdit?.id === invoiceId) setInvoiceToEdit(null);
-      // No need to refetch, UI is already updated.
     } catch (error: any) {
       toast({ variant: "destructive", title: "Delete Error", description: error.message });
+      setPerformaInvoices(originalInvoices);
     }
   };
 
@@ -154,7 +157,7 @@ export default function PerformaInvoicePageV2() {
       toast({ variant: "destructive", title: "Error", description: "Exporter or Client data missing for this invoice." });
       return;
     }
-    await generatePerformaInvoicePdf(invoice, exporter, client, sizes, products, selectedBank);
+    await generatePerformaInvoicePdf(invoice, exporter, client, sizes, allProducts, selectedBank);
   };
 
   if (isLoading) {
@@ -206,15 +209,26 @@ export default function PerformaInvoicePageV2() {
             </Card>
           )}
         </div>
-        <PerformaInvoiceListV2
-          invoices={performaInvoices}
-          exporters={exporters}
-          clients={clients}
-          onDeleteInvoice={handleDeleteInvoice}
-          onEditInvoice={handleEditInvoice}
-          onGeneratePO={handleGeneratePO}
-          onDownloadPdf={handleDownloadPdf}
-        />
+        {isClient ? (
+          <PerformaInvoiceListV2
+            invoices={performaInvoices}
+            exporters={exporters}
+            clients={clients}
+            onDeleteInvoice={handleDeleteInvoice}
+            onEditInvoice={handleEditInvoice}
+            onGeneratePO={handleGeneratePO}
+            onDownloadPdf={handleDownloadPdf}
+          />
+        ) : (
+          <Card className="w-full shadow-xl mt-8">
+            <CardHeader>
+              <CardTitle className="font-headline text-2xl">Saved Performa Invoices</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-center text-muted-foreground py-4">Loading invoices...</p>
+            </CardContent>
+          </Card>
+        )}
       </main>
       <footer className="py-6 text-center text-sm text-muted-foreground border-t">
         © {new Date().getFullYear()} HEMITH ERP. All rights reserved. (V2 - MySQL)
