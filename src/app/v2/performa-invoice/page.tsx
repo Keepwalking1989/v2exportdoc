@@ -47,7 +47,7 @@ export default function PerformaInvoicePageV2() {
     try {
       const [piRes, expRes, cliRes, sizeRes, prodRes, bankRes] = await Promise.all([
         fetch('/api/v2/performa-invoice-data'),
-        fetch('/api/v2/exporter-data'), // Assuming an exporter API exists
+        fetch('/api/v2/exporter-data'),
         fetch('/api/v2/client-data'),
         fetch('/api/v2/size-data'),
         fetch('/api/v2/product-data'),
@@ -108,13 +108,23 @@ export default function PerformaInvoicePageV2() {
   };
   
   const handleDeleteInvoice = async (invoiceId: string) => {
+    const originalInvoices = [...performaInvoices];
+    // Optimistically update the UI
+    setPerformaInvoices(prev => prev.filter(inv => inv.id !== invoiceId));
+
     try {
       const response = await fetch(`/api/v2/performa-invoice-data?id=${invoiceId}`, { method: 'DELETE' });
-      if (!response.ok) throw new Error('Failed to delete invoice.');
+      
+      if (!response.ok) {
+        // If the API call fails, revert the UI and show an error
+        setPerformaInvoices(originalInvoices);
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to delete invoice.');
+      }
       
       toast({ title: "Invoice Deleted", description: "The performa invoice has been marked as deleted." });
       if (invoiceToEdit?.id === invoiceId) setInvoiceToEdit(null);
-      await fetchData();
+      // No need to refetch, UI is already updated.
     } catch (error: any) {
       toast({ variant: "destructive", title: "Delete Error", description: error.message });
     }
