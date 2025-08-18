@@ -209,6 +209,7 @@ const ContainerProductItem: React.FC<ItemProps> = ({
     
     const { productId, boxes, rate } = currentItem;
 
+    // This handler is called only on user interaction, preventing overwrites on initial load.
     const handleProductSelectionChange = (newProductId: string) => {
         setValue(`containerItems.${containerIndex}.${fieldArrayName}.${productIndex}.productId`, newProductId, { shouldDirty: true });
         
@@ -216,17 +217,21 @@ const ContainerProductItem: React.FC<ItemProps> = ({
         if (product) {
             const size = allSizes.find(s => s.id === product.sizeId);
             
+            // Set Rate
             const newRate = product.salesPrice ?? (size?.salesPrice || 0);
             setValue(`containerItems.${containerIndex}.${fieldArrayName}.${productIndex}.rate`, newRate);
             
+            // Set Weights
             const numBoxes = Number(getValues(`containerItems.${containerIndex}.${fieldArrayName}.${productIndex}.boxes`)) || 0;
             const baseBoxWeight = product.boxWeight ?? (size?.boxWeight || 0);
             const newNetWeight = numBoxes * baseBoxWeight;
             setValue(`containerItems.${containerIndex}.${fieldArrayName}.${productIndex}.netWeight`, newNetWeight);
+            // Default gross weight to net weight when product changes
             setValue(`containerItems.${containerIndex}.${fieldArrayName}.${productIndex}.grossWeight`, newNetWeight);
         }
     };
 
+    // This effect updates weights ONLY when the box count changes, preserving manually entered weights.
     useEffect(() => {
         const currentProductId = getValues(`containerItems.${containerIndex}.${fieldArrayName}.${productIndex}.productId`);
         if (!currentProductId) return;
@@ -672,6 +677,9 @@ export function ExportDocumentFormV2({
     name: "manufacturerDetails",
   });
 
+  const watchedClientId = useWatch({ control: form.control, name: "clientId" });
+  const watchedPerformaInvoiceId = useWatch({ control: form.control, name: "performaInvoiceId" });
+  const watchedManufacturerId = useWatch({ control: form.control, name: "manufacturerDetails.0.manufacturerId" });
 
   useEffect(() => {
     if (isEditing && initialData) {
@@ -712,33 +720,28 @@ export function ExportDocumentFormV2({
                 manufacturerId: po.manufacturerId.toString(),
                 invoiceNumber: "",
                 invoiceDate: new Date(),
-                permissionNumber: allManufacturers.find(m => m.id === po.manufacturerId)?.stuffingPermissionNumber || ''
+                permissionNumber: allManufacturers.find(m => m.id.toString() === po.manufacturerId.toString())?.stuffingPermissionNumber || ''
             }],
-            countryOfFinalDestination: allClients.find(c => c.id === pi.clientId)?.country || '',
+            countryOfFinalDestination: allClients.find(c => c.id.toString() === pi.clientId.toString())?.country || '',
         });
     } else {
         form.reset(getDefaultFormValues(nextExportInvoiceNumber));
     }
-}, [isEditing, initialData, form, nextExportInvoiceNumber, sourcePoId, allPurchaseOrders, allPerformaInvoices, allClients, allManufacturers]);
+  }, [isEditing, initialData, form, nextExportInvoiceNumber, sourcePoId, allPurchaseOrders, allPerformaInvoices, allClients, allManufacturers]);
 
-  const watchedClientId = useWatch({ control: form.control, name: 'clientId' });
-  const watchedPerformaInvoiceId = useWatch({ control: form.control, name: 'performaInvoiceId' });
-  const watchedManufacturerDetails = useWatch({ control: form.control, name: 'manufacturerDetails' });
-
-  // Reset dependent fields when their parent changes
+  // Effect for cascading resets
   useEffect(() => {
     if (form.formState.isDirty) {
-        form.setValue('performaInvoiceId', '');
-        form.setValue('purchaseOrderId', '');
+      form.setValue('performaInvoiceId', '');
+      form.setValue('purchaseOrderId', '');
     }
   }, [watchedClientId, form]);
   
   useEffect(() => {
     if (form.formState.isDirty) {
-        form.setValue('purchaseOrderId', '');
+      form.setValue('purchaseOrderId', '');
     }
-  }, [watchedPerformaInvoiceId, watchedManufacturerDetails, form]);
-
+  }, [watchedPerformaInvoiceId, watchedManufacturerId, form]);
 
   const clientOptions: ComboboxOption[] = useMemo(() =>
     allClients.map(c => ({ value: c.id.toString(), label: c.companyName })),
@@ -753,7 +756,7 @@ export function ExportDocumentFormV2({
   }, [watchedClientId, allPerformaInvoices]);
 
   const poOptions = useMemo(() => {
-    const selectedManufacturerId = watchedManufacturerDetails?.[0]?.manufacturerId;
+    const selectedManufacturerId = form.getValues('manufacturerDetails.0.manufacturerId');
     if (!watchedPerformaInvoiceId || !selectedManufacturerId) return [];
     
     return allPurchaseOrders
@@ -762,7 +765,7 @@ export function ExportDocumentFormV2({
         po.manufacturerId?.toString() === selectedManufacturerId
       )
       .map(po => ({ value: po.id.toString(), label: po.poNumber }));
-  }, [watchedPerformaInvoiceId, watchedManufacturerDetails, allPurchaseOrders]);
+  }, [watchedPerformaInvoiceId, watchedManufacturerId, allPurchaseOrders, form]);
 
   const exporterOptions: ComboboxOption[] = useMemo(() =>
     allExporters.map(e => ({ value: e.id, label: e.companyName })),
@@ -810,7 +813,7 @@ export function ExportDocumentFormV2({
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <FormField control={form.control} name="clientId" render={({ field }) => ( <FormItem><FormLabel className="flex items-center gap-2"><Users className="h-4 w-4 text-muted-foreground" />Client *</FormLabel><Combobox options={clientOptions} value={field.value} onChange={field.onChange} placeholder="Select Client..."/><FormMessage /></FormItem>)} />
                 <FormField control={form.control} name="performaInvoiceId" render={({ field }) => ( <FormItem><FormLabel className="flex items-center gap-2"><ShoppingCart className="h-4 w-4 text-muted-foreground" />Performa Invoice *</FormLabel><Combobox options={piOptions} value={field.value} onChange={field.onChange} placeholder="Select PI..." disabled={!watchedClientId} /><FormMessage /></FormItem>)} />
-                <FormField control={form.control} name="purchaseOrderId" render={({ field }) => ( <FormItem><FormLabel className="flex items-center gap-2"><ReceiptText className="h-4 w-4 text-muted-foreground" />Purchase Order *</FormLabel><Combobox options={poOptions} value={field.value} onChange={field.onChange} placeholder="Select PO..." disabled={!watchedPerformaInvoiceId || !watchedManufacturerDetails?.[0]?.manufacturerId} /><FormMessage /></FormItem>)} />
+                <FormField control={form.control} name="purchaseOrderId" render={({ field }) => ( <FormItem><FormLabel className="flex items-center gap-2"><ReceiptText className="h-4 w-4 text-muted-foreground" />Purchase Order *</FormLabel><Combobox options={poOptions} value={field.value} onChange={field.onChange} placeholder="Select PO..." disabled={!watchedPerformaInvoiceId || !watchedManufacturerId} /><FormMessage /></FormItem>)} />
             </div>
             
             <Card>
@@ -856,7 +859,7 @@ export function ExportDocumentFormV2({
                 <FormField control={form.control} name="discount" render={({ field }) => (<FormItem><FormLabel className="flex items-center gap-2"><Percent className="h-4 w-4 text-muted-foreground" />Discount</FormLabel><FormControl><Input type="number" placeholder="e.g. 100" {...field} /></FormControl><FormMessage /></FormItem>)} />
             </div>
             
-            <FormField control={form.control} name="termsOfDeliveryAndPayment" render={({ field }) => (<FormItem><FormLabel className="flex items-center gap-2"><FileText className="h-4 w-4 text-muted-foreground" />Terms Of Delivery &amp; Payments *</FormLabel><FormControl><Textarea placeholder="Terms..." {...field} /></FormControl><FormMessage /></FormItem>)} />
+            <FormField control={form.control} name="termsOfDeliveryAndPayment" render={({ field }) => (<FormItem><FormLabel className="flex items-center gap-2"><FileText className="h-4 w-4 text-muted-foreground" />Terms Of Delivery & Payments *</FormLabel><FormControl><Textarea placeholder="Terms..." {...field} /></FormControl><FormMessage /></FormItem>)} />
 
             <Card>
               <CardHeader>
@@ -890,7 +893,7 @@ export function ExportDocumentFormV2({
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                                 <FormField control={form.control} name={`containerItems.${index}.description`} render={({ field }) => (<FormItem className="lg:col-span-1"><FormLabel className="flex items-center gap-2"><NotebookText className="h-4 w-4 text-muted-foreground" />Description *</FormLabel><FormControl><Textarea placeholder="e.g. Contains fragile items, handle with care." {...field} /></FormControl><FormMessage /></FormItem>)} />
                                 <FormField control={form.control} name={`containerItems.${index}.weighingSlipNo`} render={({ field }) => (<FormItem><FormLabel className="flex items-center gap-2"><FileScan className="h-4 w-4 text-muted-foreground" />Weighing Slip No *</FormLabel><FormControl><Input placeholder="e.g. WSN-5678" {...field} /></FormControl><FormMessage /></FormItem>)} />
-                                <Controller control={form.control} name={`containerItems.${index}.weighingDateTime`} render={({ field }) => {const dateValue = field.value ? new Date(field.value) : new Date(); const localISOString = new Date(dateValue.getTime() - (dateValue.getTimezoneOffset() * 60000)).toISOString().slice(0, 16); return (<FormItem><FormLabel className="flex items-center gap-2"><Clock className="h-4 w-4 text-muted-foreground" />Weighing Date &amp; Time *</FormLabel><FormControl><Input type="datetime-local" value={field.value ? localISOString : ''} onChange={(e) => {field.onChange(e.target.value ? new Date(e.target.value) : null);}} /></FormControl><FormMessage /></FormItem>);}} />
+                                <Controller control={form.control} name={`containerItems.${index}.weighingDateTime`} render={({ field }) => {const dateValue = field.value ? new Date(field.value) : new Date(); const localISOString = new Date(dateValue.getTime() - (dateValue.getTimezoneOffset() * 60000)).toISOString().slice(0, 16); return (<FormItem><FormLabel className="flex items-center gap-2"><Clock className="h-4 w-4 text-muted-foreground" />Weighing Date & Time *</FormLabel><FormControl><Input type="datetime-local" value={field.value ? localISOString : ''} onChange={(e) => {field.onChange(e.target.value ? new Date(e.target.value) : null);}} /></FormControl><FormMessage /></FormItem>);}} />
                             </div>
                             
                             <ContainerProductManager containerIndex={index} control={form.control} allProducts={allProducts} allSizes={allSizes} getValues={form.getValues} setValue={form.setValue} />
@@ -905,7 +908,7 @@ export function ExportDocumentFormV2({
 
             <div className="flex justify-end space-x-4">
               <Button type="button" variant="ghost" onClick={onCancelEdit} className="font-headline"><XCircle className="mr-2 h-5 w-5" /> Cancel</Button>
-              <Button type="submit" className="bg-accent hover:bg-accent/90 text-accent-foreground font-headline"><Save className="mr-2 h-5 w-5" />{isEditing ? "Update Document" : "Save Document"}</Button>
+              <Button type="submit" className="bg-accent hover:bg-accent/90 text-accent-foreground font-headline" disabled={exporterOptions.length === 0}><Save className="mr-2 h-5 w-5" />{isEditing ? "Update Document" : "Save Document"}</Button>
             </div>
           </form>
         </Form>
