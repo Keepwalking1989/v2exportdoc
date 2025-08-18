@@ -81,7 +81,7 @@ export default function DashboardPageV2() {
     const [manuBills, setManuBills] = useState<ManuBill[]>([]);
     const [transBills, setTransBills] = useState<TransBill[]>([]);
     const [supplyBills, setSupplyBills] = useState<SupplyBill[]>([]);
-    const [products, setProducts] = useState<Product[]>([]);
+    const [products, setProducts] = useState<(Product & { sizeName: string })[]>([]);
     const [sizes, setSizes] = useState<Size[]>([]);
     const [clients, setClients] = useState<Client[]>([]);
     const [performaInvoices, setPerformaInvoices] = useState<PerformaInvoice[]>([]);
@@ -329,4 +329,3 @@ export default function DashboardPageV2() {
         </div>
     );
 }
-
