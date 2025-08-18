@@ -1,4 +1,3 @@
-
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -102,7 +101,7 @@ export type ExportDocumentFormValues = z.infer<typeof formSchema>;
 interface ExportDocumentFormProps {
   initialData?: ExportDocument | null;
   isEditing: boolean;
-  onSave: (data: ExportDocumentFormValues) => void;
+  onSave: (data: ExportDocument) => void;
   onCancelEdit: () => void;
   allExporters: Company[];
   allManufacturers: Manufacturer[];
@@ -209,7 +208,6 @@ const ContainerProductItem: React.FC<ItemProps> = ({
     
     const { productId, boxes, rate } = currentItem;
 
-    // This handler is called only on user interaction, preventing overwrites on initial load.
     const handleProductSelectionChange = (newProductId: string) => {
         setValue(`containerItems.${containerIndex}.${fieldArrayName}.${productIndex}.productId`, newProductId, { shouldDirty: true });
         
@@ -217,21 +215,17 @@ const ContainerProductItem: React.FC<ItemProps> = ({
         if (product) {
             const size = allSizes.find(s => s.id === product.sizeId);
             
-            // Set Rate
             const newRate = product.salesPrice ?? (size?.salesPrice || 0);
             setValue(`containerItems.${containerIndex}.${fieldArrayName}.${productIndex}.rate`, newRate);
             
-            // Set Weights
             const numBoxes = Number(getValues(`containerItems.${containerIndex}.${fieldArrayName}.${productIndex}.boxes`)) || 0;
             const baseBoxWeight = product.boxWeight ?? (size?.boxWeight || 0);
             const newNetWeight = numBoxes * baseBoxWeight;
             setValue(`containerItems.${containerIndex}.${fieldArrayName}.${productIndex}.netWeight`, newNetWeight);
-            // Default gross weight to net weight when product changes
             setValue(`containerItems.${containerIndex}.${fieldArrayName}.${productIndex}.grossWeight`, newNetWeight);
         }
     };
 
-    // This effect updates weights ONLY when the box count changes, preserving manually entered weights.
     useEffect(() => {
         const currentProductId = getValues(`containerItems.${containerIndex}.${fieldArrayName}.${productIndex}.productId`);
         if (!currentProductId) return;
@@ -677,71 +671,69 @@ export function ExportDocumentFormV2({
     name: "manufacturerDetails",
   });
 
-  const watchedClientId = useWatch({ control: form.control, name: "clientId" });
-  const watchedPerformaInvoiceId = useWatch({ control: form.control, name: "performaInvoiceId" });
-  const watchedManufacturerId = useWatch({ control: form.control, name: "manufacturerDetails.0.manufacturerId" });
 
   useEffect(() => {
     if (isEditing && initialData) {
-        form.reset({
-            ...initialData,
-            exporterId: initialData.exporterId?.toString(),
-            clientId: initialData.clientId?.toString(),
-            performaInvoiceId: initialData.performaInvoiceId?.toString(),
-            purchaseOrderId: initialData.purchaseOrderId?.toString(),
-            transporterId: initialData.transporterId?.toString(),
-            exportInvoiceDate: new Date(initialData.exportInvoiceDate),
-            exchangeDate: initialData.exchangeDate ? new Date(initialData.exchangeDate) : new Date(),
-            manufacturerDetails: initialData.manufacturerDetails?.map(md => ({...md, manufacturerId: md.manufacturerId.toString(), invoiceDate: md.invoiceDate ? new Date(md.invoiceDate) : new Date()})) || [defaultNewManufacturerItem],
-            containerItems: initialData.containerItems && initialData.containerItems.length > 0 
-                ? initialData.containerItems.map(item => ({
-                    ...item,
-                    weighingDateTime: item.weighingDateTime ? new Date(item.weighingDateTime) : new Date(),
-                    productItems: item.productItems || [],
-                    sampleItems: item.sampleItems || [],
-                }))
-                : [defaultNewContainerItem],
-        });
+      form.reset({
+        ...initialData,
+        exportInvoiceDate: new Date(initialData.exportInvoiceDate),
+        exchangeDate: initialData.exchangeDate ? new Date(initialData.exchangeDate) : new Date(),
+        manufacturerDetails: initialData.manufacturerDetails?.map(md => ({...md, invoiceDate: md.invoiceDate ? new Date(md.invoiceDate) : new Date()})) || [defaultNewManufacturerItem],
+        containerItems: initialData.containerItems && initialData.containerItems.length > 0 
+          ? initialData.containerItems.map(item => ({
+              ...item,
+              weighingDateTime: item.weighingDateTime ? new Date(item.weighingDateTime) : new Date(),
+              productItems: item.productItems || [],
+              sampleItems: item.sampleItems || [],
+            }))
+          : [defaultNewContainerItem],
+      });
     } else if (!isEditing && sourcePoId) {
-        const po = allPurchaseOrders.find(p => p.id === sourcePoId);
-        if (!po) return;
+      const po = allPurchaseOrders.find(p => p.id.toString() === sourcePoId);
+      if (!po) return;
 
-        const pi = allPerformaInvoices.find(p => p.id === po.sourcePiId);
-        if (!pi) return;
-        
-        form.reset({
-            ...getDefaultFormValues(nextExportInvoiceNumber),
-            clientId: pi.clientId.toString(),
-            performaInvoiceId: pi.id.toString(),
-            purchaseOrderId: po.id.toString(),
-            exporterId: po.exporterId.toString(),
-            manufacturerDetails: [{
-                id: Date.now().toString(),
-                manufacturerId: po.manufacturerId.toString(),
-                invoiceNumber: "",
-                invoiceDate: new Date(),
-                permissionNumber: allManufacturers.find(m => m.id.toString() === po.manufacturerId.toString())?.stuffingPermissionNumber || ''
-            }],
-            countryOfFinalDestination: allClients.find(c => c.id.toString() === pi.clientId.toString())?.country || '',
-        });
+      const pi = allPerformaInvoices.find(p => p.id.toString() === po.sourcePiId.toString());
+      if (!pi) return;
+      
+      form.reset({
+          ...getDefaultFormValues(nextExportInvoiceNumber),
+          clientId: pi.clientId,
+          performaInvoiceId: pi.id,
+          purchaseOrderId: po.id,
+          exporterId: po.exporterId,
+          manufacturerDetails: [{
+            id: Date.now().toString(),
+            manufacturerId: po.manufacturerId,
+            invoiceNumber: "",
+            invoiceDate: new Date(),
+            permissionNumber: allManufacturers.find(m => m.id === po.manufacturerId)?.stuffingPermissionNumber || ''
+          }],
+          countryOfFinalDestination: allClients.find(c => c.id === pi.clientId)?.country || '',
+      });
+
     } else {
-        form.reset(getDefaultFormValues(nextExportInvoiceNumber));
+      form.reset(getDefaultFormValues(nextExportInvoiceNumber));
     }
   }, [isEditing, initialData, form, nextExportInvoiceNumber, sourcePoId, allPurchaseOrders, allPerformaInvoices, allClients, allManufacturers]);
 
-  // Effect for cascading resets
+  const watchedClientId = useWatch({ control: form.control, name: 'clientId' });
+  const watchedPerformaInvoiceId = useWatch({ control: form.control, name: 'performaInvoiceId' });
+  const watchedManufacturerDetails = useWatch({ control: form.control, name: 'manufacturerDetails' });
+
+  // Cascading Resets
   useEffect(() => {
     if (form.formState.isDirty) {
       form.setValue('performaInvoiceId', '');
       form.setValue('purchaseOrderId', '');
     }
   }, [watchedClientId, form]);
-  
+
   useEffect(() => {
-    if (form.formState.isDirty) {
+     if (form.formState.isDirty) {
       form.setValue('purchaseOrderId', '');
     }
-  }, [watchedPerformaInvoiceId, watchedManufacturerId, form]);
+  }, [watchedPerformaInvoiceId, watchedManufacturerDetails, form]);
+
 
   const clientOptions: ComboboxOption[] = useMemo(() =>
     allClients.map(c => ({ value: c.id.toString(), label: c.companyName })),
@@ -756,7 +748,7 @@ export function ExportDocumentFormV2({
   }, [watchedClientId, allPerformaInvoices]);
 
   const poOptions = useMemo(() => {
-    const selectedManufacturerId = form.getValues('manufacturerDetails.0.manufacturerId');
+    const selectedManufacturerId = watchedManufacturerDetails?.[0]?.manufacturerId;
     if (!watchedPerformaInvoiceId || !selectedManufacturerId) return [];
     
     return allPurchaseOrders
@@ -765,7 +757,8 @@ export function ExportDocumentFormV2({
         po.manufacturerId?.toString() === selectedManufacturerId
       )
       .map(po => ({ value: po.id.toString(), label: po.poNumber }));
-  }, [watchedPerformaInvoiceId, watchedManufacturerId, allPurchaseOrders, form]);
+  }, [watchedPerformaInvoiceId, watchedManufacturerDetails, allPurchaseOrders]);
+
 
   const exporterOptions: ComboboxOption[] = useMemo(() =>
     allExporters.map(e => ({ value: e.id, label: e.companyName })),
@@ -783,13 +776,24 @@ export function ExportDocumentFormV2({
   );
 
   function onSubmit(values: ExportDocumentFormValues) {
-    onSave(values);
+    const finalDocData: ExportDocument = {
+        ...values,
+        id: isEditing && initialData ? initialData.id : '',
+        manufacturerDetails: values.manufacturerDetails?.map(md => ({...md, id: md.id || Math.random().toString(36).substring(2,9)})),
+        containerItems: values.containerItems?.map(item => ({
+            ...item, 
+            id: item.id || Math.random().toString(36).substring(2,9),
+            productItems: item.productItems?.map(p => ({...p, id: p.id || Math.random().toString(36).substring(2,9)})),
+            sampleItems: item.sampleItems?.map(s => ({...s, id: s.id || Math.random().toString(36).substring(2,9)})),
+        })) || [],
+    };
+    onSave(finalDocData);
   }
 
   const formTitle = isEditing ? "Edit Export Document (DB)" :
                     sourcePoId ? "New Export Document (from PO)" : "New Export Document (DB)";
   const formDescription = isEditing ? "Modify the details for this document in the database." :
-                          sourcePoId ? `This document is linked to PO ID: ${sourcePoId.slice(-6)}. It will be saved to the database.` :
+                          sourcePoId ? `This document is linked to PO ID: ${sourcePoId}. It will be saved to the database.` :
                           "Fill in the details for the new document to save to the database.";
 
   return (
@@ -813,7 +817,7 @@ export function ExportDocumentFormV2({
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <FormField control={form.control} name="clientId" render={({ field }) => ( <FormItem><FormLabel className="flex items-center gap-2"><Users className="h-4 w-4 text-muted-foreground" />Client *</FormLabel><Combobox options={clientOptions} value={field.value} onChange={field.onChange} placeholder="Select Client..."/><FormMessage /></FormItem>)} />
                 <FormField control={form.control} name="performaInvoiceId" render={({ field }) => ( <FormItem><FormLabel className="flex items-center gap-2"><ShoppingCart className="h-4 w-4 text-muted-foreground" />Performa Invoice *</FormLabel><Combobox options={piOptions} value={field.value} onChange={field.onChange} placeholder="Select PI..." disabled={!watchedClientId} /><FormMessage /></FormItem>)} />
-                <FormField control={form.control} name="purchaseOrderId" render={({ field }) => ( <FormItem><FormLabel className="flex items-center gap-2"><ReceiptText className="h-4 w-4 text-muted-foreground" />Purchase Order *</FormLabel><Combobox options={poOptions} value={field.value} onChange={field.onChange} placeholder="Select PO..." disabled={!watchedPerformaInvoiceId || !watchedManufacturerId} /><FormMessage /></FormItem>)} />
+                <FormField control={form.control} name="purchaseOrderId" render={({ field }) => ( <FormItem><FormLabel className="flex items-center gap-2"><ReceiptText className="h-4 w-4 text-muted-foreground" />Purchase Order *</FormLabel><Combobox options={poOptions} value={field.value} onChange={field.onChange} placeholder="Select PO..." disabled={!watchedPerformaInvoiceId || !watchedManufacturerDetails?.[0]?.manufacturerId} /><FormMessage /></FormItem>)} />
             </div>
             
             <Card>
