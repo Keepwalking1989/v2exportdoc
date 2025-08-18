@@ -5,6 +5,8 @@ import type { TransBill, TransBillItem } from "@/types/trans-bill";
 import type { RowDataPacket, OkPacket } from 'mysql2';
 import { format } from 'date-fns';
 
+export const dynamic = 'force-dynamic';
+
 // Helper types for DB results
 interface TransBillRow extends RowDataPacket, Omit<TransBill, 'items'> {
     items_json: string;

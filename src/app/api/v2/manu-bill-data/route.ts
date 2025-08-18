@@ -5,6 +5,8 @@ import type { ManuBill, ManuBillItem } from "@/types/manu-bill";
 import type { RowDataPacket, OkPacket } from 'mysql2';
 import { format } from 'date-fns';
 
+export const dynamic = 'force-dynamic';
+
 // Helper types for DB results
 interface ManuBillRow extends RowDataPacket, Omit<ManuBill, 'items'> {
     items_json: string;

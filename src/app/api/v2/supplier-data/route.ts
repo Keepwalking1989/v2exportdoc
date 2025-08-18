@@ -4,6 +4,8 @@ import { pool } from '@/lib/db';
 import type { Supplier } from "@/types/supplier";
 import { OkPacket } from 'mysql2';
 
+export const dynamic = 'force-dynamic';
+
 // GET handler to fetch all non-deleted suppliers
 export async function GET() {
   try {

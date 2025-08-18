@@ -5,6 +5,8 @@ import type { SupplyBill, SupplyBillItem } from "@/types/supply-bill";
 import type { RowDataPacket, OkPacket } from 'mysql2';
 import { format } from 'date-fns';
 
+export const dynamic = 'force-dynamic';
+
 // Helper types for DB results
 interface SupplyBillRow extends RowDataPacket, Omit<SupplyBill, 'items'> {
     items_json: string;

@@ -5,6 +5,8 @@ import type { PerformaInvoice } from "@/types/performa-invoice";
 import type { RowDataPacket, OkPacket } from 'mysql2';
 import { format } from 'date-fns';
 
+export const dynamic = 'force-dynamic';
+
 interface PerformaInvoiceRow extends RowDataPacket, Omit<PerformaInvoice, 'items'> {
     items_json: string;
 }

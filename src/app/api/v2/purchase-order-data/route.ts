@@ -5,6 +5,8 @@ import type { PurchaseOrder } from "@/types/purchase-order";
 import type { RowDataPacket, OkPacket } from 'mysql2';
 import { format } from 'date-fns';
 
+export const dynamic = 'force-dynamic';
+
 interface PurchaseOrderRow extends RowDataPacket, Omit<PurchaseOrder, 'items'> {
     items_json: string;
 }

@@ -3,6 +3,8 @@ import { NextResponse } from 'next/server';
 import { pool } from '@/lib/db';
 import type { Company } from "@/types/company";
 
+export const dynamic = 'force-dynamic';
+
 // This is a simplified GET handler for fetching exporters.
 // A full implementation would have POST, PUT, DELETE for full CRUD.
 export async function GET() {

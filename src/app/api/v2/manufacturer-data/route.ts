@@ -5,6 +5,8 @@ import type { Manufacturer } from "@/types/manufacturer";
 import { format } from 'date-fns';
 import { OkPacket } from 'mysql2';
 
+export const dynamic = 'force-dynamic';
+
 // GET handler to fetch all non-deleted manufacturers
 export async function GET() {
   try {

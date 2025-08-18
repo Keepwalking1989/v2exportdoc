@@ -4,6 +4,8 @@ import { pool } from '@/lib/db';
 import type { Client } from "@/types/client";
 import { OkPacket } from 'mysql2';
 
+export const dynamic = 'force-dynamic';
+
 // GET handler to fetch all non-deleted clients
 export async function GET() {
   try {

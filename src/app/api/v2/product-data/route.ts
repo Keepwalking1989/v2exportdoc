@@ -4,6 +4,8 @@ import { pool } from '@/lib/db';
 import type { Product } from "@/types/product";
 import type { RowDataPacket, OkPacket } from 'mysql2';
 
+export const dynamic = 'force-dynamic';
+
 // GET handler to fetch all non-deleted products
 export async function GET() {
   try {

@@ -4,6 +4,8 @@ import { pool } from '@/lib/db';
 import type { Bank } from "@/types/bank";
 import { OkPacket } from 'mysql2';
 
+export const dynamic = 'force-dynamic';
+
 // GET handler to fetch all non-deleted banks
 export async function GET() {
   try {

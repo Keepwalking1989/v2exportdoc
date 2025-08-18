@@ -4,6 +4,8 @@ import { pool } from '@/lib/db';
 import type { Transporter } from "@/types/transporter";
 import { OkPacket } from 'mysql2';
 
+export const dynamic = 'force-dynamic';
+
 // GET handler to fetch all non-deleted transporters
 export async function GET() {
   try {

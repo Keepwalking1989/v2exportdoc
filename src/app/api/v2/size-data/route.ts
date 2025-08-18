@@ -4,6 +4,8 @@ import { pool } from '@/lib/db';
 import type { Size } from "@/types/size";
 import { OkPacket } from 'mysql2';
 
+export const dynamic = 'force-dynamic';
+
 // GET handler to fetch all non-deleted sizes
 export async function GET() {
   try {

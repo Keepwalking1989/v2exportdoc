@@ -5,6 +5,8 @@ import type { Transaction } from "@/types/transaction";
 import type { RowDataPacket, OkPacket } from 'mysql2';
 import { format } from 'date-fns';
 
+export const dynamic = 'force-dynamic';
+
 interface TransactionRow extends RowDataPacket, Omit<Transaction, 'relatedInvoices'> {
     relatedInvoices_json: string | null;
 }

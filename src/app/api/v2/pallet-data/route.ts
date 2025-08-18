@@ -4,6 +4,8 @@ import { pool } from '@/lib/db';
 import type { Pallet } from "@/types/pallet";
 import { OkPacket } from 'mysql2';
 
+export const dynamic = 'force-dynamic';
+
 // GET handler to fetch all non-deleted pallets
 export async function GET() {
   try {

@@ -5,6 +5,8 @@ import type { ExportDocument } from '@/types/export-document';
 import type { RowDataPacket, OkPacket } from 'mysql2';
 import { format } from 'date-fns';
 
+export const dynamic = 'force-dynamic';
+
 interface ExportDocumentRow extends RowDataPacket, Omit<ExportDocument, 'containerItems' | 'manufacturerDetails'> {
     containerItems_json: string | null;
     manufacturerDetails_json: string | null;
