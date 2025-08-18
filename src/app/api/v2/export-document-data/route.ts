@@ -32,6 +32,7 @@ export async function GET(request: Request) {
         const document: ExportDocument = {
             ...row,
             id: row.id.toString(),
+            purchaseOrderId: row.purchaseOrderId?.toString(),
             containerItems: JSON.parse(row.containerItems_json || '[]'),
             manufacturerDetails: JSON.parse(row.manufacturerDetails_json || '[]'),
             exportInvoiceDate: new Date(row.exportInvoiceDate),
@@ -53,6 +54,7 @@ export async function GET(request: Request) {
             return {
                 ...docData,
                 id: docData.id.toString(),
+                purchaseOrderId: docData.purchaseOrderId?.toString(),
                 containerItems: JSON.parse(containerItems_json || '[]'),
                 manufacturerDetails: JSON.parse(manufacturerDetails_json || '[]'),
                 exportInvoiceDate: new Date(docData.exportInvoiceDate),

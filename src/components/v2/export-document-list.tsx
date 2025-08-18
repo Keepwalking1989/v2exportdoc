@@ -24,7 +24,7 @@ interface ExportDocumentListProps {
   onDownloadPdf: (docId: string) => void;
 }
 
-export function ExportDocumentList({
+export function ExportDocumentListV2({
   documents,
   allExporters,
   allManufacturers,
