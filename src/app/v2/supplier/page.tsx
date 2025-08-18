@@ -16,62 +16,60 @@ export default function SupplierPageV2() {
   const [supplierToEdit, setSupplierToEdit] = useState<Supplier | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Fetch suppliers from the API
-  useEffect(() => {
-    const fetchSuppliers = async () => {
-      setIsLoading(true);
-      try {
-        const response = await fetch('/api/v2/supplier-data');
-        if (!response.ok) {
-          throw new Error('Failed to fetch suppliers');
-        }
-        const data: Supplier[] = await response.json();
-        setSuppliers(data);
-      } catch (error) {
-        console.error("Failed to fetch suppliers from API", error);
-        toast({
-          variant: "destructive",
-          title: "Error",
-          description: "Could not load suppliers from the database.",
-        });
-        setSuppliers([]);
-      } finally {
-        setIsLoading(false);
+  const fetchSuppliers = async () => {
+    setIsLoading(true);
+    try {
+      const response = await fetch('/api/v2/supplier-data');
+      if (!response.ok) {
+        throw new Error('Failed to fetch suppliers');
       }
-    };
+      const data: Supplier[] = await response.json();
+      setSuppliers(data);
+    } catch (error: any) {
+      console.error("Failed to fetch suppliers from API", error);
+      toast({
+        variant: "destructive",
+        title: "Fetch Error",
+        description: error.message || "Could not load suppliers from the database.",
+      });
+      setSuppliers([]);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
     fetchSuppliers();
   }, [toast]);
 
   const handleSaveSupplier = async (values: SupplierFormValues) => {
-    if (supplierToEdit) {
-      // TODO: Implement update logic
-      console.log("Update logic to be implemented");
-      toast({ title: "Supplier Updated", description: `${values.companyName} has been successfully updated.` });
-    } else {
-      // Create new logic
-      try {
-        const response = await fetch('/api/v2/supplier-data', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(values),
-        });
+    const isEditing = !!supplierToEdit;
+    const url = isEditing ? `/api/v2/supplier-data?id=${supplierToEdit!.id}` : '/api/v2/supplier-data';
+    const method = isEditing ? 'PUT' : 'POST';
+    
+    try {
+      const response = await fetch(url, {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(values),
+      });
 
-        if (!response.ok) {
-          const errorData = await response.json();
-          throw new Error(errorData.message || 'Failed to save supplier');
-        }
-        const newSupplier: Supplier = await response.json();
-        setSuppliers(prev => [newSupplier, ...prev]);
-        toast({ title: "Supplier Saved", description: `${values.companyName} has been successfully saved to the database.` });
-        
-      } catch (error: any) {
-        console.error("Failed to save supplier via API", error);
-        toast({
-          variant: "destructive",
-          title: "Error Saving Supplier",
-          description: error.message || "An unknown error occurred.",
-        });
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || `Failed to ${isEditing ? 'update' : 'save'} supplier.`);
       }
+      
+      toast({ title: `Supplier ${isEditing ? 'Updated' : 'Saved'}`, description: `${values.companyName} has been successfully saved.` });
+      setSupplierToEdit(null);
+      await fetchSuppliers();
+      
+    } catch (error: any) {
+      console.error("Failed to save supplier via API", error);
+      toast({
+        variant: "destructive",
+        title: "Save Error",
+        description: error.message || "An unknown error occurred.",
+      });
     }
   };
 
@@ -87,14 +85,15 @@ export default function SupplierPageV2() {
     setSupplierToEdit(null);
   };
   
-  const handleDeleteSupplier = (id: string) => {
-    // TODO: Implement delete logic
-    console.log("Delete logic to be implemented");
-    toast({
-        variant: "destructive",
-        title: "Deletion Pending",
-        description: "Delete functionality is not yet implemented for the database.",
-      });
+  const handleDeleteSupplier = async (id: string) => {
+    try {
+        const response = await fetch(`/api/v2/supplier-data?id=${id}`, { method: 'DELETE' });
+        if (!response.ok) throw new Error((await response.json()).message || 'Failed to delete supplier.');
+        toast({ title: "Supplier Deleted", description: "The supplier has been marked as deleted." });
+        await fetchSuppliers();
+    } catch (error: any) {
+        toast({ variant: "destructive", title: "Delete Error", description: error.message });
+    }
   };
 
   if (isLoading) {

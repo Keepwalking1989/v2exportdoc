@@ -16,62 +16,60 @@ export default function TransporterPageV2() {
   const [transporterToEdit, setTransporterToEdit] = useState<Transporter | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Fetch transporters from the API
-  useEffect(() => {
-    const fetchTransporters = async () => {
-      setIsLoading(true);
-      try {
-        const response = await fetch('/api/v2/transporter-data');
-        if (!response.ok) {
-          throw new Error('Failed to fetch transporters');
-        }
-        const data: Transporter[] = await response.json();
-        setTransporters(data);
-      } catch (error) {
-        console.error("Failed to fetch transporters from API", error);
-        toast({
-          variant: "destructive",
-          title: "Error",
-          description: "Could not load transporters from the database.",
-        });
-        setTransporters([]);
-      } finally {
-        setIsLoading(false);
+  const fetchTransporters = async () => {
+    setIsLoading(true);
+    try {
+      const response = await fetch('/api/v2/transporter-data');
+      if (!response.ok) {
+        throw new Error('Failed to fetch transporters');
       }
-    };
+      const data: Transporter[] = await response.json();
+      setTransporters(data);
+    } catch (error: any) {
+      console.error("Failed to fetch transporters from API", error);
+      toast({
+        variant: "destructive",
+        title: "Fetch Error",
+        description: error.message || "Could not load transporters from the database.",
+      });
+      setTransporters([]);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
     fetchTransporters();
   }, [toast]);
 
   const handleSaveTransporter = async (values: TransporterFormValues) => {
-    if (transporterToEdit) {
-      // TODO: Implement update logic
-      console.log("Update logic to be implemented");
-      toast({ title: "Transporter Updated", description: `${values.companyName} has been successfully updated.` });
-    } else {
-      // Create new logic
-      try {
-        const response = await fetch('/api/v2/transporter-data', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(values),
-        });
+    const isEditing = !!transporterToEdit;
+    const url = isEditing ? `/api/v2/transporter-data?id=${transporterToEdit!.id}` : '/api/v2/transporter-data';
+    const method = isEditing ? 'PUT' : 'POST';
 
-        if (!response.ok) {
-          const errorData = await response.json();
-          throw new Error(errorData.message || 'Failed to save transporter');
-        }
-        const newTransporter: Transporter = await response.json();
-        setTransporters(prev => [newTransporter, ...prev]);
-        toast({ title: "Transporter Saved", description: `${values.companyName} has been successfully saved to the database.` });
-        
-      } catch (error: any) {
-        console.error("Failed to save transporter via API", error);
-        toast({
-          variant: "destructive",
-          title: "Error Saving Transporter",
-          description: error.message || "An unknown error occurred.",
-        });
+    try {
+      const response = await fetch(url, {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(values),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || `Failed to ${isEditing ? 'update' : 'save'} transporter.`);
       }
+      
+      toast({ title: `Transporter ${isEditing ? 'Updated' : 'Saved'}`, description: `${values.companyName} has been successfully saved.` });
+      setTransporterToEdit(null);
+      await fetchTransporters();
+      
+    } catch (error: any) {
+      console.error("Failed to save transporter via API", error);
+      toast({
+        variant: "destructive",
+        title: "Save Error",
+        description: error.message || "An unknown error occurred.",
+      });
     }
   };
 
@@ -87,14 +85,15 @@ export default function TransporterPageV2() {
     setTransporterToEdit(null);
   };
   
-  const handleDeleteTransporter = (id: string) => {
-    // TODO: Implement delete logic
-    console.log("Delete logic to be implemented");
-    toast({
-        variant: "destructive",
-        title: "Deletion Pending",
-        description: "Delete functionality is not yet implemented for the database.",
-      });
+  const handleDeleteTransporter = async (id: string) => {
+    try {
+        const response = await fetch(`/api/v2/transporter-data?id=${id}`, { method: 'DELETE' });
+        if (!response.ok) throw new Error((await response.json()).message || 'Failed to delete transporter.');
+        toast({ title: "Transporter Deleted", description: "The transporter has been marked as deleted." });
+        await fetchTransporters();
+    } catch (error: any) {
+        toast({ variant: "destructive", title: "Delete Error", description: error.message });
+    }
   };
 
   if (isLoading) {

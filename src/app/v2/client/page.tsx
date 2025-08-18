@@ -16,65 +16,60 @@ export default function ClientPageV2() {
   const [clientToEdit, setClientToEdit] = useState<Client | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Fetch clients from the API
-  useEffect(() => {
-    const fetchClients = async () => {
-      setIsLoading(true);
-      try {
-        const response = await fetch('/api/v2/client-data');
-        if (!response.ok) {
-          throw new Error('Failed to fetch clients');
-        }
-        const data: Client[] = await response.json();
-        setClients(data);
-      } catch (error) {
-        console.error("Failed to fetch clients from API", error);
-        toast({
-          variant: "destructive",
-          title: "Error",
-          description: "Could not load clients from the database.",
-        });
-        setClients([]);
-      } finally {
-        setIsLoading(false);
+  const fetchClients = async () => {
+    setIsLoading(true);
+    try {
+      const response = await fetch('/api/v2/client-data');
+      if (!response.ok) {
+        throw new Error('Failed to fetch clients');
       }
-    };
+      const data: Client[] = await response.json();
+      setClients(data);
+    } catch (error: any) {
+      console.error("Failed to fetch clients from API", error);
+      toast({
+        variant: "destructive",
+        title: "Fetch Error",
+        description: error.message || "Could not load clients from the database.",
+      });
+      setClients([]);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
     fetchClients();
   }, [toast]);
 
   const handleSaveClient = async (values: ClientFormValues) => {
-    // For V2, this will handle both Create and Update
-    if (clientToEdit) {
-      // TODO: Implement update logic
-      console.log("Update logic to be implemented");
-      toast({ title: "Client Updated", description: `${values.companyName} has been successfully updated.` });
-    } else {
-      // Create new logic
-      try {
-        const response = await fetch('/api/v2/client-data', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(values),
-        });
+    const isEditing = !!clientToEdit;
+    const url = isEditing ? `/api/v2/client-data?id=${clientToEdit!.id}` : '/api/v2/client-data';
+    const method = isEditing ? 'PUT' : 'POST';
 
-        if (!response.ok) {
-          const errorData = await response.json();
-          throw new Error(errorData.message || 'Failed to save client');
-        }
-        const newClient: Client = await response.json();
-        setClients(prevClients => [newClient, ...prevClients]);
-        toast({ title: "Client Saved", description: `${values.companyName} has been successfully saved to the database.` });
-        formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      } catch (error: any) {
-        console.error("Failed to save client via API", error);
-        toast({
-          variant: "destructive",
-          title: "Error Saving Client",
-          description: error.message || "An unknown error occurred.",
-        });
+    try {
+      const response = await fetch(url, {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(values),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || `Failed to ${isEditing ? 'update' : 'save'} client.`);
       }
+      
+      toast({ title: `Client ${isEditing ? 'Updated' : 'Saved'}`, description: `${values.companyName} has been successfully saved.` });
+      setClientToEdit(null);
+      await fetchClients(); // Refetch the list to show the new/updated data
+      
+    } catch (error: any) {
+      console.error("Failed to save client via API", error);
+      toast({
+        variant: "destructive",
+        title: "Save Error",
+        description: error.message || "An unknown error occurred.",
+      });
     }
   };
 
@@ -90,14 +85,15 @@ export default function ClientPageV2() {
     setClientToEdit(null);
   };
   
-  const handleDeleteClient = (id: string) => {
-    // TODO: Implement delete logic
-    console.log("Delete logic to be implemented");
-    toast({
-        variant: "destructive",
-        title: "Deletion Pending",
-        description: "Delete functionality is not yet implemented for the database.",
-      });
+  const handleDeleteClient = async (id: string) => {
+    try {
+        const response = await fetch(`/api/v2/client-data?id=${id}`, { method: 'DELETE' });
+        if (!response.ok) throw new Error((await response.json()).message || 'Failed to delete client.');
+        toast({ title: "Client Deleted", description: "The client has been marked as deleted." });
+        await fetchClients();
+    } catch (error: any) {
+        toast({ variant: "destructive", title: "Delete Error", description: error.message });
+    }
   };
 
   if (isLoading) {

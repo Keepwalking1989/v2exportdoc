@@ -16,67 +16,63 @@ export default function ManufacturerPageV2() {
   const [manufacturerToEdit, setManufacturerToEdit] = useState<Manufacturer | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Fetch manufacturers from the API
-  useEffect(() => {
-    const fetchManufacturers = async () => {
-      setIsLoading(true);
-      try {
-        const response = await fetch('/api/v2/manufacturer-data');
-        if (!response.ok) {
-          throw new Error('Failed to fetch manufacturers');
-        }
-        const data: Manufacturer[] = await response.json();
-        setManufacturers(data.map(m => ({
-          ...m,
-          stuffingPermissionDate: new Date(m.stuffingPermissionDate),
-        })));
-      } catch (error) {
-        console.error("Failed to fetch manufacturers from API", error);
-        toast({
-          variant: "destructive",
-          title: "Error",
-          description: "Could not load manufacturers from the database.",
-        });
-        setManufacturers([]);
-      } finally {
-        setIsLoading(false);
+  const fetchManufacturers = async () => {
+    setIsLoading(true);
+    try {
+      const response = await fetch('/api/v2/manufacturer-data');
+      if (!response.ok) {
+        throw new Error('Failed to fetch manufacturers');
       }
-    };
+      const data: Manufacturer[] = await response.json();
+      setManufacturers(data.map(m => ({
+        ...m,
+        stuffingPermissionDate: new Date(m.stuffingPermissionDate),
+      })));
+    } catch (error: any) {
+      console.error("Failed to fetch manufacturers from API", error);
+      toast({
+        variant: "destructive",
+        title: "Fetch Error",
+        description: error.message || "Could not load manufacturers from the database.",
+      });
+      setManufacturers([]);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
     fetchManufacturers();
   }, [toast]);
 
   const handleSaveManufacturer = async (values: ManufacturerFormValues) => {
-    if (manufacturerToEdit) {
-      // TODO: Implement update logic
-      console.log("Update logic to be implemented");
-      toast({ title: "Manufacturer Updated", description: `${values.companyName} has been successfully updated.` });
-    } else {
-      // Create new logic
-      try {
-        const response = await fetch('/api/v2/manufacturer-data', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(values),
-        });
+    const isEditing = !!manufacturerToEdit;
+    const url = isEditing ? `/api/v2/manufacturer-data?id=${manufacturerToEdit!.id}` : '/api/v2/manufacturer-data';
+    const method = isEditing ? 'PUT' : 'POST';
 
-        if (!response.ok) {
-          const errorData = await response.json();
-          throw new Error(errorData.message || 'Failed to save manufacturer');
-        }
-        const newManufacturer: Manufacturer = await response.json();
-        setManufacturers(prev => [{...newManufacturer, stuffingPermissionDate: new Date(newManufacturer.stuffingPermissionDate)}, ...prev]);
-        toast({ title: "Manufacturer Saved", description: `${values.companyName} has been successfully saved to the database.` });
-        
-      } catch (error: any) {
-        console.error("Failed to save manufacturer via API", error);
-        toast({
-          variant: "destructive",
-          title: "Error Saving Manufacturer",
-          description: error.message || "An unknown error occurred.",
-        });
+    try {
+      const response = await fetch(url, {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(values),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || `Failed to ${isEditing ? 'update' : 'save'} manufacturer.`);
       }
+      
+      toast({ title: `Manufacturer ${isEditing ? 'Updated' : 'Saved'}`, description: `${values.companyName} has been successfully saved.` });
+      setManufacturerToEdit(null);
+      await fetchManufacturers(); // Refetch the list
+      
+    } catch (error: any) {
+      console.error("Failed to save manufacturer via API", error);
+      toast({
+        variant: "destructive",
+        title: "Save Error",
+        description: error.message || "An unknown error occurred.",
+      });
     }
   };
 
@@ -92,14 +88,15 @@ export default function ManufacturerPageV2() {
     setManufacturerToEdit(null);
   };
   
-  const handleDeleteManufacturer = (id: string) => {
-    // TODO: Implement delete logic
-    console.log("Delete logic to be implemented");
-    toast({
-        variant: "destructive",
-        title: "Deletion Pending",
-        description: "Delete functionality is not yet implemented for the database.",
-      });
+  const handleDeleteManufacturer = async (id: string) => {
+    try {
+        const response = await fetch(`/api/v2/manufacturer-data?id=${id}`, { method: 'DELETE' });
+        if (!response.ok) throw new Error((await response.json()).message || 'Failed to delete manufacturer.');
+        toast({ title: "Manufacturer Deleted", description: "The manufacturer has been marked as deleted." });
+        await fetchManufacturers();
+    } catch (error: any) {
+        toast({ variant: "destructive", title: "Delete Error", description: error.message });
+    }
   };
 
   if (isLoading) {

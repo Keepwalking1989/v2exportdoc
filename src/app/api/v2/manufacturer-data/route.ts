@@ -3,6 +3,7 @@ import { NextResponse } from 'next/server';
 import { pool } from '@/lib/db';
 import type { Manufacturer } from "@/types/manufacturer";
 import { format } from 'date-fns';
+import { OkPacket } from 'mysql2';
 
 // GET handler to fetch all non-deleted manufacturers
 export async function GET() {
@@ -27,34 +28,28 @@ export async function GET() {
 // POST handler to create a new manufacturer
 export async function POST(request: Request) {
   try {
-    const body = await request.json();
+    const body: Manufacturer = await request.json();
     const { companyName, contactPerson, address, gstNumber, stuffingPermissionNumber, stuffingPermissionDate, pinCode } = body;
 
     if (!companyName || !contactPerson || !address || !gstNumber || !stuffingPermissionNumber || !stuffingPermissionDate || !pinCode) {
       return NextResponse.json({ message: 'Missing required fields' }, { status: 400 });
     }
     
-    // Format date for MySQL (YYYY-MM-DD)
     const formattedDate = format(new Date(stuffingPermissionDate), 'yyyy-MM-dd');
 
     const connection = await pool.getConnection();
-    const [result] = await connection.query<any>(
+    const [result] = await connection.query<OkPacket>(
       'INSERT INTO manufacturers (companyName, contactPerson, address, gstNumber, stuffingPermissionNumber, stuffingPermissionDate, pinCode) VALUES (?, ?, ?, ?, ?, ?, ?)',
       [companyName, contactPerson, address, gstNumber, stuffingPermissionNumber, formattedDate, pinCode]
     );
     connection.release();
 
-    const newManufacturerId = result.insertId.toString();
+    const newManufacturerId = result.insertId;
 
     const newManufacturer: Manufacturer = {
-        id: newManufacturerId,
-        companyName,
-        contactPerson,
-        address,
-        gstNumber,
-        stuffingPermissionNumber,
+        ...body,
+        id: newManufacturerId.toString(),
         stuffingPermissionDate: new Date(stuffingPermissionDate),
-        pinCode,
     };
 
     return NextResponse.json(newManufacturer, { status: 201 });
@@ -63,4 +58,52 @@ export async function POST(request: Request) {
     console.error(error);
     return NextResponse.json({ message: 'Error creating manufacturer' }, { status: 500 });
   }
+}
+
+// PUT handler to update a manufacturer
+export async function PUT(request: Request) {
+    const { searchParams } = new URL(request.url);
+    const id = searchParams.get('id');
+    if (!id) {
+        return NextResponse.json({ message: 'Manufacturer ID is required' }, { status: 400 });
+    }
+    
+    try {
+        const body: Manufacturer = await request.json();
+        const { companyName, contactPerson, address, gstNumber, stuffingPermissionNumber, stuffingPermissionDate, pinCode } = body;
+
+        const formattedDate = format(new Date(stuffingPermissionDate), 'yyyy-MM-dd');
+
+        const connection = await pool.getConnection();
+        await connection.query(
+            'UPDATE manufacturers SET companyName = ?, contactPerson = ?, address = ?, gstNumber = ?, stuffingPermissionNumber = ?, stuffingPermissionDate = ?, pinCode = ? WHERE id = ?',
+            [companyName, contactPerson, address, gstNumber, stuffingPermissionNumber, formattedDate, pinCode, id]
+        );
+        connection.release();
+
+        return NextResponse.json({ ...body, id }, { status: 200 });
+
+    } catch (error) {
+        console.error(error);
+        return NextResponse.json({ message: 'Error updating manufacturer' }, { status: 500 });
+    }
+}
+
+// DELETE handler to soft-delete a manufacturer
+export async function DELETE(request: Request) {
+    const { searchParams } = new URL(request.url);
+    const id = searchParams.get('id');
+    if (!id) {
+        return NextResponse.json({ message: 'Manufacturer ID is required' }, { status: 400 });
+    }
+
+    try {
+        const connection = await pool.getConnection();
+        await connection.query('UPDATE manufacturers SET isDeleted = TRUE WHERE id = ?', [id]);
+        connection.release();
+        return NextResponse.json({ message: 'Manufacturer marked as deleted' }, { status: 200 });
+    } catch (error) {
+        console.error("Error deleting manufacturer:", error);
+        return NextResponse.json({ message: 'Error deleting manufacturer' }, { status: 500 });
+    }
 }

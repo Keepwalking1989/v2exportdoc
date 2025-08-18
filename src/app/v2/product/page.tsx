@@ -19,69 +19,62 @@ export default function ProductPageV2() {
   const [sizes, setSizes] = useState<Size[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Fetch initial data
+  const fetchProducts = async () => {
+    try {
+      const productsRes = await fetch('/api/v2/product-data');
+      if (!productsRes.ok) throw new Error('Failed to fetch products');
+      const productsData = await productsRes.json();
+      setProducts(productsData);
+    } catch (error: any) {
+      toast({ variant: "destructive", title: "Product Fetch Error", description: error.message });
+    }
+  };
+
   useEffect(() => {
-    const fetchData = async () => {
+    const fetchInitialData = async () => {
       setIsLoading(true);
       try {
-        const [productsRes, sizesRes] = await Promise.all([
-          fetch('/api/v2/product-data'),
-          fetch('/api/v2/size-data')
-        ]);
-
-        if (!productsRes.ok) throw new Error('Failed to fetch products');
+        const sizesRes = await fetch('/api/v2/size-data');
         if (!sizesRes.ok) throw new Error('Failed to fetch sizes');
-
-        const productsData = await productsRes.json();
-        const sizesData = await sizesRes.json();
-        
-        setProducts(productsData);
-        setSizes(sizesData);
-
-      } catch (error) {
-        console.error("Failed to fetch initial data", error);
-        toast({ variant: "destructive", title: "Error", description: "Could not load data from the database." });
+        setSizes(await sizesRes.json());
+        await fetchProducts();
+      } catch (error: any) {
+        toast({ variant: "destructive", title: "Error", description: `Could not load data: ${error.message}` });
       } finally {
         setIsLoading(false);
       }
     };
-    fetchData();
+    fetchInitialData();
   }, [toast]);
 
   const handleSaveProduct = async (values: ProductFormValues) => {
-    if (productToEdit) {
-      // TODO: Implement update logic
-      console.log("Update logic not implemented yet.");
-      toast({ title: "Product Updated", description: `${values.designName} has been successfully updated.` });
-    } else {
-      // Create new logic
-      try {
-        const response = await fetch('/api/v2/product-data', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(values),
-        });
+    const isEditing = !!productToEdit;
+    const url = isEditing ? `/api/v2/product-data?id=${productToEdit!.id}` : '/api/v2/product-data';
+    const method = isEditing ? 'PUT' : 'POST';
 
-        if (!response.ok) {
-          const errorData = await response.json();
-          throw new Error(errorData.message || 'Failed to save products');
-        }
+    try {
+      const response = await fetch(url, {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(values),
+      });
 
-        const successData = await response.json();
-        toast({ title: "Products Saved", description: successData.message });
-
-        // Refetch products to update the list
-        const productsRes = await fetch('/api/v2/product-data');
-        const productsData = await productsRes.json();
-        setProducts(productsData);
-
-      } catch (error: any) {
-        toast({
-          variant: "destructive",
-          title: "Error Saving Products",
-          description: error.message || "An unknown error occurred.",
-        });
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || `Failed to ${isEditing ? 'update' : 'save'} product.`);
       }
+
+      const successData = await response.json();
+      toast({ title: `Product(s) ${isEditing ? 'Updated' : 'Saved'}`, description: successData.message || `Product ${values.designName} has been processed.` });
+      setProductToEdit(null);
+      await fetchProducts();
+
+    } catch (error: any) {
+      toast({
+        variant: "destructive",
+        title: "Error Saving Product",
+        description: error.message || "An unknown error occurred.",
+      });
     }
   };
 
@@ -97,14 +90,15 @@ export default function ProductPageV2() {
     setProductToEdit(null);
   };
 
-  const handleDeleteProduct = (id: string) => {
-    // TODO: Implement delete logic
-    console.log("Delete logic not implemented yet.");
-    toast({
-      variant: "destructive",
-      title: "Deletion Pending",
-      description: "Delete functionality is not yet implemented for the database.",
-    });
+  const handleDeleteProduct = async (id: string) => {
+    try {
+        const response = await fetch(`/api/v2/product-data?id=${id}`, { method: 'DELETE' });
+        if (!response.ok) throw new Error((await response.json()).message || 'Failed to delete product.');
+        toast({ title: "Product Deleted", description: "The product has been marked as deleted." });
+        await fetchProducts();
+    } catch (error: any) {
+        toast({ variant: "destructive", title: "Delete Error", description: error.message });
+    }
   };
 
   if (isLoading) {
