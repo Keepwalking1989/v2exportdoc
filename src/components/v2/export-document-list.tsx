@@ -4,7 +4,6 @@
 import Link from "next/link";
 import type { ExportDocument } from "@/types/export-document";
 import type { Company } from "@/types/company";
-import type { Manufacturer } from "@/types/manufacturer";
 import type { Client } from "@/types/client";
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -12,14 +11,13 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
-import { FileText, Edit, Trash2, Download, FileType } from "lucide-react";
+import { FileText, Edit, Trash2, FileType } from "lucide-react";
 import { format } from "date-fns";
 
 interface ExportDocumentListProps {
   documents: ExportDocument[];
   allExporters: Company[];
-  allManufacturers: Manufacturer[];
-  allClients: Client[]; // Added this prop
+  allClients: Client[];
   onEditDocument: (docId: string) => void;
   onDeleteDocument: (docId: string) => void;
   onDownloadPdf: (docId: string) => void;
@@ -28,11 +26,9 @@ interface ExportDocumentListProps {
 export function ExportDocumentListV2({
   documents,
   allExporters,
-  allManufacturers,
-  allClients, // Added this prop
+  allClients,
   onEditDocument,
   onDeleteDocument,
-  onDownloadPdf,
 }: ExportDocumentListProps) {
 
   if (!documents || documents.length === 0) {
@@ -73,17 +69,12 @@ export function ExportDocumentListV2({
                   <TableHead className="font-headline">Date</TableHead>
                   <TableHead className="font-headline">Exporter</TableHead>
                   <TableHead className="font-headline">Client</TableHead>
-                  <TableHead className="font-headline">Manufacturers</TableHead>
                   <TableHead className="font-headline text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {documents.map((doc) => {
                   const exporterName = allExporters.find(e => e.id === doc.exporterId)?.companyName || "N/A";
-                  const manufacturerNames = doc.manufacturerDetails
-                    ?.map(md => allManufacturers.find(m => m.id === md.manufacturerId)?.companyName)
-                    .filter(Boolean)
-                    .join(", ") || "N/A";
                   const clientName = allClients.find(c => c.id === doc.clientId)?.companyName || "N/A";
 
                   return (
@@ -92,7 +83,6 @@ export function ExportDocumentListV2({
                       <TableCell>{format(new Date(doc.exportInvoiceDate), "dd-MMM-yyyy")}</TableCell>
                       <TableCell>{exporterName}</TableCell>
                       <TableCell>{clientName}</TableCell>
-                      <TableCell>{manufacturerNames}</TableCell>
                       <TableCell className="text-right space-x-0.5">
                         <Tooltip>
                           <TooltipTrigger asChild>
