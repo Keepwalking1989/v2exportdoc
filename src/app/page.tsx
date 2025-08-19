@@ -1,8 +1,4 @@
-
 "use client";
-
-// This page now redirects to the V2 dashboard.
-// All the old localStorage logic has been removed.
 
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
