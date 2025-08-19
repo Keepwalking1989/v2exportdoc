@@ -5,7 +5,7 @@ import Link from "next/link";
 import type { ExportDocument } from "@/types/export-document";
 import type { Company } from "@/types/company";
 import type { Manufacturer } from "@/types/manufacturer";
-import type { Transporter } from "@/types/transporter";
+import type { Client } from "@/types/client";
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -19,7 +19,7 @@ interface ExportDocumentListProps {
   documents: ExportDocument[];
   allExporters: Company[];
   allManufacturers: Manufacturer[];
-  allTransporters: Transporter[];
+  allClients: Client[]; // Added this prop
   onEditDocument: (docId: string) => void;
   onDeleteDocument: (docId: string) => void;
   onDownloadPdf: (docId: string) => void;
@@ -29,7 +29,7 @@ export function ExportDocumentListV2({
   documents,
   allExporters,
   allManufacturers,
-  allTransporters,
+  allClients, // Added this prop
   onEditDocument,
   onDeleteDocument,
   onDownloadPdf,
@@ -84,7 +84,7 @@ export function ExportDocumentListV2({
                     ?.map(md => allManufacturers.find(m => m.id === md.manufacturerId)?.companyName)
                     .filter(Boolean)
                     .join(", ") || "N/A";
-                  const clientName = "Client Name Placeholder"; // You'll need to pass allClients to get the real name
+                  const clientName = allClients.find(c => c.id === doc.clientId)?.companyName || "N/A";
 
                   return (
                     <TableRow key={doc.id}>

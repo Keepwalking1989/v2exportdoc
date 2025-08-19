@@ -225,7 +225,7 @@ export default function ExportDocumentPageV2() {
           documents={exportDocuments}
           allExporters={allExporters}
           allManufacturers={allManufacturers}
-          allTransporters={allTransporters}
+          allClients={allClients}
           onDeleteDocument={handleDeleteDocument}
           onEditDocument={(docId) => router.push(`/v2/export-document?editDocId=${docId}`)}
           onDownloadPdf={() => toast({ title: "PDF Generation", description: "PDF generation is handled on the Document Data page." })}
