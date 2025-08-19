@@ -26,7 +26,10 @@ export async function GET() {
         return {
             ...billData,
             id: billData.id.toString(),
-            items: items
+            items: items,
+            exportDocumentId: String(billData.exportDocumentId),
+            transporterId: String(billData.transporterId),
+            invoiceDate: new Date(billData.invoiceDate),
         };
     });
 
@@ -82,28 +85,40 @@ export async function PUT(request: Request) {
     const { searchParams } = new URL(request.url);
     const id = searchParams.get('id');
     if (!id) {
+        connection.release();
         return NextResponse.json({ message: 'Bill ID is required' }, { status: 400 });
     }
 
     const bill: TransBill = await request.json();
-    const { items, ...billData } = bill;
     
     await connection.beginTransaction();
 
-    const formattedInvoiceDate = format(new Date(billData.invoiceDate), 'yyyy-MM-dd HH:mm:ss');
-    const items_json = JSON.stringify(items);
+    const updateData = {
+        exportDocumentId: bill.exportDocumentId,
+        transporterId: bill.transporterId,
+        invoiceNumber: bill.invoiceNumber,
+        invoiceDate: format(new Date(bill.invoiceDate), 'yyyy-MM-dd HH:mm:ss'),
+        shippingLine: bill.shippingLine,
+        portOfLoading: bill.portOfLoading,
+        portOfDischarge: bill.portOfDischarge,
+        items_json: JSON.stringify(bill.items || []),
+        remarks: bill.remarks,
+        subTotal: bill.subTotal,
+        cgstRate: bill.cgstRate,
+        cgstAmount: bill.cgstAmount,
+        sgstRate: bill.sgstRate,
+        sgstAmount: bill.sgstAmount,
+        totalTax: bill.totalTax,
+        totalAfterTax: bill.totalAfterTax,
+        roundOff: bill.roundOff,
+        totalPayable: bill.totalPayable,
+        billDocumentUri: bill.billDocumentUri,
+        lrDocumentUri: bill.lrDocumentUri,
+    };
 
     await connection.query<OkPacket>(
       'UPDATE trans_bills SET ? WHERE id = ?',
-      [
-        {
-          ...billData,
-          invoiceDate: formattedInvoiceDate,
-          items_json,
-          id: undefined, // remove id from update data
-        },
-        id
-      ]
+      [updateData, id]
     );
 
     await connection.commit();

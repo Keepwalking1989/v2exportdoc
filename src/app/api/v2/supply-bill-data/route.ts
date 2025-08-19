@@ -26,7 +26,11 @@ export async function GET() {
         return {
             ...billData,
             id: billData.id.toString(),
-            items: items
+            items: items,
+            exportDocumentId: String(billData.exportDocumentId),
+            supplierId: String(billData.supplierId),
+            invoiceDate: new Date(billData.invoiceDate),
+            ackDate: billData.ackDate ? new Date(billData.ackDate) : undefined,
         };
     });
 
@@ -85,30 +89,41 @@ export async function PUT(request: Request) {
     const { searchParams } = new URL(request.url);
     const id = searchParams.get('id');
     if (!id) {
+        connection.release();
         return NextResponse.json({ message: 'Bill ID is required' }, { status: 400 });
     }
 
     const bill: SupplyBill = await request.json();
-    const { items, ...billData } = bill;
     
     await connection.beginTransaction();
 
-    const formattedInvoiceDate = format(new Date(billData.invoiceDate), 'yyyy-MM-dd HH:mm:ss');
-    const formattedAckDate = billData.ackDate ? format(new Date(billData.ackDate), 'yyyy-MM-dd HH:mm:ss') : null;
-    const items_json = JSON.stringify(items);
+    const updateData = {
+        exportDocumentId: bill.exportDocumentId,
+        supplierId: bill.supplierId,
+        invoiceNumber: bill.invoiceNumber,
+        invoiceDate: format(new Date(bill.invoiceDate), 'yyyy-MM-dd HH:mm:ss'),
+        ackNo: bill.ackNo,
+        ackDate: bill.ackDate ? format(new Date(bill.ackDate), 'yyyy-MM-dd HH:mm:ss') : null,
+        items_json: JSON.stringify(bill.items || []),
+        remarks: bill.remarks,
+        subTotal: bill.subTotal,
+        discountAmount: bill.discountAmount,
+        insuranceAmount: bill.insuranceAmount,
+        freightAmount: bill.freightAmount,
+        finalSubTotal: bill.finalSubTotal,
+        centralTaxRate: bill.centralTaxRate,
+        centralTaxAmount: bill.centralTaxAmount,
+        stateTaxRate: bill.stateTaxRate,
+        stateTaxAmount: bill.stateTaxAmount,
+        roundOff: bill.roundOff,
+        grandTotal: bill.grandTotal,
+        billDocumentUri: bill.billDocumentUri,
+        ewayBillDocumentUri: bill.ewayBillDocumentUri,
+    };
 
     await connection.query<OkPacket>(
       'UPDATE supply_bills SET ? WHERE id = ?',
-      [
-        {
-          ...billData,
-          invoiceDate: formattedInvoiceDate,
-          ackDate: formattedAckDate,
-          items_json,
-          id: undefined, // remove id from update data
-        },
-        id
-      ]
+      [updateData, id]
     );
 
     await connection.commit();
