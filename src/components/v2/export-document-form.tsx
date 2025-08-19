@@ -1,3 +1,4 @@
+
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -716,23 +717,25 @@ export function ExportDocumentFormV2({
     }
   }, [isEditing, initialData, form, nextExportInvoiceNumber, sourcePoId, allPurchaseOrders, allPerformaInvoices, allClients, allManufacturers]);
 
-  const watchedClientId = useWatch({ control: form.control, name: 'clientId' });
-  const watchedPerformaInvoiceId = useWatch({ control: form.control, name: 'performaInvoiceId' });
-  const watchedManufacturerDetails = useWatch({ control: form.control, name: 'manufacturerDetails' });
+  const watchedClientId = form.watch('clientId');
+  const watchedPerformaInvoiceId = form.watch('performaInvoiceId');
+  const watchedManufacturerDetails = form.watch('manufacturerDetails');
 
-  // Cascading Resets
+  // Cascading Resets for NEW forms
   useEffect(() => {
-    if (form.formState.isDirty) {
+    if (!isEditing && form.formState.isDirty) {
       form.setValue('performaInvoiceId', '');
       form.setValue('purchaseOrderId', '');
     }
-  }, [watchedClientId, form]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [watchedClientId, isEditing]);
 
   useEffect(() => {
-     if (form.formState.isDirty) {
+     if (!isEditing && form.formState.isDirty) {
       form.setValue('purchaseOrderId', '');
     }
-  }, [watchedPerformaInvoiceId, watchedManufacturerDetails, form]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [watchedPerformaInvoiceId, watchedManufacturerDetails, isEditing]);
 
 
   const clientOptions: ComboboxOption[] = useMemo(() =>
@@ -920,3 +923,4 @@ export function ExportDocumentFormV2({
     </Card>
   );
 }
+
