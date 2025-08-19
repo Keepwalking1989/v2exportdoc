@@ -744,23 +744,25 @@ export function ExportDocumentFormV2({
   );
 
   const piOptions = useMemo(() => {
-    if (!watchedClientId) return [];
+    const currentClientId = watchedClientId || initialData?.clientId;
+    if (!currentClientId) return [];
     return allPerformaInvoices
-      .filter(pi => pi.clientId.toString() === watchedClientId)
+      .filter(pi => pi.clientId.toString() === currentClientId)
       .map(pi => ({ value: pi.id.toString(), label: pi.invoiceNumber }));
-  }, [watchedClientId, allPerformaInvoices]);
+  }, [watchedClientId, allPerformaInvoices, initialData]);
 
   const poOptions = useMemo(() => {
-    const selectedManufacturerId = watchedManufacturerDetails?.[0]?.manufacturerId;
-    if (!watchedPerformaInvoiceId || !selectedManufacturerId) return [];
+    const currentPiId = watchedPerformaInvoiceId || initialData?.performaInvoiceId;
+    const selectedManufacturerId = watchedManufacturerDetails?.[0]?.manufacturerId || initialData?.manufacturerDetails?.[0]?.manufacturerId;
+    if (!currentPiId || !selectedManufacturerId) return [];
     
     return allPurchaseOrders
       .filter(po => 
-        po.sourcePiId?.toString() === watchedPerformaInvoiceId &&
+        po.sourcePiId?.toString() === currentPiId &&
         po.manufacturerId?.toString() === selectedManufacturerId
       )
       .map(po => ({ value: po.id.toString(), label: po.poNumber }));
-  }, [watchedPerformaInvoiceId, watchedManufacturerDetails, allPurchaseOrders]);
+  }, [watchedPerformaInvoiceId, watchedManufacturerDetails, allPurchaseOrders, initialData]);
 
 
   const exporterOptions: ComboboxOption[] = useMemo(() =>
@@ -819,8 +821,8 @@ export function ExportDocumentFormV2({
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <FormField control={form.control} name="clientId" render={({ field }) => ( <FormItem><FormLabel className="flex items-center gap-2"><Users className="h-4 w-4 text-muted-foreground" />Client *</FormLabel><Combobox options={clientOptions} value={field.value} onChange={field.onChange} placeholder="Select Client..."/><FormMessage /></FormItem>)} />
-                <FormField control={form.control} name="performaInvoiceId" render={({ field }) => ( <FormItem><FormLabel className="flex items-center gap-2"><ShoppingCart className="h-4 w-4 text-muted-foreground" />Performa Invoice *</FormLabel><Combobox options={piOptions} value={field.value} onChange={field.onChange} placeholder="Select PI..." disabled={!watchedClientId} /><FormMessage /></FormItem>)} />
-                <FormField control={form.control} name="purchaseOrderId" render={({ field }) => ( <FormItem><FormLabel className="flex items-center gap-2"><ReceiptText className="h-4 w-4 text-muted-foreground" />Purchase Order *</FormLabel><Combobox options={poOptions} value={field.value} onChange={field.onChange} placeholder="Select PO..." disabled={!watchedPerformaInvoiceId || !watchedManufacturerDetails?.[0]?.manufacturerId} /><FormMessage /></FormItem>)} />
+                <FormField control={form.control} name="performaInvoiceId" render={({ field }) => ( <FormItem><FormLabel className="flex items-center gap-2"><ShoppingCart className="h-4 w-4 text-muted-foreground" />Performa Invoice *</FormLabel><Combobox options={piOptions} value={field.value} onChange={field.onChange} placeholder="Select PI..." disabled={!watchedClientId && !initialData?.clientId} /><FormMessage /></FormItem>)} />
+                <FormField control={form.control} name="purchaseOrderId" render={({ field }) => ( <FormItem><FormLabel className="flex items-center gap-2"><ReceiptText className="h-4 w-4 text-muted-foreground" />Purchase Order *</FormLabel><Combobox options={poOptions} value={field.value} onChange={field.onChange} placeholder="Select PO..." disabled={(!watchedPerformaInvoiceId && !initialData?.performaInvoiceId) || (!watchedManufacturerDetails?.[0]?.manufacturerId && !initialData?.manufacturerDetails?.[0]?.manufacturerId)} /><FormMessage /></FormItem>)} />
             </div>
             
             <Card>
