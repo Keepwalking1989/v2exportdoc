@@ -23,9 +23,7 @@ export default function ManuBillPageV2() {
   const [allExportDocuments, setAllExportDocuments] = useState<ExportDocument[]>([]);
   const [allManufacturers, setAllManufacturers] = useState<Manufacturer[]>([]);
 
-  // Fetch initial data
-  useEffect(() => {
-    const fetchData = async () => {
+  const fetchData = async () => {
       setIsLoading(true);
       try {
         const [billsRes, docsRes, manufacturersRes] = await Promise.all([
@@ -42,13 +40,17 @@ export default function ManuBillPageV2() {
         const docsData = await docsRes.json();
         const manufacturersData = await manufacturersRes.json();
 
+        // Ensure all IDs are strings for consistency
         setManuBills(billsData.map((b: any) => ({
           ...b,
+          id: String(b.id),
+          exportDocumentId: String(b.exportDocumentId),
+          manufacturerId: String(b.manufacturerId),
           invoiceDate: new Date(b.invoiceDate),
           ackDate: b.ackDate ? new Date(b.ackDate) : undefined,
         })));
-        setAllExportDocuments(docsData);
-        setAllManufacturers(manufacturersData);
+        setAllExportDocuments(docsData.map((d: any) => ({ ...d, id: String(d.id) })));
+        setAllManufacturers(manufacturersData.map((m: any) => ({ ...m, id: String(m.id) })));
 
       } catch (error) {
         console.error("Failed to load data from database", error);
@@ -57,22 +59,14 @@ export default function ManuBillPageV2() {
         setIsLoading(false);
       }
     };
+
+  // Fetch initial data
+  useEffect(() => {
     fetchData();
   }, [toast]);
   
   const refetchBills = async () => {
-    try {
-        const response = await fetch('/api/v2/manu-bill-data');
-        if (!response.ok) throw new Error('Failed to refetch bills');
-        const data = await response.json();
-        setManuBills(data.map((b: any) => ({
-          ...b,
-          invoiceDate: new Date(b.invoiceDate),
-          ackDate: b.ackDate ? new Date(b.ackDate) : undefined,
-        })));
-    } catch (error) {
-         toast({ variant: "destructive", title: "Error", description: "Could not refresh bill list." });
-    }
+    await fetchData(); // Just refetch all data for simplicity and consistency
   }
 
   const handleSaveBill = async (values: ManuBill) => {

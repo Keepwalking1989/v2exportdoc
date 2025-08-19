@@ -1,3 +1,4 @@
+
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -109,8 +110,8 @@ export function ManuBillFormV2({
   useEffect(() => {
     if (selectedExportDocId) {
       const doc = allExportDocuments.find(d => d.id === selectedExportDocId);
-      if (doc && doc.manufacturerId) {
-        form.setValue('manufacturerId', doc.manufacturerId);
+      if (doc && doc.manufacturerDetails?.[0]?.manufacturerId) {
+        form.setValue('manufacturerId', doc.manufacturerDetails[0].manufacturerId);
       }
     }
   }, [selectedExportDocId, allExportDocuments, form]);
@@ -120,6 +121,8 @@ export function ManuBillFormV2({
       form.reset({
         ...defaultFormValues,
         ...initialData,
+        exportDocumentId: String(initialData.exportDocumentId),
+        manufacturerId: String(initialData.manufacturerId),
         invoiceDate: new Date(initialData.invoiceDate),
         ackDate: initialData.ackDate ? new Date(initialData.ackDate) : undefined,
       });

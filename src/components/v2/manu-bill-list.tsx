@@ -36,8 +36,8 @@ export function ManuBillListV2({ manuBills, allManufacturers, allExportDocuments
 
   const enrichedBills = useMemo(() => {
     return manuBills.map(bill => {
-      const manufacturer = allManufacturers.find(m => m.id === bill.manufacturerId);
-      const exportDoc = allExportDocuments.find(d => d.id === bill.exportDocumentId);
+      const manufacturer = allManufacturers.find(m => String(m.id) === String(bill.manufacturerId));
+      const exportDoc = allExportDocuments.find(d => String(d.id) === String(bill.exportDocumentId));
       
       return {
         ...bill,
