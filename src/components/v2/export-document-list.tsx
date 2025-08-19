@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { FileText, Edit, Trash2, Download, FileType } from "lucide-react";
+import { format } from "date-fns";
 
 interface ExportDocumentListProps {
   documents: ExportDocument[];
@@ -68,12 +69,11 @@ export function ExportDocumentListV2({
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="font-headline">Doc ID</TableHead>
                   <TableHead className="font-headline">Export Invoice #</TableHead>
+                  <TableHead className="font-headline">Date</TableHead>
                   <TableHead className="font-headline">Exporter</TableHead>
+                  <TableHead className="font-headline">Client</TableHead>
                   <TableHead className="font-headline">Manufacturers</TableHead>
-                  <TableHead className="font-headline">Transporter</TableHead>
-                  <TableHead className="font-headline">PO ID</TableHead>
                   <TableHead className="font-headline text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
@@ -84,17 +84,15 @@ export function ExportDocumentListV2({
                     ?.map(md => allManufacturers.find(m => m.id === md.manufacturerId)?.companyName)
                     .filter(Boolean)
                     .join(", ") || "N/A";
-                  const transporterName = doc.transporterId ? (allTransporters.find(t => t.id === doc.transporterId)?.companyName || "N/A") : "N/A";
-                  const poId = doc.purchaseOrderId ? doc.purchaseOrderId.toString() : '';
+                  const clientName = "Client Name Placeholder"; // You'll need to pass allClients to get the real name
 
                   return (
                     <TableRow key={doc.id}>
-                      <TableCell className="font-medium">ED-{doc.id.slice(-6)}</TableCell>
                       <TableCell>{doc.exportInvoiceNumber}</TableCell>
+                      <TableCell>{format(new Date(doc.exportInvoiceDate), "dd-MMM-yyyy")}</TableCell>
                       <TableCell>{exporterName}</TableCell>
+                      <TableCell>{clientName}</TableCell>
                       <TableCell>{manufacturerNames}</TableCell>
-                      <TableCell>{transporterName}</TableCell>
-                      <TableCell>{poId ? `PO-${poId.slice(-6)}` : "N/A"}</TableCell>
                       <TableCell className="text-right space-x-0.5">
                         <Tooltip>
                           <TooltipTrigger asChild>
@@ -115,7 +113,7 @@ export function ExportDocumentListV2({
                             <AlertDialogHeader>
                               <AlertDialogTitle>Are you sure?</AlertDialogTitle>
                               <AlertDialogDescription>
-                                This action will mark Export Document ED-{doc.id.slice(-6)} as deleted.
+                                This action will mark Export Document {doc.exportInvoiceNumber} as deleted.
                               </AlertDialogDescription>
                             </AlertDialogHeader>
                             <AlertDialogFooter>
