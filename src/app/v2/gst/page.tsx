@@ -117,13 +117,13 @@ export default function GstPageV2() {
 
                 gstPaidItems.sort((a, b) => b.date.getTime() - a.date.getTime());
                 setAllGstPaid(gstPaidItems);
-                setTotalGstPaid(gstPaidItems.reduce((acc, item) => acc + item.gstAmount, 0));
+                setTotalGstPaid(Number(gstPaidItems.reduce((acc, item) => acc + item.gstAmount, 0)));
 
                 // Process GST Received
                 const gstReceivedTransactions = transactions.filter(t => t.type === 'credit' && t.partyType === 'gst' && !t.isDeleted);
                 gstReceivedTransactions.sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime());
                 setAllGstReceived(gstReceivedTransactions);
-                setTotalGstReceived(gstReceivedTransactions.reduce((acc, item) => acc + item.amount, 0));
+                setTotalGstReceived(Number(gstReceivedTransactions.reduce((acc, item) => acc + item.amount, 0)));
 
             } catch (error) {
                 console.error("Failed to load GST data from API", error);
