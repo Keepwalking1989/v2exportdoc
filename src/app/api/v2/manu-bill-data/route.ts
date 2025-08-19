@@ -99,6 +99,7 @@ export async function PUT(request: Request) {
     
     await connection.beginTransaction();
 
+    // Create a clean object with only the fields that exist in the database table
     const updateData = {
         exportDocumentId: bill.exportDocumentId,
         manufacturerId: bill.manufacturerId,
@@ -132,6 +133,7 @@ export async function PUT(request: Request) {
     await connection.commit();
     connection.release();
     
+    // Return the original complete bill object from the request, as the frontend expects it
     return NextResponse.json({ ...bill, id: id }, { status: 200 });
 
   } catch (error) {

@@ -23,11 +23,12 @@ import { Combobox, type ComboboxOption } from "@/components/ui/combobox";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { CalendarIcon, PlusCircle, Trash2, Save, XCircle, FileUp, DollarSign, BookOpen, Link as LinkIcon, NotebookText, Truck } from "lucide-react";
-import React, { useEffect, useMemo } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import type { SupplyBill, SupplyBillItem } from "@/types/supply-bill";
 import type { ExportDocument } from "@/types/export-document";
 import type { Supplier } from "@/types/supplier";
 import type { Pallet } from "@/types/pallet";
+import { useToast } from "@/hooks/use-toast";
 
 const supplyBillItemSchema = z.object({
   id: z.string().optional(),
@@ -98,6 +99,9 @@ export function SupplyBillFormV2({
   allSuppliers,
   allPallets,
 }: SupplyBillFormProps) {
+  const { toast } = useToast();
+  const [isUploading, setIsUploading] = useState(false);
+  
   const form = useForm<SupplyBillFormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: defaultFormValues,
@@ -113,8 +117,6 @@ export function SupplyBillFormV2({
       form.reset({
         ...defaultFormValues,
         ...initialData,
-        invoiceDate: new Date(initialData.invoiceDate),
-        ackDate: initialData.ackDate ? new Date(initialData.ackDate) : undefined,
       });
     } else {
       form.reset(defaultFormValues);
@@ -146,14 +148,37 @@ export function SupplyBillFormV2({
     };
   }, [watchedItems, watchedTaxesAndCharges]);
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>, fieldName: 'billDocumentUri' | 'ewayBillDocumentUri') => {
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>, fieldName: 'billDocumentUri' | 'ewayBillDocumentUri') => {
     const file = e.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        form.setValue(fieldName, reader.result as string);
-      };
-      reader.readAsDataURL(file);
+    if (!file) return;
+
+    setIsUploading(true);
+    toast({ title: "Uploading...", description: `Uploading ${file.name}. Please wait.` });
+
+    try {
+        const reader = new FileReader();
+        reader.readAsDataURL(file);
+        reader.onloadend = async () => {
+            const fileData = reader.result;
+            const response = await fetch('/api/v2/upload', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ fileData, fileName: file.name }),
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.message || 'File upload failed');
+            }
+
+            const { filePath } = await response.json();
+            form.setValue(fieldName, filePath, { shouldValidate: true });
+            toast({ title: "Upload Successful", description: `File saved to: ${filePath}` });
+        };
+    } catch (error: any) {
+        toast({ variant: "destructive", title: "Upload Error", description: error.message });
+    } finally {
+        setIsUploading(false);
     }
   };
 
@@ -301,15 +326,15 @@ export function SupplyBillFormV2({
                 <CardContent className="space-y-4">
                    <FormField control={form.control} name="remarks" render={({ field }) => (<FormItem><FormLabel className="flex items-center gap-2"><NotebookText />Remarks</FormLabel><FormControl><Textarea {...field} /></FormControl></FormItem>)} />
                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <FormField control={form.control} name="billDocumentUri" render={({ field }) => (<FormItem><FormLabel className="flex items-center gap-2"><FileUp/>Upload Bill PDF/Image</FormLabel><FormControl><Input type="file" onChange={(e) => handleFileChange(e, 'billDocumentUri')} accept=".pdf,.jpg,.jpeg,.png" /></FormControl><FormMessage/></FormItem>)} />
-                        <FormField control={form.control} name="ewayBillDocumentUri" render={({ field }) => (<FormItem><FormLabel className="flex items-center gap-2"><FileUp/>Upload E-Way Bill PDF/Image</FormLabel><FormControl><Input type="file" onChange={(e) => handleFileChange(e, 'ewayBillDocumentUri')} accept=".pdf,.jpg,.jpeg,.png" /></FormControl><FormMessage/></FormItem>)} />
+                        <FormField control={form.control} name="billDocumentUri" render={({ field }) => (<FormItem><FormLabel className="flex items-center gap-2"><FileUp/>Upload Bill PDF/Image</FormLabel><FormControl><Input type="file" onChange={(e) => handleFileChange(e, 'billDocumentUri')} accept=".pdf,.jpg,.jpeg,.png" disabled={isUploading}/></FormControl><FormMessage/></FormItem>)} />
+                        <FormField control={form.control} name="ewayBillDocumentUri" render={({ field }) => (<FormItem><FormLabel className="flex items-center gap-2"><FileUp/>Upload E-Way Bill PDF/Image</FormLabel><FormControl><Input type="file" onChange={(e) => handleFileChange(e, 'ewayBillDocumentUri')} accept=".pdf,.jpg,.jpeg,.png" disabled={isUploading} /></FormControl><FormMessage/></FormItem>)} />
                    </div>
                 </CardContent>
              </Card>
           </CardContent>
           <CardFooter className="flex justify-end gap-2">
             {isEditing && (<Button type="button" variant="ghost" onClick={onCancelEdit}><XCircle/> Cancel</Button>)}
-            <Button type="submit"><Save /> {isEditing ? "Save Changes" : "Save Bill"}</Button>
+            <Button type="submit" disabled={isUploading}><Save /> {isUploading ? "Uploading..." : (isEditing ? "Save Changes" : "Save Bill")}</Button>
           </CardFooter>
         </form>
       </Form>
