@@ -26,6 +26,11 @@ export default function TransactionPageV2() {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [transactionToEdit, setTransactionToEdit] = useState<Transaction | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [currentYear, setCurrentYear] = useState(new Date().getFullYear());
+
+  useEffect(() => {
+    setCurrentYear(new Date().getFullYear());
+  }, []);
 
   // States for all dependency data
   const [allClients, setAllClients] = useState<Client[]>([]);
@@ -177,7 +182,7 @@ export default function TransactionPageV2() {
         />
       </main>
       <footer className="py-6 text-center text-sm text-muted-foreground border-t">
-        © {new Date().getFullYear()} HEMITH ERP. All rights reserved.
+        © {currentYear} HEMITH ERP. All rights reserved.
       </footer>
     </div>
   );

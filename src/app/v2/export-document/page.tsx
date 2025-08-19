@@ -34,6 +34,11 @@ export default function ExportDocumentPageV2() {
   const [docToEdit, setDocToEdit] = useState<ExportDocument | null>(null);
   const [sourcePoIdForNew, setSourcePoIdForNew] = useState<string | null>(null);
   const [nextExportInvoiceNumber, setNextExportInvoiceNumber] = useState("");
+  const [currentYear, setCurrentYear] = useState(new Date().getFullYear());
+
+  useEffect(() => {
+    setCurrentYear(new Date().getFullYear());
+  }, []);
 
   // Dependency data
   const [allExporters, setAllExporters] = useState<Company[]>([]);
@@ -227,7 +232,7 @@ export default function ExportDocumentPageV2() {
         />
       </main>
       <footer className="py-6 text-center text-sm text-muted-foreground border-t">
-        © {new Date().getFullYear()} HEMITH ERP. All rights reserved. (V2 - MySQL)
+        © {currentYear} HEMITH ERP. All rights reserved. (V2 - MySQL)
       </footer>
     </div>
   );

@@ -83,6 +83,11 @@ export default function DocumentDataPageV2() {
 
   const [document, setDocument] = useState<ExportDocument | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [currentYear, setCurrentYear] = useState(new Date().getFullYear());
+
+  useEffect(() => {
+    setCurrentYear(new Date().getFullYear());
+  }, []);
 
   // Editing states
   const [isEditingEway, setIsEditingEway] = useState(false);
@@ -621,7 +626,7 @@ export default function DocumentDataPageV2() {
           </TabsContent>
         </Tabs>
       </main>
-      <footer className="py-6 text-center text-sm text-muted-foreground border-t">© {new Date().getFullYear()} HEMITH ERP. All rights reserved.</footer>
+      <footer className="py-6 text-center text-sm text-muted-foreground border-t">© {currentYear} HEMITH ERP. All rights reserved.</footer>
     </div>
   );
 }

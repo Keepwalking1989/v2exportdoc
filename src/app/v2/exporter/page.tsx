@@ -14,6 +14,11 @@ export default function ExporterPageV2() {
   const [companies, setCompanies] = useState<Company[]>([]);
   const [companyToEdit, setCompanyToEdit] = useState<Company | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [currentYear, setCurrentYear] = useState(new Date().getFullYear());
+
+  useEffect(() => {
+    setCurrentYear(new Date().getFullYear());
+  }, []);
 
   const fetchExporters = async () => {
     setIsLoading(true);
@@ -111,7 +116,7 @@ export default function ExporterPageV2() {
         />
       </main>
       <footer className="py-6 text-center text-sm text-muted-foreground border-t">
-        © {new Date().getFullYear()} HEMITH ERP. All rights reserved.
+        © {currentYear} HEMITH ERP. All rights reserved.
       </footer>
     </div>
   );
