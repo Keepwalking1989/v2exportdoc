@@ -281,6 +281,8 @@ export function PerformaInvoiceFormV2({
     if (isEditing && initialDataForForm) {
       const formData = {
         ...initialDataForForm,
+        exporterId: String(initialDataForForm.exporterId),
+        clientId: String(initialDataForForm.clientId),
         invoiceDate: new Date(initialDataForForm.invoiceDate),
         selectedBankId: initialDataForForm.selectedBankId?.toString() || "",
         items: initialDataForForm.items.map(item => ({
@@ -727,3 +729,6 @@ export function PerformaInvoiceFormV2({
   );
 }
 
+
+
+    
