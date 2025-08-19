@@ -43,12 +43,22 @@ export default function SupplyBillPageV2() {
       const billsData = await billsRes.json();
       setSupplyBills(billsData.map((b: any) => ({
         ...b,
+        id: String(b.id),
+        exportDocumentId: String(b.exportDocumentId),
+        supplierId: String(b.supplierId),
         invoiceDate: new Date(b.invoiceDate),
         ackDate: b.ackDate ? new Date(b.ackDate) : undefined,
       })));
-      setAllExportDocuments(await docsRes.json());
-      setAllSuppliers(await suppliersRes.json());
-      setAllPallets(await palletsRes.json());
+      
+      const docsData = await docsRes.json();
+      setAllExportDocuments(docsData.map((d: any) => ({...d, id: String(d.id)})));
+      
+      const suppliersData = await suppliersRes.json();
+      setAllSuppliers(suppliersData.map((s: any) => ({...s, id: String(s.id)})));
+
+      const palletsData = await palletsRes.json();
+      setAllPallets(palletsData.map((p: any) => ({...p, id: String(p.id)})));
+
 
     } catch (error) {
       console.error("Failed to load data from database", error);

@@ -45,8 +45,8 @@ export function SupplyBillListV2({ supplyBills, allSuppliers, allPallets, allExp
 
   const enrichedBills = useMemo(() => {
     return supplyBills.map(bill => {
-      const supplier = combinedSuppliers.find(s => s.id === bill.supplierId);
-      const exportDoc = allExportDocuments.find(d => d.id === bill.exportDocumentId);
+      const supplier = combinedSuppliers.find(s => String(s.id) === String(bill.supplierId));
+      const exportDoc = allExportDocuments.find(d => String(d.id) === String(bill.exportDocumentId));
 
       // Placeholder for payment logic
       const outstandingAmount = bill.grandTotal;
@@ -59,6 +59,12 @@ export function SupplyBillListV2({ supplyBills, allSuppliers, allPallets, allExp
       };
     });
   }, [supplyBills, combinedSuppliers, allExportDocuments]);
+
+  useEffect(() => {
+    if (enrichedBills.length <= (currentPage - 1) * ITEMS_PER_PAGE && currentPage > 1) {
+      setCurrentPage(1);
+    }
+  }, [enrichedBills, currentPage]);
 
   const filteredBills = useMemo(() => {
     if (!searchTerm) return enrichedBills;

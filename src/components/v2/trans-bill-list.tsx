@@ -36,8 +36,8 @@ export function TransBillListV2({ transBills, allTransporters, allExportDocument
 
   const enrichedBills = useMemo(() => {
     return transBills.map(bill => {
-      const transporter = allTransporters.find(t => t.id === bill.transporterId);
-      const exportDoc = allExportDocuments.find(d => d.id === bill.exportDocumentId);
+      const transporter = allTransporters.find(t => String(t.id) === String(bill.transporterId));
+      const exportDoc = allExportDocuments.find(d => String(d.id) === String(bill.exportDocumentId));
       
       // Placeholder for payment logic
       const outstandingAmount = bill.totalPayable;

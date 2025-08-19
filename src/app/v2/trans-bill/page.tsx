@@ -41,10 +41,17 @@ export default function TransBillPageV2() {
         const billsData = await billsRes.json();
         setTransBills(billsData.map((b: any) => ({
           ...b,
+          id: String(b.id),
+          exportDocumentId: String(b.exportDocumentId),
+          transporterId: String(b.transporterId),
           invoiceDate: new Date(b.invoiceDate),
         })));
-        setAllExportDocuments(await docsRes.json());
-        setAllTransporters(await transportersRes.json());
+        
+        const docsData = await docsRes.json();
+        setAllExportDocuments(docsData.map((d: any) => ({...d, id: String(d.id)})));
+        
+        const transportersData = await transportersRes.json();
+        setAllTransporters(transportersData.map((t: any) => ({...t, id: String(t.id)})));
 
       } catch (error) {
         console.error("Failed to load data from database", error);
@@ -57,15 +64,33 @@ export default function TransBillPageV2() {
   }, [toast]);
   
   const refetchBills = async () => {
-    try {
-        const response = await fetch('/api/v2/trans-bill-data');
-        if (!response.ok) throw new Error('Failed to refetch bills');
-        const data = await response.json();
-        setTransBills(data.map((b: any) => ({
+     try {
+        const [billsRes, docsRes, transportersRes] = await Promise.all([
+          fetch('/api/v2/trans-bill-data'),
+          fetch('/api/v2/export-document-data'),
+          fetch('/api/v2/transporter-data'),
+        ]);
+
+        if (!billsRes.ok) throw new Error('Failed to fetch transport bills');
+        if (!docsRes.ok) throw new Error('Failed to fetch export documents');
+        if (!transportersRes.ok) throw new Error('Failed to fetch transporters');
+
+        const billsData = await billsRes.json();
+        setTransBills(billsData.map((b: any) => ({
           ...b,
+          id: String(b.id),
+          exportDocumentId: String(b.exportDocumentId),
+          transporterId: String(b.transporterId),
           invoiceDate: new Date(b.invoiceDate),
         })));
-    } catch (error) {
+        
+        const docsData = await docsRes.json();
+        setAllExportDocuments(docsData.map((d: any) => ({...d, id: String(d.id)})));
+        
+        const transportersData = await transportersRes.json();
+        setAllTransporters(transportersData.map((t: any) => ({...t, id: String(t.id)})));
+
+      } catch (error) {
          toast({ variant: "destructive", title: "Error", description: "Could not refresh bill list." });
     }
   }
