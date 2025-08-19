@@ -120,21 +120,25 @@ export async function PUT(request: Request) {
     const connection = await pool.getConnection();
     try {
         const invoice: PerformaInvoice = await request.json();
-        const { items, ...invoiceData } = invoice;
+        // Destructure to remove fields that should not be in the SET clause of the UPDATE query
+        const { items, id: invoiceId, isDeleted, ...invoiceData } = invoice;
 
         await connection.beginTransaction();
 
         const formattedInvoiceDate = format(new Date(invoiceData.invoiceDate), 'yyyy-MM-dd HH:mm:ss');
         const items_json = JSON.stringify(items);
+        
+        // Handle potentially empty selectedBankId by setting it to null for the database
+        const selectedBankIdForDb = invoiceData.selectedBankId ? invoiceData.selectedBankId : null;
 
         await connection.query<OkPacket>(
             'UPDATE performa_invoices SET ? WHERE id = ?',
             [
                 {
                     ...invoiceData,
+                    selectedBankId: selectedBankIdForDb,
                     invoiceDate: formattedInvoiceDate,
                     items_json,
-                    id: undefined, // Do not update the ID
                 },
                 id
             ]
