@@ -23,76 +23,49 @@ export default function TransBillPageV2() {
   const [allExportDocuments, setAllExportDocuments] = useState<ExportDocument[]>([]);
   const [allTransporters, setAllTransporters] = useState<Transporter[]>([]);
 
+  const fetchData = async () => {
+    setIsLoading(true);
+    try {
+      const [billsRes, docsRes, transportersRes] = await Promise.all([
+        fetch('/api/v2/trans-bill-data'),
+        fetch('/api/v2/export-document-data'),
+        fetch('/api/v2/transporter-data'),
+      ]);
+
+      if (!billsRes.ok) throw new Error('Failed to fetch transport bills');
+      if (!docsRes.ok) throw new Error('Failed to fetch export documents');
+      if (!transportersRes.ok) throw new Error('Failed to fetch transporters');
+
+      const billsData = await billsRes.json();
+      const docsData = await docsRes.json();
+      const transportersData = await transportersRes.json();
+      
+      // Ensure all relevant IDs are strings for type consistency
+      setTransBills(billsData.map((b: any) => ({
+        ...b,
+        id: String(b.id),
+        exportDocumentId: String(b.exportDocumentId),
+        transporterId: String(b.transporterId),
+        invoiceDate: new Date(b.invoiceDate),
+      })));
+      setAllExportDocuments(docsData.map((d: any) => ({...d, id: String(d.id)})));
+      setAllTransporters(transportersData.map((t: any) => ({...t, id: String(t.id)})));
+
+    } catch (error) {
+      console.error("Failed to load data from database", error);
+      toast({ variant: "destructive", title: "Error", description: "Could not load required data." });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   // Fetch initial data
   useEffect(() => {
-    const fetchData = async () => {
-      setIsLoading(true);
-      try {
-        const [billsRes, docsRes, transportersRes] = await Promise.all([
-          fetch('/api/v2/trans-bill-data'),
-          fetch('/api/v2/export-document-data'),
-          fetch('/api/v2/transporter-data'),
-        ]);
-
-        if (!billsRes.ok) throw new Error('Failed to fetch transport bills');
-        if (!docsRes.ok) throw new Error('Failed to fetch export documents');
-        if (!transportersRes.ok) throw new Error('Failed to fetch transporters');
-
-        const billsData = await billsRes.json();
-        setTransBills(billsData.map((b: any) => ({
-          ...b,
-          id: String(b.id),
-          exportDocumentId: String(b.exportDocumentId),
-          transporterId: String(b.transporterId),
-          invoiceDate: new Date(b.invoiceDate),
-        })));
-        
-        const docsData = await docsRes.json();
-        setAllExportDocuments(docsData.map((d: any) => ({...d, id: String(d.id)})));
-        
-        const transportersData = await transportersRes.json();
-        setAllTransporters(transportersData.map((t: any) => ({...t, id: String(t.id)})));
-
-      } catch (error) {
-        console.error("Failed to load data from database", error);
-        toast({ variant: "destructive", title: "Error", description: "Could not load required data." });
-      } finally {
-        setIsLoading(false);
-      }
-    };
     fetchData();
   }, [toast]);
   
   const refetchBills = async () => {
-     try {
-        const [billsRes, docsRes, transportersRes] = await Promise.all([
-          fetch('/api/v2/trans-bill-data'),
-          fetch('/api/v2/export-document-data'),
-          fetch('/api/v2/transporter-data'),
-        ]);
-
-        if (!billsRes.ok) throw new Error('Failed to fetch transport bills');
-        if (!docsRes.ok) throw new Error('Failed to fetch export documents');
-        if (!transportersRes.ok) throw new Error('Failed to fetch transporters');
-
-        const billsData = await billsRes.json();
-        setTransBills(billsData.map((b: any) => ({
-          ...b,
-          id: String(b.id),
-          exportDocumentId: String(b.exportDocumentId),
-          transporterId: String(b.transporterId),
-          invoiceDate: new Date(b.invoiceDate),
-        })));
-        
-        const docsData = await docsRes.json();
-        setAllExportDocuments(docsData.map((d: any) => ({...d, id: String(d.id)})));
-        
-        const transportersData = await transportersRes.json();
-        setAllTransporters(transportersData.map((t: any) => ({...t, id: String(t.id)})));
-
-      } catch (error) {
-         toast({ variant: "destructive", title: "Error", description: "Could not refresh bill list." });
-    }
+    await fetchData(); // Refetch all data
   }
 
   const handleSaveBill = async (values: TransBill) => {
