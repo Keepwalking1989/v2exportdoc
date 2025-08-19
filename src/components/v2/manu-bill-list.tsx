@@ -113,7 +113,7 @@ export function ManuBillListV2({ manuBills, allManufacturers, allExportDocuments
                     <TableCell className="hidden sm:table-cell">{format(new Date(bill.invoiceDate), "dd/MM/yyyy")}</TableCell>
                     <TableCell>{bill.manufacturerName}</TableCell>
                     <TableCell className="hidden md:table-cell font-mono">
-                      {`₹ ${bill.grandTotal.toFixed(2)}`}
+                      {`₹ ${Number(bill.grandTotal).toFixed(2)}`}
                     </TableCell>
                     <TableCell className="text-right space-x-1">
                       {bill.billDocumentUri && (
