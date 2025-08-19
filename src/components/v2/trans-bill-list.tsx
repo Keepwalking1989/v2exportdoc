@@ -110,7 +110,7 @@ export function TransBillListV2({ transBills, allTransporters, allExportDocument
                     <TableCell className="hidden sm:table-cell">{format(new Date(bill.invoiceDate), "dd/MM/yyyy")}</TableCell>
                     <TableCell>{bill.transporterName}</TableCell>
                     <TableCell className="hidden md:table-cell font-mono">
-                      {`₹ ${bill.totalPayable.toFixed(2)}`}
+                      {`₹ ${Number(bill.totalPayable).toFixed(2)}`}
                     </TableCell>
                     <TableCell className="text-right space-x-1">
                       {bill.billDocumentUri && (
