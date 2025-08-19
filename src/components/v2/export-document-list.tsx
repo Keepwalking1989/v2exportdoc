@@ -5,6 +5,7 @@ import Link from "next/link";
 import type { ExportDocument } from "@/types/export-document";
 import type { Company } from "@/types/company";
 import type { Client } from "@/types/client";
+import type { Manufacturer } from "@/types/manufacturer";
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -18,6 +19,7 @@ interface ExportDocumentListProps {
   documents: ExportDocument[];
   allExporters: Company[];
   allClients: Client[];
+  allManufacturers: Manufacturer[];
   onEditDocument: (docId: string) => void;
   onDeleteDocument: (docId: string) => void;
   onDownloadPdf: (docId: string) => void;
@@ -27,6 +29,7 @@ export function ExportDocumentListV2({
   documents,
   allExporters,
   allClients,
+  allManufacturers,
   onEditDocument,
   onDeleteDocument,
 }: ExportDocumentListProps) {
@@ -69,6 +72,7 @@ export function ExportDocumentListV2({
                   <TableHead className="font-headline">Date</TableHead>
                   <TableHead className="font-headline">Exporter</TableHead>
                   <TableHead className="font-headline">Client</TableHead>
+                  <TableHead className="font-headline">Manufacturer</TableHead>
                   <TableHead className="font-headline text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
@@ -76,6 +80,7 @@ export function ExportDocumentListV2({
                 {documents.map((doc) => {
                   const exporterName = allExporters.find(e => e.id === doc.exporterId)?.companyName || "N/A";
                   const clientName = allClients.find(c => c.id === doc.clientId)?.companyName || "N/A";
+                  const manufacturerName = allManufacturers.find(m => m.id === (doc.manufacturerId || doc.manufacturerDetails?.[0]?.manufacturerId))?.companyName || "N/A";
 
                   return (
                     <TableRow key={doc.id}>
@@ -83,6 +88,7 @@ export function ExportDocumentListV2({
                       <TableCell>{format(new Date(doc.exportInvoiceDate), "dd-MMM-yyyy")}</TableCell>
                       <TableCell>{exporterName}</TableCell>
                       <TableCell>{clientName}</TableCell>
+                      <TableCell>{manufacturerName}</TableCell>
                       <TableCell className="text-right space-x-0.5">
                         <Tooltip>
                           <TooltipTrigger asChild>
