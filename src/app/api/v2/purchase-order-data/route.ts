@@ -87,7 +87,7 @@ export async function PUT(request: Request) {
     const connection = await pool.getConnection();
     try {
         const order: PurchaseOrder = await request.json();
-        const { items, ...orderData } = order;
+        const { items, id: orderId, ...orderData } = order;
 
         await connection.beginTransaction();
 
@@ -103,7 +103,6 @@ export async function PUT(request: Request) {
                     poDate: formattedPoDate,
                     items_json,
                     termsAndConditions,
-                    id: undefined, // Do not update the ID
                 },
                 id
             ]
