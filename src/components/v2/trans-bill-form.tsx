@@ -116,6 +116,7 @@ export function TransBillFormV2({
       form.reset({
         ...defaultFormValues,
         ...initialData,
+        transporterId: String(initialData.transporterId),
         invoiceDate: new Date(initialData.invoiceDate),
       });
     } else {
@@ -168,7 +169,7 @@ export function TransBillFormV2({
 
   function onSubmit(values: TransBillFormValues) {
     const finalBill: TransBill = {
-      id: '', 
+      id: isEditing ? initialData!.id : '', 
       ...values,
       items: (values.items || []).map(item => ({
         ...item,
