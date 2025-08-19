@@ -84,15 +84,24 @@ export default function ExportDocumentPageV2() {
       
       const [docs, exporters, manufacturers, transporters, products, sizes, clients, performaInvoices, purchaseOrders] = data;
       
-      setExportDocuments(docs);
-      setAllExporters(exporters);
-      setAllManufacturers(manufacturers);
-      setAllTransporters(transporters);
-      setAllProducts(products);
-      setAllSizes(sizes);
-      setAllClients(clients);
-      setAllPerformaInvoices(performaInvoices);
-      setAllPurchaseOrders(purchaseOrders);
+      setExportDocuments(docs.map((d: any) => ({
+        ...d,
+        id: String(d.id),
+        exporterId: String(d.exporterId),
+        clientId: String(d.clientId),
+        transporterId: String(d.transporterId),
+        purchaseOrderId: d.purchaseOrderId ? String(d.purchaseOrderId) : undefined,
+        manufacturerDetails: d.manufacturerDetails?.map((md: any) => ({ ...md, id: String(md.id), manufacturerId: String(md.manufacturerId) })) || [],
+      })));
+      
+      setAllExporters(exporters.map((e: any) => ({ ...e, id: String(e.id) })));
+      setAllManufacturers(manufacturers.map((m: any) => ({ ...m, id: String(m.id) })));
+      setAllTransporters(transporters.map((t: any) => ({ ...t, id: String(t.id) })));
+      setAllProducts(products.map((p: any) => ({ ...p, id: String(p.id) })));
+      setAllSizes(sizes.map((s: any) => ({ ...s, id: String(s.id) })));
+      setAllClients(clients.map((c: any) => ({ ...c, id: String(c.id) })));
+      setAllPerformaInvoices(performaInvoices.map((pi: any) => ({ ...pi, id: String(pi.id) })));
+      setAllPurchaseOrders(purchaseOrders.map((po: any) => ({ ...po, id: String(po.id) })));
 
       setNextExportInvoiceNumber(getNextExportInvoiceNumberInternal(docs, getCurrentIndianFinancialYear()));
 
