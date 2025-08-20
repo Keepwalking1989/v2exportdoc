@@ -19,6 +19,7 @@ import type { Manufacturer } from '@/types/manufacturer';
 import type { Transporter } from '@/types/transporter';
 import type { Supplier } from '@/types/supplier';
 import type { Pallet } from '@/types/pallet';
+import { useToast } from '@/hooks/use-toast';
 
 interface GstPaidItem {
   id: string;
@@ -46,6 +47,7 @@ const StatCard = ({ title, value, icon, description, colorClass }: { title: stri
 
 export default function GstPageV2() {
     const [isLoading, setIsLoading] = useState(true);
+    const { toast } = useToast();
 
     const [allGstPaid, setAllGstPaid] = useState<GstPaidItem[]>([]);
     const [allGstReceived, setAllGstReceived] = useState<Transaction[]>([]);
@@ -78,21 +80,25 @@ export default function GstPageV2() {
                     fetch('/api/v2/pallet-data'),
                 ]);
 
-                const manuBills: ManuBill[] = await manuBillsRes.json();
-                const transBills: TransBill[] = await transBillsRes.json();
-                const supplyBills: SupplyBill[] = await supplyBillsRes.json();
-                const transactions: Transaction[] = await transactionsRes.json();
-                const manufacturers: Manufacturer[] = await manufacturersRes.json();
-                const transporters: Transporter[] = await transportersRes.json();
-                const suppliers: Supplier[] = await suppliersRes.json();
-                const pallets: Pallet[] = await palletsRes.json();
+                const manuBills: ManuBill[] = manuBillsRes.ok ? await manuBillsRes.json() : [];
+                const transBills: TransBill[] = transBillsRes.ok ? await transBillsRes.json() : [];
+                const supplyBills: SupplyBill[] = supplyBillsRes.ok ? await supplyBillsRes.json() : [];
+                const transactions: Transaction[] = transactionsRes.ok ? await transactionsRes.json() : [];
+                const manufacturers: Manufacturer[] = manufacturersRes.ok ? await manufacturersRes.json() : [];
+                const transporters: Transporter[] = transportersRes.ok ? await transportersRes.json() : [];
+                const suppliers: Supplier[] = suppliersRes.ok ? await suppliersRes.json() : [];
+                const pallets: Pallet[] = palletsRes.ok ? await palletsRes.json() : [];
                 const allSupplierLike = [...suppliers, ...pallets];
 
                 // Process GST Paid
                 const gstPaidItems: GstPaidItem[] = [];
                 
                 manuBills.forEach(bill => {
-                    const gstAmount = Number(bill.centralTaxAmount) + Number(bill.stateTaxAmount);
+                    const finalSubTotal = Number(bill.finalSubTotal) || 0;
+                    const centralTaxRate = Number(bill.centralTaxRate) / 100 || 0;
+                    const stateTaxRate = Number(bill.stateTaxRate) / 100 || 0;
+                    const gstAmount = finalSubTotal * (centralTaxRate + stateTaxRate);
+                    
                     if (gstAmount > 0.1) {
                         const party = manufacturers.find(m => m.id === bill.manufacturerId);
                         gstPaidItems.push({ id: bill.id, date: new Date(bill.invoiceDate), invoiceNumber: bill.invoiceNumber, partyName: party?.companyName || 'Unknown', gstAmount, type: 'Manufacturer' });
@@ -108,7 +114,11 @@ export default function GstPageV2() {
                 });
                 
                 supplyBills.forEach(bill => {
-                     const gstAmount = Number(bill.centralTaxAmount) + Number(bill.stateTaxAmount);
+                     const finalSubTotal = Number(bill.finalSubTotal) || 0;
+                     const centralTaxRate = Number(bill.centralTaxRate) / 100 || 0;
+                     const stateTaxRate = Number(bill.stateTaxRate) / 100 || 0;
+                     const gstAmount = finalSubTotal * (centralTaxRate + stateTaxRate);
+
                      if (gstAmount > 0.1) {
                         const party = allSupplierLike.find(s => s.id === bill.supplierId);
                         gstPaidItems.push({ id: bill.id, date: new Date(bill.invoiceDate), invoiceNumber: bill.invoiceNumber, partyName: party?.companyName || 'Unknown', gstAmount, type: 'Supply' });
@@ -123,16 +133,17 @@ export default function GstPageV2() {
                 const gstReceivedTransactions = transactions.filter(t => t.type === 'credit' && t.partyType === 'gst' && !t.isDeleted);
                 gstReceivedTransactions.sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime());
                 setAllGstReceived(gstReceivedTransactions);
-                setTotalGstReceived(Number(gstReceivedTransactions.reduce((acc, item) => acc + item.amount, 0)));
+                setTotalGstReceived(Number(gstReceivedTransactions.reduce((acc, item) => acc + Number(item.amount), 0)));
 
             } catch (error) {
                 console.error("Failed to load GST data from API", error);
+                 toast({ variant: "destructive", title: "Fetch Error", description: "Could not load data for the GST page." });
             } finally {
                 setIsLoading(false);
             }
         };
         fetchData();
-    }, []);
+    }, [toast]);
 
     const remainingGst = useMemo(() => totalGstPaid - totalGstReceived, [totalGstPaid, totalGstReceived]);
 
