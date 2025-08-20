@@ -92,24 +92,24 @@ export default function GstPageV2() {
                 const gstPaidItems: GstPaidItem[] = [];
                 
                 manuBills.forEach(bill => {
-                    const gstAmount = (bill.centralTaxAmount || 0) + (bill.stateTaxAmount || 0);
-                    if (gstAmount > 1) {
+                    const gstAmount = Number(bill.centralTaxAmount) + Number(bill.stateTaxAmount);
+                    if (gstAmount > 0.1) {
                         const party = manufacturers.find(m => m.id === bill.manufacturerId);
                         gstPaidItems.push({ id: bill.id, date: new Date(bill.invoiceDate), invoiceNumber: bill.invoiceNumber, partyName: party?.companyName || 'Unknown', gstAmount, type: 'Manufacturer' });
                     }
                 });
 
                 transBills.forEach(bill => {
-                    const gstAmount = bill.totalTax || 0;
-                     if (gstAmount > 1) {
+                    const gstAmount = Number(bill.totalTax) || 0;
+                     if (gstAmount > 0.1) {
                         const party = transporters.find(t => t.id === bill.transporterId);
                         gstPaidItems.push({ id: bill.id, date: new Date(bill.invoiceDate), invoiceNumber: bill.invoiceNumber, partyName: party?.companyName || 'Unknown', gstAmount, type: 'Transport' });
                     }
                 });
                 
                 supplyBills.forEach(bill => {
-                     const gstAmount = (bill.centralTaxAmount || 0) + (bill.stateTaxAmount || 0);
-                     if (gstAmount > 1) {
+                     const gstAmount = Number(bill.centralTaxAmount) + Number(bill.stateTaxAmount);
+                     if (gstAmount > 0.1) {
                         const party = allSupplierLike.find(s => s.id === bill.supplierId);
                         gstPaidItems.push({ id: bill.id, date: new Date(bill.invoiceDate), invoiceNumber: bill.invoiceNumber, partyName: party?.companyName || 'Unknown', gstAmount, type: 'Supply' });
                     }
