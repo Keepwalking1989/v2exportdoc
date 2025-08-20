@@ -131,14 +131,7 @@ export async function PUT(request: Request) {
     const connection = await pool.getConnection();
     try {
         const doc: ExportDocument = await request.json();
-        const { 
-            containerItems, 
-            manufacturerDetails, 
-            clientId, // This field doesn't exist in the DB table, so we remove it
-            performaInvoiceId, // This field doesn't exist in the DB table, so we remove it
-            totalInvoiceValue, // This field doesn't exist in the DB table, so we remove it
-            ...docData 
-        } = doc;
+        const { containerItems, manufacturerDetails, ...docData } = doc;
         
         await connection.beginTransaction();
 
