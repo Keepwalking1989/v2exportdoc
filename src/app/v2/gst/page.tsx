@@ -22,7 +22,7 @@ import type { Pallet } from '@/types/pallet';
 import { useToast } from '@/hooks/use-toast';
 
 interface GstPaidItem {
-  id: string;
+  id: string; // Now guaranteed to be unique, e.g., "manu-bill-1"
   date: Date;
   invoiceNumber: string;
   partyName: string;
@@ -88,7 +88,8 @@ export default function GstPageV2() {
                 const transporters: Transporter[] = transportersRes.ok ? await transportersRes.json() : [];
                 const suppliers: Supplier[] = suppliersRes.ok ? await suppliersRes.json() : [];
                 const pallets: Pallet[] = palletsRes.ok ? await palletsRes.json() : [];
-                const allSupplierLike = [...(suppliers || []), ...(pallets || [])];
+                const allSupplierLike = [...(Array.isArray(suppliers) ? suppliers : []), ...(Array.isArray(pallets) ? pallets : [])];
+
 
                 // Process GST Paid
                 const gstPaidItems: GstPaidItem[] = [];
@@ -101,15 +102,15 @@ export default function GstPageV2() {
                     
                     if (gstAmount > 0.1) {
                         const party = manufacturers.find(m => m.id === bill.manufacturerId);
-                        gstPaidItems.push({ id: bill.id, date: new Date(bill.invoiceDate), invoiceNumber: bill.invoiceNumber, partyName: party?.companyName || 'Unknown', gstAmount, type: 'Manufacturer' });
+                        gstPaidItems.push({ id: `manu-bill-${bill.id}`, date: new Date(bill.invoiceDate), invoiceNumber: bill.invoiceNumber, partyName: party?.companyName || 'Unknown', gstAmount, type: 'Manufacturer' });
                     }
                 });
 
                 transBills.forEach(bill => {
-                    const gstAmount = bill.totalTax || 0;
+                    const gstAmount = Number(bill.totalTax) || 0;
                      if (gstAmount > 1) {
                         const party = transporters.find(t => t.id === bill.transporterId);
-                        gstPaidItems.push({ id: bill.id, date: new Date(bill.invoiceDate), invoiceNumber: bill.invoiceNumber, partyName: party?.companyName || 'Unknown', gstAmount, type: 'Transport' });
+                        gstPaidItems.push({ id: `trans-bill-${bill.id}`, date: new Date(bill.invoiceDate), invoiceNumber: bill.invoiceNumber, partyName: party?.companyName || 'Unknown', gstAmount, type: 'Transport' });
                     }
                 });
                 
@@ -121,19 +122,19 @@ export default function GstPageV2() {
 
                      if (gstAmount > 0.1) {
                         const party = allSupplierLike.find(s => s.id === bill.supplierId);
-                        gstPaidItems.push({ id: bill.id, date: new Date(bill.invoiceDate), invoiceNumber: bill.invoiceNumber, partyName: party?.companyName || 'Unknown', gstAmount, type: 'Supply' });
+                        gstPaidItems.push({ id: `supply-bill-${bill.id}`, date: new Date(bill.invoiceDate), invoiceNumber: bill.invoiceNumber, partyName: party?.companyName || 'Unknown', gstAmount, type: 'Supply' });
                     }
                 });
 
                 gstPaidItems.sort((a, b) => b.date.getTime() - a.date.getTime());
                 setAllGstPaid(gstPaidItems);
-                setTotalGstPaid(Number(gstPaidItems.reduce((acc, item) => acc + Number(item.gstAmount), 0)));
+                setTotalGstPaid(gstPaidItems.reduce((acc, item) => acc + Number(item.gstAmount), 0));
 
                 // Process GST Received
                 const gstReceivedTransactions = transactions.filter(t => t.type === 'credit' && t.partyType === 'gst' && !t.isDeleted);
                 gstReceivedTransactions.sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime());
                 setAllGstReceived(gstReceivedTransactions);
-                setTotalGstReceived(Number(gstReceivedTransactions.reduce((acc, item) => acc + Number(item.amount), 0)));
+                setTotalGstReceived(gstReceivedTransactions.reduce((acc, item) => acc + Number(item.amount), 0));
 
             } catch (error) {
                 console.error("Failed to load GST data from API", error);
@@ -208,7 +209,7 @@ export default function GstPageV2() {
                            <div className="mb-4"><div className="relative"><Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" /><Input type="search" placeholder="Search by description..." value={gstReceivedSearchTerm} onChange={(e) => setGstReceivedSearchTerm(e.target.value)} className="pl-8 w-full"/></div></div>
                            <div className="rounded-md border h-96 overflow-auto">
                                 <Table><TableHeader className="sticky top-0 bg-background"><TableRow><TableHead>Date</TableHead><TableHead>Description</TableHead><TableHead className="text-right">Amount</TableHead></TableRow></TableHeader>
-                                    <TableBody>{paginatedGstReceived.map(item => (<TableRow key={item.id}><TableCell>{format(new Date(item.date), "dd/MM/yy")}</TableCell><TableCell>{item.description || 'GST Refund'}</TableCell><TableCell className="text-right font-mono text-green-600">₹ {Number(item.amount).toFixed(2)}</TableCell></TableRow>))}</TableBody>
+                                    <TableBody>{paginatedGstReceived.map(item => (<TableRow key={`gst-credit-${item.id}`}><TableCell>{format(new Date(item.date), "dd/MM/yy")}</TableCell><TableCell>{item.description || 'GST Refund'}</TableCell><TableCell className="text-right font-mono text-green-600">₹ {Number(item.amount).toFixed(2)}</TableCell></TableRow>))}</TableBody>
                                 </Table>
                            </div>
                             {totalGstReceivedPages > 1 && (<div className="flex items-center justify-between mt-4"><Button variant="outline" size="sm" onClick={() => setGstReceivedCurrentPage((p) => Math.max(1, p - 1))} disabled={gstReceivedCurrentPage === 1}><ChevronLeft className="h-4 w-4 mr-1" />Previous</Button><span className="text-sm text-muted-foreground">Page {gstReceivedCurrentPage} of {totalGstReceivedPages}</span><Button variant="outline" size="sm" onClick={() => setGstReceivedCurrentPage((p) => Math.min(totalGstReceivedPages, p + 1))} disabled={gstReceivedCurrentPage === totalGstReceivedPages}>Next<ChevronRight className="h-4 w-4 ml-1" /></Button></div>)}
