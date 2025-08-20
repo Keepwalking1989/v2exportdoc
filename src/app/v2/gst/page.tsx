@@ -88,23 +88,18 @@ export default function GstPageV2() {
                 const transporters: Transporter[] = transportersRes.ok ? await transportersRes.json() : [];
                 const suppliers: Supplier[] = suppliersRes.ok ? await suppliersRes.json() : [];
                 const pallets: Pallet[] = palletsRes.ok ? await palletsRes.json() : [];
-                const allSupplierLike = [...suppliers, ...pallets];
+                const allSupplierLike = [...(suppliers || []), ...(pallets || [])];
 
                 // Process GST Paid
                 const gstPaidItems: GstPaidItem[] = [];
                 
                 manuBills.forEach(bill => {
-<<<<<<< HEAD
                     const finalSubTotal = Number(bill.finalSubTotal) || 0;
                     const centralTaxRate = Number(bill.centralTaxRate) / 100 || 0;
                     const stateTaxRate = Number(bill.stateTaxRate) / 100 || 0;
                     const gstAmount = finalSubTotal * (centralTaxRate + stateTaxRate);
                     
                     if (gstAmount > 0.1) {
-=======
-                    const gstAmount = (bill.centralTaxAmount || 0) + (bill.stateTaxAmount || 0);
-                    if (gstAmount > 1) {
->>>>>>> parent of fbbef40 (in gst page there is only one entry shows which is from trans bill page)
                         const party = manufacturers.find(m => m.id === bill.manufacturerId);
                         gstPaidItems.push({ id: bill.id, date: new Date(bill.invoiceDate), invoiceNumber: bill.invoiceNumber, partyName: party?.companyName || 'Unknown', gstAmount, type: 'Manufacturer' });
                     }
@@ -119,17 +114,12 @@ export default function GstPageV2() {
                 });
                 
                 supplyBills.forEach(bill => {
-<<<<<<< HEAD
                      const finalSubTotal = Number(bill.finalSubTotal) || 0;
                      const centralTaxRate = Number(bill.centralTaxRate) / 100 || 0;
                      const stateTaxRate = Number(bill.stateTaxRate) / 100 || 0;
                      const gstAmount = finalSubTotal * (centralTaxRate + stateTaxRate);
 
                      if (gstAmount > 0.1) {
-=======
-                     const gstAmount = (bill.centralTaxAmount || 0) + (bill.stateTaxAmount || 0);
-                     if (gstAmount > 1) {
->>>>>>> parent of fbbef40 (in gst page there is only one entry shows which is from trans bill page)
                         const party = allSupplierLike.find(s => s.id === bill.supplierId);
                         gstPaidItems.push({ id: bill.id, date: new Date(bill.invoiceDate), invoiceNumber: bill.invoiceNumber, partyName: party?.companyName || 'Unknown', gstAmount, type: 'Supply' });
                     }
