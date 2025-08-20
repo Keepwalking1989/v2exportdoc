@@ -311,9 +311,9 @@ export default function DashboardPage() {
                 content = (
                      <Table>
                         <TableBody>
-                            <TableRow><TableCell>Total GST Paid (Input)</TableCell><TableCell className="text-right font-mono text-destructive">₹ {dashboardData.totalGstPaid.toFixed(2)}</TableCell></TableRow>
-                            <TableRow><TableCell>Total GST Received (Refund)</TableCell><TableCell className="text-right font-mono text-green-600">₹ {dashboardData.totalGstReceived.toFixed(2)}</TableCell></TableRow>
-                            <TableRow className="font-bold"><TableCell>Net Receivable</TableCell><TableCell className="text-right font-mono text-primary">₹ {dashboardData.netGstReceivable.toFixed(2)}</TableCell></TableRow>
+                            <TableRow><TableCell>Total GST Paid (Input)</TableCell><TableCell className="text-right font-mono text-destructive">₹ {Number(dashboardData.totalGstPaid).toFixed(2)}</TableCell></TableRow>
+                            <TableRow><TableCell>Total GST Received (Refund)</TableCell><TableCell className="text-right font-mono text-green-600">₹ {Number(dashboardData.totalGstReceived).toFixed(2)}</TableCell></TableRow>
+                            <TableRow className="font-bold"><TableCell>Net Receivable</TableCell><TableCell className="text-right font-mono text-primary">₹ {Number(dashboardData.netGstReceivable).toFixed(2)}</TableCell></TableRow>
                         </TableBody>
                     </Table>
                 );
@@ -425,7 +425,7 @@ export default function DashboardPage() {
                     />
                      <StatCard 
                         title="GST Receivable"
-                        value={`₹ ${dashboardData.netGstReceivable.toFixed(2)}`}
+                        value={`₹ ${Number(dashboardData.netGstReceivable).toFixed(2)}`}
                         icon={<Percent className="h-4 w-4 text-indigo-500" />}
                         description="GST Paid minus GST Received."
                         colorClass="text-indigo-500"
