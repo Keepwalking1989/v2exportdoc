@@ -61,7 +61,7 @@ async function fetchClientInvoices(clientId: string): Promise<LedgerItem[]> {
     const poToPiIdMap = new Map(allPOs.map(po => [po.id, po.sourcePiId]));
     const piIdToCurrencyMap = new Map(allPIs.map(pi => [pi.id, pi.currencyType]));
 
-    // --- The Fix: Filter directly by clientId on the export document ---
+    // --- Filter directly by clientId on the export document ---
     const clientExportDocs = allExportDocs.filter(doc => doc.clientId?.toString() === clientId);
 
     const calculateDocTotal = (doc: ExportDocument): number => {
@@ -72,10 +72,12 @@ async function fetchClientInvoices(clientId: string): Promise<LedgerItem[]> {
                 const product = allProducts.find(p => p.id === item.productId);
                 if (!product) return;
                 const size = allSizes.find(s => s.id === product.sizeId);
-                if (!size || !size.sqmPerBox) return;
-                total += (item.boxes || 0) * size.sqmPerBox * (item.rate || 0);
+                if (!size) return;
+                // Ensure all parts of the calculation are valid numbers
+                total += (item.boxes || 0) * (size.sqmPerBox || 0) * (item.rate || 0);
             });
         });
+        // Ensure freight is also treated as a number
         return total + (doc.freight || 0);
     };
 
@@ -274,5 +276,3 @@ export default function ClientTransactionPageV2() {
         </div>
     );
 }
-
-    
