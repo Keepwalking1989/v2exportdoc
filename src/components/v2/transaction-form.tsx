@@ -200,7 +200,11 @@ export function TransactionFormV2({
       else if (inv.type === 'supply') bill = allSupplyBills.find(b => b.id === inv.id);
       
       if (bill) {
-        total += bill.grandTotal || (bill as TransBill).totalPayable || 0;
+        // Ensure the value is treated as a number before adding
+        const billTotal = parseFloat(String(bill.grandTotal || (bill as TransBill).totalPayable || 0));
+        if (!isNaN(billTotal)) {
+          total += billTotal;
+        }
       }
     });
     form.setValue('amount', parseFloat(total.toFixed(2)));
