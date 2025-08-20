@@ -62,16 +62,16 @@ export default function TransactionPageV2() {
         fetch('/api/v2/supply-bill-data'),
       ]);
 
-      setTransactions(await transRes.json());
-      setAllClients(await cliRes.json());
-      setAllManufacturers(await manuRes.json());
-      setAllTransporters(await transpRes.json());
-      setAllSuppliers(await suppRes.json());
-      setAllPallets(await palletRes.json());
-      setAllExportDocuments(await docsRes.json());
-      setAllManuBills(await manuBillRes.json());
-      setAllTransBills(await transBillRes.json());
-      setAllSupplyBills(await supplyBillRes.json());
+      setTransactions(transRes.ok ? await transRes.json() : []);
+      setAllClients(cliRes.ok ? await cliRes.json() : []);
+      setAllManufacturers(manuRes.ok ? await manuRes.json() : []);
+      setAllTransporters(transpRes.ok ? await transpRes.json() : []);
+      setAllSuppliers(suppRes.ok ? await suppRes.json() : []);
+      setAllPallets(palletRes.ok ? await palletRes.json() : []);
+      setAllExportDocuments(docsRes.ok ? await docsRes.json() : []);
+      setAllManuBills(manuBillRes.ok ? await manuBillRes.json() : []);
+      setAllTransBills(transBillRes.ok ? await transBillRes.json() : []);
+      setAllSupplyBills(supplyBillRes.ok ? await supplyBillRes.json() : []);
 
     } catch (error) {
       console.error("Failed to fetch data", error);
