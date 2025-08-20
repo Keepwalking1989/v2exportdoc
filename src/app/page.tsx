@@ -24,7 +24,6 @@ import { format } from 'date-fns';
 import type { DateRange } from 'react-day-picker';
 import { Calendar as CalendarIcon, IndianRupee, HandCoins, Handshake, Ship, TrendingUp, TrendingDown, ArrowLeftRight, Percent } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { useToast } from '@/hooks/use-toast';
 
 // Import all required types
 import type { Transaction } from '@/types/transaction';
@@ -42,6 +41,23 @@ import type { PerformaInvoice } from '@/types/performa-invoice';
 import type { PurchaseOrder } from '@/types/purchase-order';
 import type { Client } from '@/types/client';
 
+
+const LOCAL_STORAGE_KEYS = {
+    TRANSACTIONS: "bizform_transactions",
+    EXPORT_DOCS: "bizform_export_documents_v2",
+    MANU_BILLS: "bizform_manu_bills",
+    TRANS_BILLS: "bizform_trans_bills",
+    SUPPLY_BILLS: "bizform_supply_bills",
+    PRODUCTS: "bizform_products",
+    SIZES: "bizform_sizes",
+    MANUFACTURERS: "bizform_manufacturers",
+    TRANSPORTERS: "bizform_transporters",
+    SUPPLIERS: "bizform_suppliers",
+    PALLETS: "bizform_pallets",
+    PERFORMA_INVOICES: "bizform_performa_invoices",
+    PURCHASE_ORDERS: "bizform_purchase_orders",
+    CLIENTS: "bizform_clients",
+};
 
 const StatCard = ({ title, value, icon, description, colorClass, onClick }: { title: string; value: string; icon: React.ReactNode; description: string; colorClass?: string, onClick?: () => void }) => (
     <Card className={cn("hover:shadow-lg transition-shadow", onClick && "cursor-pointer")} onClick={onClick}>
@@ -74,7 +90,7 @@ const DashboardDetailModal = ({ open, onOpenChange, title, children }: { open: b
 
 export default function DashboardPage() {
     const router = useRouter();
-    const { toast } = useToast();
+    const [isClient, setIsClient] = useState(false);
     const [isLoading, setIsLoading] = useState(true);
     const [modalState, setModalState] = useState<{ open: boolean, title: string, content: React.ReactNode | null }>({ open: false, title: '', content: null });
 
@@ -101,52 +117,31 @@ export default function DashboardPage() {
 
 
     useEffect(() => {
-      const fetchData = async () => {
-        setIsLoading(true);
-        try {
-          const apiEndpoints = [
-            '/api/v2/transaction-data',
-            '/api/v2/export-document-data',
-            '/api/v2/manu-bill-data',
-            '/api/v2/trans-bill-data',
-            '/api/v2/supply-bill-data',
-            '/api/v2/product-data',
-            '/api/v2/size-data',
-            '/api/v2/manufacturer-data',
-            '/api/v2/transporter-data',
-            '/api/v2/supplier-data',
-            '/api/v2/pallet-data',
-            '/api/v2/performa-invoice-data',
-            '/api/v2/purchase-order-data',
-            '/api/v2/client-data'
-          ];
-          const responses = await Promise.all(apiEndpoints.map(url => fetch(url)));
-          const data = await Promise.all(responses.map(res => res.ok ? res.json() : [])); // Use [] as fallback
+        setIsClient(true);
+        if (typeof window !== "undefined") {
+            try {
+                setTransactions(JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEYS.TRANSACTIONS) || '[]'));
+                setExportDocuments(JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEYS.EXPORT_DOCS) || '[]'));
+                setManuBills(JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEYS.MANU_BILLS) || '[]'));
+                setTransBills(JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEYS.TRANS_BILLS) || '[]'));
+                setSupplyBills(JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEYS.SUPPLY_BILLS) || '[]'));
+                setProducts(JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEYS.PRODUCTS) || '[]'));
+                setSizes(JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEYS.SIZES) || '[]'));
+                setManufacturers(JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEYS.MANUFACTURERS) || '[]'));
+                setTransporters(JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEYS.TRANSPORTERS) || '[]'));
+                setSuppliers(JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEYS.SUPPLIERS) || '[]'));
+                setPallets(JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEYS.PALLETS) || '[]'));
+                setAllPerformaInvoices(JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEYS.PERFORMA_INVOICES) || '[]'));
+                setAllPurchaseOrders(JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEYS.PURCHASE_ORDERS) || '[]'));
+                setAllClients(JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEYS.CLIENTS) || '[]'));
 
-          setTransactions(data[0] || []);
-          setExportDocuments(data[1] || []);
-          setManuBills(data[2] || []);
-          setTransBills(data[3] || []);
-          setSupplyBills(data[4] || []);
-          setProducts(data[5] || []);
-          setSizes(data[6] || []);
-          setManufacturers(data[7] || []);
-          setTransporters(data[8] || []);
-          setSuppliers(data[9] || []);
-          setPallets(data[10] || []);
-          setAllPerformaInvoices(data[11] || []);
-          setAllPurchaseOrders(data[12] || []);
-          setAllClients(data[13] || []);
-
-        } catch (error: any) {
-            console.error("Failed to load dashboard data from database", error);
-            toast({ variant: 'destructive', title: 'Error Loading Dashboard', description: error.message });
-        } finally {
-            setIsLoading(false);
+            } catch (error) {
+                console.error("Failed to load dashboard data from localStorage", error);
+            } finally {
+                setIsLoading(false);
+            }
         }
-      }
-      fetchData();
-    }, [toast]);
+    }, []);
 
     const dashboardData = useMemo(() => {
         const fromDate = date?.from;
@@ -223,10 +218,10 @@ export default function DashboardPage() {
         }).filter(c => c.balance > 0.01);
 
         const allPayableParties = [
-            ...(Array.isArray(manufacturers) ? manufacturers.map(p => ({ ...p, partyType: 'manufacturer' })) : []),
-            ...(Array.isArray(transporters) ? transporters.map(p => ({ ...p, partyType: 'transporter' })) : []),
-            ...(Array.isArray(suppliers) ? suppliers.map(p => ({ ...p, partyType: 'supplier' })) : []),
-            ...(Array.isArray(pallets) ? pallets.map(p => ({ ...p, partyType: 'pallet' })) : [])
+            ...manufacturers.map(p => ({ ...p, partyType: 'manufacturer' })),
+            ...transporters.map(p => ({ ...p, partyType: 'transporter' })),
+            ...suppliers.map(p => ({ ...p, partyType: 'supplier' })),
+            ...pallets.map(p => ({ ...p, partyType: 'pallet' }))
         ];
 
         const payablesBreakdown = allPayableParties.map(party => {
@@ -311,9 +306,9 @@ export default function DashboardPage() {
                 content = (
                      <Table>
                         <TableBody>
-                            <TableRow><TableCell>Total GST Paid (Input)</TableCell><TableCell className="text-right font-mono text-destructive">₹ {Number(dashboardData.totalGstPaid).toFixed(2)}</TableCell></TableRow>
-                            <TableRow><TableCell>Total GST Received (Refund)</TableCell><TableCell className="text-right font-mono text-green-600">₹ {Number(dashboardData.totalGstReceived).toFixed(2)}</TableCell></TableRow>
-                            <TableRow className="font-bold"><TableCell>Net Receivable</TableCell><TableCell className="text-right font-mono text-primary">₹ {Number(dashboardData.netGstReceivable).toFixed(2)}</TableCell></TableRow>
+                            <TableRow><TableCell>Total GST Paid (Input)</TableCell><TableCell className="text-right font-mono text-destructive">₹ {dashboardData.totalGstPaid.toFixed(2)}</TableCell></TableRow>
+                            <TableRow><TableCell>Total GST Received (Refund)</TableCell><TableCell className="text-right font-mono text-green-600">₹ {dashboardData.totalGstReceived.toFixed(2)}</TableCell></TableRow>
+                            <TableRow className="font-bold"><TableCell>Net Receivable</TableCell><TableCell className="text-right font-mono text-primary">₹ {dashboardData.netGstReceivable.toFixed(2)}</TableCell></TableRow>
                         </TableBody>
                     </Table>
                 );
@@ -347,7 +342,7 @@ export default function DashboardPage() {
         setModalState({ open: true, title, content });
     };
 
-    if (isLoading) {
+    if (!isClient || isLoading) {
         return (
             <div className="flex flex-col min-h-screen">
               <Header />
@@ -425,7 +420,7 @@ export default function DashboardPage() {
                     />
                      <StatCard 
                         title="GST Receivable"
-                        value={`₹ ${Number(dashboardData.netGstReceivable).toFixed(2)}`}
+                        value={`₹ ${dashboardData.netGstReceivable.toFixed(2)}`}
                         icon={<Percent className="h-4 w-4 text-indigo-500" />}
                         description="GST Paid minus GST Received."
                         colorClass="text-indigo-500"
@@ -472,5 +467,3 @@ export default function DashboardPage() {
         </div>
     );
 }
-
-    
