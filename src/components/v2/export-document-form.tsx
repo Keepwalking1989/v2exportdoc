@@ -674,9 +674,16 @@ export function ExportDocumentFormV2({
 
 
   useEffect(() => {
+    // Editing an existing document
     if (isEditing && initialData) {
+      const po = allPurchaseOrders.find(p => p.id === initialData.purchaseOrderId);
+      const pi = po ? allPerformaInvoices.find(p => p.id === po.sourcePiId) : undefined;
+      
       form.reset({
         ...initialData,
+        clientId: initialData.clientId || pi?.clientId || "",
+        performaInvoiceId: initialData.performaInvoiceId || pi?.id || "",
+        purchaseOrderId: initialData.purchaseOrderId || "",
         exportInvoiceDate: new Date(initialData.exportInvoiceDate),
         exchangeDate: initialData.exchangeDate ? new Date(initialData.exchangeDate) : new Date(),
         manufacturerDetails: initialData.manufacturerDetails?.map(md => ({...md, invoiceDate: md.invoiceDate ? new Date(md.invoiceDate) : new Date()})) || [defaultNewManufacturerItem],
@@ -689,7 +696,9 @@ export function ExportDocumentFormV2({
             }))
           : [defaultNewContainerItem],
       });
-    } else if (!isEditing && sourcePoId) {
+    } 
+    // Creating a new document from a source PO
+    else if (!isEditing && sourcePoId) {
       const po = allPurchaseOrders.find(p => p.id.toString() === sourcePoId);
       if (!po) return;
 
@@ -711,11 +720,12 @@ export function ExportDocumentFormV2({
           }],
           countryOfFinalDestination: allClients.find(c => c.id === pi.clientId)?.country || '',
       });
-
-    } else {
+    } 
+    // Creating a brand new document
+    else {
       form.reset(getDefaultFormValues(nextExportInvoiceNumber));
     }
-  }, [isEditing, initialData, form, nextExportInvoiceNumber, sourcePoId, allPurchaseOrders, allPerformaInvoices, allClients, allManufacturers]);
+  }, [isEditing, initialData, sourcePoId, form, nextExportInvoiceNumber, allPurchaseOrders, allPerformaInvoices, allClients, allManufacturers]);
 
   const watchedClientId = form.watch('clientId');
   const watchedPerformaInvoiceId = form.watch('performaInvoiceId');
@@ -744,16 +754,16 @@ export function ExportDocumentFormV2({
   );
 
   const piOptions = useMemo(() => {
-    const currentClientId = watchedClientId || initialData?.clientId;
+    const currentClientId = watchedClientId;
     if (!currentClientId) return [];
     return allPerformaInvoices
       .filter(pi => pi.clientId.toString() === currentClientId)
       .map(pi => ({ value: pi.id.toString(), label: pi.invoiceNumber }));
-  }, [watchedClientId, allPerformaInvoices, initialData]);
+  }, [watchedClientId, allPerformaInvoices]);
 
   const poOptions = useMemo(() => {
-    const currentPiId = watchedPerformaInvoiceId || initialData?.performaInvoiceId;
-    const selectedManufacturerId = watchedManufacturerDetails?.[0]?.manufacturerId || initialData?.manufacturerDetails?.[0]?.manufacturerId;
+    const currentPiId = watchedPerformaInvoiceId;
+    const selectedManufacturerId = watchedManufacturerDetails?.[0]?.manufacturerId;
     if (!currentPiId || !selectedManufacturerId) return [];
     
     return allPurchaseOrders
@@ -762,7 +772,7 @@ export function ExportDocumentFormV2({
         po.manufacturerId?.toString() === selectedManufacturerId
       )
       .map(po => ({ value: po.id.toString(), label: po.poNumber }));
-  }, [watchedPerformaInvoiceId, watchedManufacturerDetails, allPurchaseOrders, initialData]);
+  }, [watchedPerformaInvoiceId, watchedManufacturerDetails, allPurchaseOrders]);
 
 
   const exporterOptions: ComboboxOption[] = useMemo(() =>
@@ -925,4 +935,3 @@ export function ExportDocumentFormV2({
     </Card>
   );
 }
-
