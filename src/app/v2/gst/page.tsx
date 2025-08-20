@@ -117,7 +117,7 @@ export default function GstPageV2() {
 
                 gstPaidItems.sort((a, b) => b.date.getTime() - a.date.getTime());
                 setAllGstPaid(gstPaidItems);
-                setTotalGstPaid(Number(gstPaidItems.reduce((acc, item) => acc + item.gstAmount, 0)));
+                setTotalGstPaid(Number(gstPaidItems.reduce((acc, item) => acc + Number(item.gstAmount), 0)));
 
                 // Process GST Received
                 const gstReceivedTransactions = transactions.filter(t => t.type === 'credit' && t.partyType === 'gst' && !t.isDeleted);
@@ -172,9 +172,9 @@ export default function GstPageV2() {
                         <CardDescription>An overview of your Goods and Services Tax input and refunds from the database.</CardDescription>
                     </CardHeader>
                     <CardContent className="grid gap-4 md:grid-cols-3">
-                        <StatCard title="Total GST Paid (Input)" value={`₹ ${totalGstPaid.toFixed(2)}`} icon={<ArrowDown className="h-4 w-4 text-destructive" />} description="Total tax paid on purchases." colorClass="text-destructive"/>
-                        <StatCard title="Total GST Received (Refund)" value={`₹ ${totalGstReceived.toFixed(2)}`} icon={<ArrowUp className="h-4 w-4 text-green-600" />} description="Total refunds received from government." colorClass="text-green-600"/>
-                        <StatCard title="Net Receivable" value={`₹ ${remainingGst.toFixed(2)}`} icon={<IndianRupee className="h-4 w-4 text-primary" />} description="Amount pending to be received." colorClass="text-primary"/>
+                        <StatCard title="Total GST Paid (Input)" value={`₹ ${Number(totalGstPaid).toFixed(2)}`} icon={<ArrowDown className="h-4 w-4 text-destructive" />} description="Total tax paid on purchases." colorClass="text-destructive"/>
+                        <StatCard title="Total GST Received (Refund)" value={`₹ ${Number(totalGstReceived).toFixed(2)}`} icon={<ArrowUp className="h-4 w-4 text-green-600" />} description="Total refunds received from government." colorClass="text-green-600"/>
+                        <StatCard title="Net Receivable" value={`₹ ${Number(remainingGst).toFixed(2)}`} icon={<IndianRupee className="h-4 w-4 text-primary" />} description="Amount pending to be received." colorClass="text-primary"/>
                     </CardContent>
                 </Card>
 
@@ -185,7 +185,7 @@ export default function GstPageV2() {
                             <div className="mb-4"><div className="relative"><Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" /><Input type="search" placeholder="Search by Party or Invoice #" value={gstPaidSearchTerm} onChange={(e) => setGstPaidSearchTerm(e.target.value)} className="pl-8 w-full"/></div></div>
                             <div className="rounded-md border h-96 overflow-auto">
                                 <Table><TableHeader className="sticky top-0 bg-background"><TableRow><TableHead>Date</TableHead><TableHead>Party</TableHead><TableHead>Invoice #</TableHead><TableHead className="text-right">GST Amount</TableHead></TableRow></TableHeader>
-                                    <TableBody>{paginatedGstPaid.map(item => (<TableRow key={item.id}><TableCell>{format(item.date, "dd/MM/yy")}</TableCell><TableCell>{item.partyName}<Badge variant="secondary" className="ml-2">{item.type}</Badge></TableCell><TableCell>{item.invoiceNumber}</TableCell><TableCell className="text-right font-mono">₹ {item.gstAmount.toFixed(2)}</TableCell></TableRow>))}</TableBody>
+                                    <TableBody>{paginatedGstPaid.map(item => (<TableRow key={item.id}><TableCell>{format(item.date, "dd/MM/yy")}</TableCell><TableCell>{item.partyName}<Badge variant="secondary" className="ml-2">{item.type}</Badge></TableCell><TableCell>{item.invoiceNumber}</TableCell><TableCell className="text-right font-mono">₹ {Number(item.gstAmount).toFixed(2)}</TableCell></TableRow>))}</TableBody>
                                 </Table>
                             </div>
                             {totalGstPaidPages > 1 && (<div className="flex items-center justify-between mt-4"><Button variant="outline" size="sm" onClick={() => setGstPaidCurrentPage((p) => Math.max(1, p - 1))} disabled={gstPaidCurrentPage === 1}><ChevronLeft className="h-4 w-4 mr-1" />Previous</Button><span className="text-sm text-muted-foreground">Page {gstPaidCurrentPage} of {totalGstPaidPages}</span><Button variant="outline" size="sm" onClick={() => setGstPaidCurrentPage((p) => Math.min(totalGstPaidPages, p + 1))} disabled={gstPaidCurrentPage === totalGstPaidPages}>Next<ChevronRight className="h-4 w-4 ml-1" /></Button></div>)}
@@ -197,7 +197,7 @@ export default function GstPageV2() {
                            <div className="mb-4"><div className="relative"><Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" /><Input type="search" placeholder="Search by description..." value={gstReceivedSearchTerm} onChange={(e) => setGstReceivedSearchTerm(e.target.value)} className="pl-8 w-full"/></div></div>
                            <div className="rounded-md border h-96 overflow-auto">
                                 <Table><TableHeader className="sticky top-0 bg-background"><TableRow><TableHead>Date</TableHead><TableHead>Description</TableHead><TableHead className="text-right">Amount</TableHead></TableRow></TableHeader>
-                                    <TableBody>{paginatedGstReceived.map(item => (<TableRow key={item.id}><TableCell>{format(new Date(item.date), "dd/MM/yy")}</TableCell><TableCell>{item.description || 'GST Refund'}</TableCell><TableCell className="text-right font-mono text-green-600">₹ {item.amount.toFixed(2)}</TableCell></TableRow>))}</TableBody>
+                                    <TableBody>{paginatedGstReceived.map(item => (<TableRow key={item.id}><TableCell>{format(new Date(item.date), "dd/MM/yy")}</TableCell><TableCell>{item.description || 'GST Refund'}</TableCell><TableCell className="text-right font-mono text-green-600">₹ {Number(item.amount).toFixed(2)}</TableCell></TableRow>))}</TableBody>
                                 </Table>
                            </div>
                             {totalGstReceivedPages > 1 && (<div className="flex items-center justify-between mt-4"><Button variant="outline" size="sm" onClick={() => setGstReceivedCurrentPage((p) => Math.max(1, p - 1))} disabled={gstReceivedCurrentPage === 1}><ChevronLeft className="h-4 w-4 mr-1" />Previous</Button><span className="text-sm text-muted-foreground">Page {gstReceivedCurrentPage} of {totalGstReceivedPages}</span><Button variant="outline" size="sm" onClick={() => setGstReceivedCurrentPage((p) => Math.min(totalGstReceivedPages, p + 1))} disabled={gstReceivedCurrentPage === totalGstReceivedPages}>Next<ChevronRight className="h-4 w-4 ml-1" /></Button></div>)}

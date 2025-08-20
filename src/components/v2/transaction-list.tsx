@@ -166,7 +166,7 @@ export function TransactionListV2({
                       </TableCell>
                       <TableCell>{t.description}</TableCell>
                       <TableCell className={cn("text-right font-mono", t.type === 'debit' ? 'text-green-600' : 'text-red-600')}>
-                          {t.amount.toLocaleString(undefined, { style: 'currency', currency: t.currency, minimumFractionDigits: 2 })}
+                          {Number(t.amount).toLocaleString(undefined, { style: 'currency', currency: t.currency, minimumFractionDigits: 2 })}
                       </TableCell>
                       <TableCell className="text-right space-x-1">
                          <Button variant="ghost" size="icon" onClick={() => onEditTransaction(t.id)} className="hover:text-primary">

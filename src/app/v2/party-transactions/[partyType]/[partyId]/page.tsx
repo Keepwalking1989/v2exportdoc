@@ -121,8 +121,8 @@ export default function PartyTransactionPageV2() {
     }, [partyType, partyId]);
 
     const { totalCredit, totalDebit, balance } = useMemo(() => {
-        const debitTotal = debitItems.reduce((acc, t) => acc + t.amount, 0);
-        const creditTotal = creditItems.reduce((acc, t) => acc + t.amount, 0);
+        const debitTotal = debitItems.reduce((acc, t) => acc + Number(t.amount), 0);
+        const creditTotal = creditItems.reduce((acc, t) => acc + Number(t.amount), 0);
         return {
             totalDebit: debitTotal,
             totalCredit: creditTotal,
@@ -211,16 +211,16 @@ export default function PartyTransactionPageV2() {
                     <CardContent className="grid gap-4 md:grid-cols-3">
                         <div className="p-4 rounded-lg border bg-card">
                             <h3 className="text-sm font-medium text-muted-foreground">Total Bills (Debit)</h3>
-                            <p className="text-2xl font-bold text-destructive">₹{totalDebit.toFixed(2)}</p>
+                            <p className="text-2xl font-bold text-destructive">₹{Number(totalDebit).toFixed(2)}</p>
                         </div>
                         <div className="p-4 rounded-lg border bg-card">
                             <h3 className="text-sm font-medium text-muted-foreground">Total Payments (Credit)</h3>
-                            <p className="text-2xl font-bold text-green-600">₹{totalCredit.toFixed(2)}</p>
+                            <p className="text-2xl font-bold text-green-600">₹{Number(totalCredit).toFixed(2)}</p>
                         </div>
                         <div className="p-4 rounded-lg border bg-card">
                             <h3 className="text-sm font-medium text-muted-foreground">Net Balance</h3>
                             <p className={cn("text-2xl font-bold", balance > 0 ? 'text-destructive' : 'text-green-600')}>
-                                ₹{balance.toFixed(2)}
+                                ₹{Number(balance).toFixed(2)}
                             </p>
                             <p className="text-xs text-muted-foreground">{balance > 0 ? 'You owe them' : (balance < 0 ? 'They owe you / Overpaid' : 'Settled')}</p>
                         </div>
@@ -261,7 +261,7 @@ export default function PartyTransactionPageV2() {
                                                 <TableCell>{format(t.date, "dd/MM/yyyy")}</TableCell>
                                                 <TableCell>{t.description || 'N/A'}</TableCell>
                                                 <TableCell className="text-right font-mono text-destructive">
-                                                    ₹{t.amount.toFixed(2)}
+                                                    ₹{Number(t.amount).toFixed(2)}
                                                 </TableCell>
                                             </TableRow>
                                         )) : (
@@ -333,7 +333,7 @@ export default function PartyTransactionPageV2() {
                                                 <TableCell>{format(t.date, "dd/MM/yyyy")}</TableCell>
                                                 <TableCell>{t.description || 'N/A'}</TableCell>
                                                 <TableCell className="text-right font-mono text-green-600">
-                                                    ₹{t.amount.toFixed(2)}
+                                                    ₹{Number(t.amount).toFixed(2)}
                                                 </TableCell>
                                             </TableRow>
                                         )) : (
@@ -379,4 +379,3 @@ export default function PartyTransactionPageV2() {
         </div>
     );
 }
-

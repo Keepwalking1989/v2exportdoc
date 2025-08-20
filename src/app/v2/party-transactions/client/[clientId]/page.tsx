@@ -169,8 +169,8 @@ export default function ClientTransactionPageV2() {
     const { totalInvoiced, totalReceived, balance, currency } = useMemo(() => {
         // NOTE: Assumes single currency for simplicity.
         const firstInvoiceCurrency = invoicedItems[0]?.currency || 'USD';
-        const invoicedTotal = invoicedItems.reduce((acc, item) => acc + item.amount, 0);
-        const receivedTotal = paymentItems.reduce((acc, item) => acc + item.amount, 0);
+        const invoicedTotal = invoicedItems.reduce((acc, item) => acc + Number(item.amount), 0);
+        const receivedTotal = paymentItems.reduce((acc, item) => acc + Number(item.amount), 0);
         return {
             totalInvoiced: invoicedTotal,
             totalReceived: receivedTotal,
@@ -225,15 +225,15 @@ export default function ClientTransactionPageV2() {
                     <CardContent className="grid gap-4 md:grid-cols-3">
                         <div className="p-4 rounded-lg border bg-card">
                             <h3 className="text-sm font-medium text-muted-foreground">Total Invoiced</h3>
-                            <p className="text-2xl font-bold text-destructive">{currency}{totalInvoiced.toFixed(2)}</p>
+                            <p className="text-2xl font-bold text-destructive">{currency}{Number(totalInvoiced).toFixed(2)}</p>
                         </div>
                         <div className="p-4 rounded-lg border bg-card">
                             <h3 className="text-sm font-medium text-muted-foreground">Total Payments Received</h3>
-                            <p className="text-2xl font-bold text-green-600">{currency}{totalReceived.toFixed(2)}</p>
+                            <p className="text-2xl font-bold text-green-600">{currency}{Number(totalReceived).toFixed(2)}</p>
                         </div>
                         <div className="p-4 rounded-lg border bg-card">
                             <h3 className="text-sm font-medium text-muted-foreground">Net Balance</h3>
-                            <p className={cn("text-2xl font-bold", balance > 0 ? 'text-destructive' : 'text-green-600')}>{currency}{balance.toFixed(2)}</p>
+                            <p className={cn("text-2xl font-bold", balance > 0 ? 'text-destructive' : 'text-green-600')}>{currency}{Number(balance).toFixed(2)}</p>
                             <p className="text-xs text-muted-foreground">{balance > 0 ? 'Client owes you' : (balance < 0 ? 'You owe client / Overpaid' : 'Settled')}</p>
                         </div>
                     </CardContent>
@@ -248,7 +248,7 @@ export default function ClientTransactionPageV2() {
                                 <Table><TableHeader className="sticky top-0 bg-background"><TableRow><TableHead>Date</TableHead><TableHead>Invoice #</TableHead><TableHead className="text-right">Amount</TableHead></TableRow></TableHeader>
                                     <TableBody>
                                         {paginatedInvoices.length > 0 ? paginatedInvoices.map(t => (
-                                            <TableRow key={t.id}><TableCell>{format(t.date, "dd/MM/yyyy")}</TableCell><TableCell>{t.description || 'N/A'}</TableCell><TableCell className="text-right font-mono text-destructive">{t.currency}{t.amount.toFixed(2)}</TableCell></TableRow>
+                                            <TableRow key={t.id}><TableCell>{format(t.date, "dd/MM/yyyy")}</TableCell><TableCell>{t.description || 'N/A'}</TableCell><TableCell className="text-right font-mono text-destructive">{t.currency}{Number(t.amount).toFixed(2)}</TableCell></TableRow>
                                         )) : (<TableRow><TableCell colSpan={3} className="text-center text-muted-foreground">No invoices found.</TableCell></TableRow>)}
                                     </TableBody>
                                 </Table>
@@ -271,7 +271,7 @@ export default function ClientTransactionPageV2() {
                                 <Table><TableHeader className="sticky top-0 bg-background"><TableRow><TableHead>Date</TableHead><TableHead>Description</TableHead><TableHead className="text-right">Amount</TableHead></TableRow></TableHeader>
                                     <TableBody>
                                         {paginatedPayments.length > 0 ? paginatedPayments.map(t => (
-                                            <TableRow key={t.id}><TableCell>{format(t.date, "dd/MM/yyyy")}</TableCell><TableCell>{t.description || 'N/A'}</TableCell><TableCell className="text-right font-mono text-green-600">{t.currency}{t.amount.toFixed(2)}</TableCell></TableRow>
+                                            <TableRow key={t.id}><TableCell>{format(t.date, "dd/MM/yyyy")}</TableCell><TableCell>{t.description || 'N/A'}</TableCell><TableCell className="text-right font-mono text-green-600">{t.currency}{Number(t.amount).toFixed(2)}</TableCell></TableRow>
                                         )) : (<TableRow><TableCell colSpan={3} className="text-center text-muted-foreground">No payments found.</TableCell></TableRow>)}
                                     </TableBody>
                                 </Table>
@@ -291,4 +291,3 @@ export default function ClientTransactionPageV2() {
         </div>
     );
 }
-
