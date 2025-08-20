@@ -46,32 +46,32 @@ export default function TransactionPageV2() {
   const fetchData = async () => {
     setIsLoading(true);
     try {
-      const [
-        transRes, cliRes, manuRes, transpRes, suppRes, palletRes, 
-        docsRes, manuBillRes, transBillRes, supplyBillRes
-      ] = await Promise.all([
-        fetch('/api/v2/transaction-data'),
-        fetch('/api/v2/client-data'),
-        fetch('/api/v2/manufacturer-data'),
-        fetch('/api/v2/transporter-data'),
-        fetch('/api/v2/supplier-data'),
-        fetch('/api/v2/pallet-data'),
-        fetch('/api/v2/export-document-data'),
-        fetch('/api/v2/manu-bill-data'),
-        fetch('/api/v2/trans-bill-data'),
-        fetch('/api/v2/supply-bill-data'),
-      ]);
+      const apiEndpoints = [
+        { key: 'transactions', url: '/api/v2/transaction-data' },
+        { key: 'clients', url: '/api/v2/client-data' },
+        { key: 'manufacturers', url: '/api/v2/manufacturer-data' },
+        { key: 'transporters', url: '/api/v2/transporter-data' },
+        { key: 'suppliers', url: '/api/v2/supplier-data' },
+        { key: 'pallets', url: '/api/v2/pallet-data' },
+        { key: 'exportDocuments', url: '/api/v2/export-document-data' },
+        { key: 'manuBills', url: '/api/v2/manu-bill-data' },
+        { key: 'transBills', url: '/api/v2/trans-bill-data' },
+        { key: 'supplyBills', url: '/api/v2/supply-bill-data' },
+      ];
+      
+      const responses = await Promise.all(apiEndpoints.map(e => fetch(e.url)));
+      const data = await Promise.all(responses.map(res => res.ok ? res.json() : []));
 
-      setTransactions(transRes.ok ? await transRes.json() : []);
-      setAllClients(cliRes.ok ? await cliRes.json() : []);
-      setAllManufacturers(manuRes.ok ? await manuRes.json() : []);
-      setAllTransporters(transpRes.ok ? await transpRes.json() : []);
-      setAllSuppliers(suppRes.ok ? await suppRes.json() : []);
-      setAllPallets(palletRes.ok ? await palletRes.json() : []);
-      setAllExportDocuments(docsRes.ok ? await docsRes.json() : []);
-      setAllManuBills(manuBillRes.ok ? await manuBillRes.json() : []);
-      setAllTransBills(transBillRes.ok ? await transBillRes.json() : []);
-      setAllSupplyBills(supplyBillRes.ok ? await supplyBillRes.json() : []);
+      setTransactions(data[0] || []);
+      setAllClients(data[1] || []);
+      setAllManufacturers(data[2] || []);
+      setAllTransporters(data[3] || []);
+      setAllSuppliers(data[4] || []);
+      setAllPallets(data[5] || []);
+      setAllExportDocuments(data[6] || []);
+      setAllManuBills(data[7] || []);
+      setAllTransBills(data[8] || []);
+      setAllSupplyBills(data[9] || []);
 
     } catch (error) {
       console.error("Failed to fetch data", error);
@@ -187,3 +187,5 @@ export default function TransactionPageV2() {
     </div>
   );
 }
+
+    
