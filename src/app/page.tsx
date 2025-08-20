@@ -222,16 +222,11 @@ export default function DashboardPage() {
             return { id: client.id, name: client.companyName, balance: invoiced - received };
         }).filter(c => c.balance > 0.01);
 
-        const safeManufacturers = Array.isArray(manufacturers) ? manufacturers : [];
-        const safeTransporters = Array.isArray(transporters) ? transporters : [];
-        const safeSuppliers = Array.isArray(suppliers) ? suppliers : [];
-        const safePallets = Array.isArray(pallets) ? pallets : [];
-
         const allPayableParties = [
-            ...safeManufacturers.map(p => ({ ...p, partyType: 'manufacturer' })),
-            ...safeTransporters.map(p => ({ ...p, partyType: 'transporter' })),
-            ...safeSuppliers.map(p => ({ ...p, partyType: 'supplier' })),
-            ...safePallets.map(p => ({ ...p, partyType: 'pallet' }))
+            ...(Array.isArray(manufacturers) ? manufacturers.map(p => ({ ...p, partyType: 'manufacturer' })) : []),
+            ...(Array.isArray(transporters) ? transporters.map(p => ({ ...p, partyType: 'transporter' })) : []),
+            ...(Array.isArray(suppliers) ? suppliers.map(p => ({ ...p, partyType: 'supplier' })) : []),
+            ...(Array.isArray(pallets) ? pallets.map(p => ({ ...p, partyType: 'pallet' })) : [])
         ];
 
         const payablesBreakdown = allPayableParties.map(party => {
