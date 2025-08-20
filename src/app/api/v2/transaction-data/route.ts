@@ -42,21 +42,38 @@ export async function POST(request: Request) {
   const connection = await pool.getConnection();
   try {
     const transaction: Transaction = await request.json();
-    const { relatedInvoices, ...transactionData } = transaction;
+    const { 
+        date, 
+        type, 
+        partyType, 
+        partyId, 
+        exportDocumentId, 
+        relatedInvoices, 
+        currency, 
+        amount, 
+        description 
+    } = transaction;
     
     await connection.beginTransaction();
 
-    const formattedDate = format(new Date(transactionData.date), 'yyyy-MM-dd HH:mm:ss');
+    const formattedDate = format(new Date(date), 'yyyy-MM-dd HH:mm:ss');
     const relatedInvoices_json = JSON.stringify(relatedInvoices || []);
+
+    const insertData = {
+        date: formattedDate,
+        type,
+        partyType,
+        partyId,
+        exportDocumentId: exportDocumentId || null,
+        relatedInvoices_json,
+        currency,
+        amount,
+        description: description || null,
+    };
 
     const [result] = await connection.query<OkPacket>(
       'INSERT INTO transactions SET ?',
-      {
-        ...transactionData,
-        date: formattedDate,
-        relatedInvoices_json,
-        id: undefined, // Let DB auto-increment
-      }
+      insertData
     );
 
     await connection.commit();
@@ -84,24 +101,39 @@ export async function PUT(request: Request) {
     const connection = await pool.getConnection();
     try {
         const transaction: Transaction = await request.json();
-        const { relatedInvoices, ...transactionData } = transaction;
+        // Destructure all fields to create a clean object for the update
+        const { 
+            date, 
+            type, 
+            partyType, 
+            partyId, 
+            exportDocumentId, 
+            relatedInvoices, 
+            currency, 
+            amount, 
+            description 
+        } = transaction;
 
         await connection.beginTransaction();
 
-        const formattedDate = format(new Date(transactionData.date), 'yyyy-MM-dd HH:mm:ss');
+        const formattedDate = format(new Date(date), 'yyyy-MM-dd HH:mm:ss');
         const relatedInvoices_json = JSON.stringify(relatedInvoices || []);
+        
+        const updateData = {
+            date: formattedDate,
+            type,
+            partyType,
+            partyId,
+            exportDocumentId: exportDocumentId || null,
+            relatedInvoices_json,
+            currency,
+            amount,
+            description: description || null,
+        };
 
         await connection.query<OkPacket>(
             'UPDATE transactions SET ? WHERE id = ?',
-            [
-                {
-                    ...transactionData,
-                    date: formattedDate,
-                    relatedInvoices_json,
-                    id: undefined, // Do not update the ID
-                },
-                id
-            ]
+            [updateData, id]
         );
         
         await connection.commit();
