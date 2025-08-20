@@ -20,16 +20,6 @@ import type { ExportDocument } from '@/types/export-document';
 import type { Product } from '@/types/product';
 import type { Size } from '@/types/size';
 
-// --- Local Storage Keys (for data fetching simulation) ---
-// In a real app with a full backend, these fetches would be targeted API calls.
-const LOCAL_STORAGE_TRANSACTIONS_KEY = "bizform_transactions";
-const LOCAL_STORAGE_CLIENTS_KEY = "bizform_clients";
-const LOCAL_STORAGE_EXPORT_DOCS_KEY_V2 = "bizform_export_documents_v2";
-const LOCAL_STORAGE_PO_KEY = "bizform_purchase_orders";
-const LOCAL_STORAGE_PI_KEY = "bizform_performa_invoices";
-const LOCAL_STORAGE_PRODUCTS_KEY = "bizform_products";
-const LOCAL_STORAGE_SIZES_KEY = "bizform_sizes";
-
 interface LedgerItem {
     id: string;
     date: Date;
@@ -50,9 +40,6 @@ async function fetchClientDetails(clientId: string): Promise<Client | null> {
 }
 
 async function fetchClientInvoices(clientId: string): Promise<LedgerItem[]> {
-    // This is complex and requires joining multiple tables on the backend.
-    // For now, we simulate this by fetching all data and joining on the client.
-    // A real implementation would have a dedicated API endpoint like /api/v2/client-invoices?clientId=...
     const [docsRes, poRes, piRes, productsRes, sizesRes] = await Promise.all([
         fetch('/api/v2/export-document-data'),
         fetch('/api/v2/purchase-order-data'),
@@ -71,16 +58,11 @@ async function fetchClientInvoices(clientId: string): Promise<LedgerItem[]> {
     const allProducts: Product[] = await productsRes.json();
     const allSizes: Size[] = await sizesRes.json();
 
-    const piToClientIdMap = new Map(allPIs.map(pi => [pi.id, pi.clientId]));
     const poToPiIdMap = new Map(allPOs.map(po => [po.id, po.sourcePiId]));
     const piIdToCurrencyMap = new Map(allPIs.map(pi => [pi.id, pi.currencyType]));
 
-    const clientExportDocs = allExportDocs.filter(doc => {
-        if (!doc.purchaseOrderId) return false;
-        const piId = poToPiIdMap.get(doc.purchaseOrderId);
-        if (!piId) return false;
-        return piToClientIdMap.get(piId)?.toString() === clientId;
-    });
+    // --- The Fix: Filter directly by clientId on the export document ---
+    const clientExportDocs = allExportDocs.filter(doc => doc.clientId?.toString() === clientId);
 
     const calculateDocTotal = (doc: ExportDocument): number => {
         let total = 0;
@@ -98,7 +80,8 @@ async function fetchClientInvoices(clientId: string): Promise<LedgerItem[]> {
     };
 
     return clientExportDocs.map(doc => {
-        const piId = poToPiIdMap.get(doc.purchaseOrderId!);
+        // Find currency from PI if available, otherwise default
+        const piId = doc.purchaseOrderId ? poToPiIdMap.get(doc.purchaseOrderId) : undefined;
         const currency = (piId ? piIdToCurrencyMap.get(piId) : 'USD') || 'USD';
         return {
             id: doc.id,
@@ -291,3 +274,5 @@ export default function ClientTransactionPageV2() {
         </div>
     );
 }
+
+    
