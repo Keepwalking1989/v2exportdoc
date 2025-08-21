@@ -181,6 +181,7 @@ export default function DocumentDataPageV2() {
     };
 
     fetchAllData();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [docId, toast]);
 
 
@@ -228,9 +229,9 @@ export default function DocumentDataPageV2() {
     
     // Using the first manufacturer as the primary for Eway Bill
     const primaryManufacturerInfo = document.manufacturerDetails?.[0];
-    const manufacturer = primaryManufacturerInfo ? allManufacturers.find(m => m.id === primaryManufacturerInfo.manufacturerId) : undefined;
+    const manufacturer = primaryManufacturerInfo ? allManufacturers.find(m => String(m.id) === String(primaryManufacturerInfo.manufacturerId)) : undefined;
     
-    const transporter = allTransporters.find(t => t.id === document.transporterId);
+    const transporter = allTransporters.find(t => String(t.id) === String(document.transporterId));
     const conversationRate = document.conversationRate || 1;
     const gstString = document.gst || "0";
     const gstRate = parseFloat(gstString.replace('%', '')) / 100 || 0;
@@ -238,9 +239,9 @@ export default function DocumentDataPageV2() {
     document.containerItems?.forEach(container => {
       const allItems = [...(container.productItems || []), ...(container.sampleItems || [])];
       allItems.forEach(item => {
-        const product = allProducts.find(p => p.id === item.productId);
+        const product = allProducts.find(p => String(p.id) === String(item.productId));
         if (!product) return;
-        const size = allSizes.find(s => s.id === product.sizeId);
+        const size = allSizes.find(s => String(s.id) === String(product.sizeId));
         if (!size) return;
         const baseAmount = (size.sqmPerBox || 0) * (item.boxes || 0) * (item.rate || 0);
         const existing = sizeAggregator.get(size.id);
@@ -289,14 +290,14 @@ export default function DocumentDataPageV2() {
       toast({ variant: "destructive", title: "Error", description: "Document data not loaded." });
       return;
     }
-    const exporter = allExporters.find(e => e.id === document.exporterId);
+    const exporter = allExporters.find(e => String(e.id) === String(document.exporterId));
     if (!exporter) {
         toast({ variant: "destructive", title: "Error", description: "The exporter for this document could not be found. It may have been deleted." });
         return;
     }
 
     const manufacturersWithDetails = (document.manufacturerDetails || []).map(md => {
-      const manu = allManufacturers.find(m => m.id === md.manufacturerId);
+      const manu = allManufacturers.find(m => String(m.id) === String(md.manufacturerId));
       return manu ? { ...manu, ...md } : null;
     }).filter((m): m is (Manufacturer & { invoiceNumber: string, invoiceDate?: Date, permissionNumber?: string }) => Boolean(m));
 
@@ -312,14 +313,14 @@ export default function DocumentDataPageV2() {
       toast({ variant: "destructive", title: "Error", description: "Document data not loaded." });
       return;
     }
-    const exporter = allExporters.find(e => e.id === document.exporterId);
+    const exporter = allExporters.find(e => String(e.id) === String(document.exporterId));
     if (!exporter) {
         toast({ variant: "destructive", title: "Error", description: "The exporter for this document could not be found. It may have been deleted." });
         return;
     }
 
     const firstManufacturer = document.manufacturerDetails?.[0]?.manufacturerId
-      ? allManufacturers.find(m => m.id === document.manufacturerDetails?.[0].manufacturerId)
+      ? allManufacturers.find(m => String(m.id) === String(document.manufacturerDetails?.[0].manufacturerId))
       : undefined;
 
     if (!firstManufacturer) {
@@ -334,14 +335,14 @@ export default function DocumentDataPageV2() {
       toast({ variant: "destructive", title: "Error", description: "Document data not loaded." });
       return;
     }
-    const exporter = allExporters.find(e => e.id === document.exporterId);
+    const exporter = allExporters.find(e => String(e.id) === String(document.exporterId));
     if (!exporter) {
         toast({ variant: "destructive", title: "Error", description: "The exporter for this document could not be found. It may have been deleted." });
         return;
     }
 
     const manufacturersWithDetails = (document.manufacturerDetails || []).map(md => {
-        const manu = allManufacturers.find(m => m.id === md.manufacturerId);
+        const manu = allManufacturers.find(m => String(m.id) === String(md.manufacturerId));
         return manu ? { ...manu, ...md } : null;
     }).filter((m): m is (Manufacturer & { invoiceNumber: string, invoiceDate?: Date, permissionNumber?: string }) => Boolean(m));
 
@@ -357,14 +358,14 @@ export default function DocumentDataPageV2() {
       toast({ variant: "destructive", title: "Error", description: "Document data not loaded." });
       return;
     }
-    const exporter = allExporters.find(e => e.id === document.exporterId);
+    const exporter = allExporters.find(e => String(e.id) === String(document.exporterId));
     if (!exporter) {
       toast({ variant: "destructive", title: "Error", description: "The exporter for this document could not be found. It may have been deleted." });
       return;
     }
 
     const firstManufacturer = document.manufacturerDetails?.[0]?.manufacturerId
-      ? allManufacturers.find(m => m.id === document.manufacturerDetails?.[0].manufacturerId)
+      ? allManufacturers.find(m => String(m.id) === String(document.manufacturerDetails?.[0].manufacturerId))
       : undefined;
       
     if (!firstManufacturer) {
