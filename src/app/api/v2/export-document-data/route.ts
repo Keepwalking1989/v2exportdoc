@@ -131,32 +131,45 @@ export async function PUT(request: Request) {
     const connection = await pool.getConnection();
     try {
         const doc: ExportDocument = await request.json();
-        const { containerItems, manufacturerDetails, ...docData } = doc;
         
         await connection.beginTransaction();
 
-        const formattedExportInvoiceDate = format(new Date(docData.exportInvoiceDate), 'yyyy-MM-dd HH:mm:ss');
-        const formattedExchangeDate = format(new Date(docData.exchangeDate), 'yyyy-MM-dd HH:mm:ss');
-        const ewayBillDate = docData.ewayBillDate ? format(new Date(docData.ewayBillDate), 'yyyy-MM-dd HH:mm:ss') : null;
-        const shippingBillDate = docData.shippingBillDate ? format(new Date(docData.shippingBillDate), 'yyyy-MM-dd HH:mm:ss') : null;
-        const blDate = docData.blDate ? format(new Date(docData.blDate), 'yyyy-MM-dd HH:mm:ss') : null;
+        // Create a clean object with only the fields that exist in the database table
+        const updateData = {
+            exporterId: doc.exporterId,
+            purchaseOrderId: doc.purchaseOrderId,
+            exportInvoiceNumber: doc.exportInvoiceNumber,
+            exportInvoiceDate: format(new Date(doc.exportInvoiceDate), 'yyyy-MM-dd HH:mm:ss'),
+            manufacturerDetails_json: JSON.stringify(doc.manufacturerDetails || []),
+            countryOfFinalDestination: doc.countryOfFinalDestination,
+            vesselFlightNo: doc.vesselFlightNo,
+            portOfLoading: doc.portOfLoading,
+            portOfDischarge: doc.portOfDischarge,
+            finalDestination: doc.finalDestination,
+            termsOfDeliveryAndPayment: doc.termsOfDeliveryAndPayment,
+            conversationRate: doc.conversationRate,
+            exchangeNotification: doc.exchangeNotification,
+            exchangeDate: doc.exchangeDate ? format(new Date(doc.exchangeDate), 'yyyy-MM-dd HH:mm:ss') : new Date(),
+            transporterId: doc.transporterId,
+            freight: doc.freight,
+            gst: doc.gst,
+            discount: doc.discount,
+            containerItems_json: JSON.stringify(doc.containerItems || []),
+            ewayBillNumber: doc.ewayBillNumber,
+            ewayBillDate: doc.ewayBillDate ? format(new Date(doc.ewayBillDate), 'yyyy-MM-dd HH:mm:ss') : null,
+            ewayBillDocument: doc.ewayBillDocument,
+            shippingBillNumber: doc.shippingBillNumber,
+            shippingBillDate: doc.shippingBillDate ? format(new Date(doc.shippingBillDate), 'yyyy-MM-dd HH:mm:ss') : null,
+            shippingBillDocument: doc.shippingBillDocument,
+            blNumber: doc.blNumber,
+            blDate: doc.blDate ? format(new Date(doc.blDate), 'yyyy-MM-dd HH:mm:ss') : null,
+            blDocument: doc.blDocument,
+            brcDocument: doc.brcDocument,
+        };
 
         await connection.query<OkPacket>(
             'UPDATE export_documents SET ? WHERE id = ?',
-            [
-                {
-                    ...docData,
-                    id: undefined, // Do not update ID
-                    exportInvoiceDate: formattedExportInvoiceDate,
-                    exchangeDate: formattedExchangeDate,
-                    ewayBillDate,
-                    shippingBillDate,
-                    blDate,
-                    containerItems_json: JSON.stringify(containerItems || []),
-                    manufacturerDetails_json: JSON.stringify(manufacturerDetails || []),
-                },
-                id
-            ]
+            [updateData, id]
         );
         
         await connection.commit();
