@@ -674,58 +674,55 @@ export function ExportDocumentFormV2({
 
 
   useEffect(() => {
-    // Editing an existing document
+    // Scenario 1: Editing an existing document
     if (isEditing && initialData) {
-      const po = allPurchaseOrders.find(p => p.id === initialData.purchaseOrderId);
-      const pi = po ? allPerformaInvoices.find(p => p.id === po.sourcePiId) : undefined;
-      
-      form.reset({
-        ...initialData,
-        clientId: initialData.clientId || pi?.clientId || "",
-        performaInvoiceId: initialData.performaInvoiceId || pi?.id || "",
-        purchaseOrderId: initialData.purchaseOrderId || "",
-        exportInvoiceDate: new Date(initialData.exportInvoiceDate),
-        exchangeDate: initialData.exchangeDate ? new Date(initialData.exchangeDate) : new Date(),
-        manufacturerDetails: initialData.manufacturerDetails?.map(md => ({...md, invoiceDate: md.invoiceDate ? new Date(md.invoiceDate) : new Date()})) || [defaultNewManufacturerItem],
-        containerItems: initialData.containerItems && initialData.containerItems.length > 0 
-          ? initialData.containerItems.map(item => ({
-              ...item,
-              weighingDateTime: item.weighingDateTime ? new Date(item.weighingDateTime) : new Date(),
-              productItems: item.productItems || [],
-              sampleItems: item.sampleItems || [],
-            }))
-          : [defaultNewContainerItem],
-      });
+        form.reset({
+            ...initialData,
+            clientId: initialData.clientId || "",
+            performaInvoiceId: initialData.performaInvoiceId || "",
+            purchaseOrderId: initialData.purchaseOrderId || "",
+            exportInvoiceDate: new Date(initialData.exportInvoiceDate),
+            exchangeDate: initialData.exchangeDate ? new Date(initialData.exchangeDate) : new Date(),
+            manufacturerDetails: initialData.manufacturerDetails?.map(md => ({...md, invoiceDate: md.invoiceDate ? new Date(md.invoiceDate) : new Date()})) || [defaultNewManufacturerItem],
+            containerItems: initialData.containerItems && initialData.containerItems.length > 0 
+              ? initialData.containerItems.map(item => ({
+                  ...item,
+                  weighingDateTime: item.weighingDateTime ? new Date(item.weighingDateTime) : new Date(),
+                  productItems: item.productItems || [],
+                  sampleItems: item.sampleItems || [],
+                }))
+              : [defaultNewContainerItem],
+        });
     } 
-    // Creating a new document from a source PO
+    // Scenario 2: Creating a new document from a source PO
     else if (!isEditing && sourcePoId) {
-      const po = allPurchaseOrders.find(p => p.id.toString() === sourcePoId);
-      if (!po) return;
+        const po = allPurchaseOrders.find(p => p.id.toString() === sourcePoId);
+        if (!po) return;
 
-      const pi = allPerformaInvoices.find(p => p.id.toString() === po.sourcePiId.toString());
-      if (!pi) return;
-      
-      form.reset({
-          ...getDefaultFormValues(nextExportInvoiceNumber),
-          clientId: pi.clientId,
-          performaInvoiceId: pi.id,
-          purchaseOrderId: po.id,
-          exporterId: po.exporterId,
-          manufacturerDetails: [{
-            id: Date.now().toString(),
-            manufacturerId: po.manufacturerId,
-            invoiceNumber: "",
-            invoiceDate: new Date(),
-            permissionNumber: allManufacturers.find(m => m.id === po.manufacturerId)?.stuffingPermissionNumber || ''
-          }],
-          countryOfFinalDestination: allClients.find(c => c.id === pi.clientId)?.country || '',
-      });
+        const pi = allPerformaInvoices.find(p => p.id.toString() === po.sourcePiId.toString());
+        if (!pi) return;
+        
+        form.reset({
+            ...getDefaultFormValues(nextExportInvoiceNumber),
+            clientId: pi.clientId,
+            performaInvoiceId: pi.id,
+            purchaseOrderId: po.id,
+            exporterId: po.exporterId,
+            manufacturerDetails: [{
+              id: Date.now().toString(),
+              manufacturerId: po.manufacturerId,
+              invoiceNumber: "",
+              invoiceDate: new Date(),
+              permissionNumber: allManufacturers.find(m => m.id === po.manufacturerId)?.stuffingPermissionNumber || ''
+            }],
+            countryOfFinalDestination: allClients.find(c => c.id === pi.clientId)?.country || '',
+        });
     } 
-    // Creating a brand new document
+    // Scenario 3: Creating a brand new document from scratch
     else {
-      form.reset(getDefaultFormValues(nextExportInvoiceNumber));
+        form.reset(getDefaultFormValues(nextExportInvoiceNumber));
     }
-  }, [isEditing, initialData, sourcePoId, form, nextExportInvoiceNumber, allPurchaseOrders, allPerformaInvoices, allClients, allManufacturers]);
+}, [isEditing, initialData, sourcePoId, form, nextExportInvoiceNumber, allPurchaseOrders, allPerformaInvoices, allClients, allManufacturers]);
 
   const watchedClientId = form.watch('clientId');
   const watchedPerformaInvoiceId = form.watch('performaInvoiceId');
@@ -935,3 +932,5 @@ export function ExportDocumentFormV2({
     </Card>
   );
 }
+
+    
