@@ -678,9 +678,9 @@ export function ExportDocumentFormV2({
     if (isEditing && initialData) {
         form.reset({
             ...initialData,
-            clientId: initialData.clientId || "",
-            performaInvoiceId: initialData.performaInvoiceId || "",
-            purchaseOrderId: initialData.purchaseOrderId || "",
+            clientId: String(initialData.clientId || ""),
+            performaInvoiceId: String(initialData.performaInvoiceId || ""),
+            purchaseOrderId: String(initialData.purchaseOrderId || ""),
             exportInvoiceDate: new Date(initialData.exportInvoiceDate),
             exchangeDate: initialData.exchangeDate ? new Date(initialData.exchangeDate) : new Date(),
             manufacturerDetails: initialData.manufacturerDetails?.map(md => ({...md, invoiceDate: md.invoiceDate ? new Date(md.invoiceDate) : new Date()})) || [defaultNewManufacturerItem],
@@ -819,6 +819,15 @@ export function ExportDocumentFormV2({
           {formTitle}
         </CardTitle>
         <CardDescription>{formDescription}</CardDescription>
+        {isEditing && initialData && (
+            <div className="p-2 border-2 border-dashed border-red-500 bg-red-50 text-red-800 text-xs rounded-md">
+                <h4 className="font-bold">Debug Info:</h4>
+                <p>Performa Invoice ID: {initialData.performaInvoiceId}</p>
+                <p>PI Number: {debugPI ? debugPI.invoiceNumber : 'Not Found'}</p>
+                <p>Purchase Order ID: {initialData.purchaseOrderId}</p>
+                <p>PO Number: {debugPO ? debugPO.poNumber : 'Not Found'}</p>
+            </div>
+        )}
       </CardHeader>
       <CardContent>
         <Form {...form}>
@@ -935,7 +944,3 @@ export function ExportDocumentFormV2({
     </Card>
   );
 }
-
-    
-
-    
