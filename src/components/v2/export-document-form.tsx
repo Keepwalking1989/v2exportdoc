@@ -699,7 +699,7 @@ export function ExportDocumentFormV2({
         const po = allPurchaseOrders.find(p => p.id.toString() === sourcePoId);
         if (!po) return;
 
-        const pi = allPerformaInvoices.find(p => p.id.toString() === po.sourcePiId.toString());
+        const pi = allPerformaInvoices.find(p => String(p.id) === String(po.sourcePiId));
         if (!pi) return;
         
         form.reset({
@@ -749,27 +749,46 @@ export function ExportDocumentFormV2({
     allClients.map(c => ({ value: c.id.toString(), label: c.companyName })),
     [allClients]
   );
-
+  
   const piOptions = useMemo(() => {
     const currentClientId = watchedClientId;
-    if (!currentClientId) return [];
-    return allPerformaInvoices
-      .filter(pi => pi.clientId.toString() === currentClientId)
-      .map(pi => ({ value: pi.id.toString(), label: pi.invoiceNumber }));
-  }, [watchedClientId, allPerformaInvoices]);
+    let filteredPies: PerformaInvoice[] = [];
+
+    if (currentClientId) {
+      filteredPies = allPerformaInvoices.filter(pi => String(pi.clientId) === String(currentClientId));
+    }
+
+    if (isEditing && initialData?.performaInvoiceId) {
+      const savedPi = allPerformaInvoices.find(pi => String(pi.id) === String(initialData.performaInvoiceId));
+      if (savedPi && !filteredPies.some(pi => String(pi.id) === String(savedPi.id))) {
+        filteredPies.push(savedPi);
+      }
+    }
+    
+    return filteredPies.map(pi => ({ value: pi.id.toString(), label: pi.invoiceNumber }));
+  }, [watchedClientId, allPerformaInvoices, isEditing, initialData]);
 
   const poOptions = useMemo(() => {
     const currentPiId = watchedPerformaInvoiceId;
     const selectedManufacturerId = watchedManufacturerDetails?.[0]?.manufacturerId;
-    if (!currentPiId || !selectedManufacturerId) return [];
+    let filteredPos: PurchaseOrder[] = [];
+
+    if (currentPiId && selectedManufacturerId) {
+      filteredPos = allPurchaseOrders.filter(po => 
+        String(po.sourcePiId) === String(currentPiId) &&
+        String(po.manufacturerId) === String(selectedManufacturerId)
+      );
+    }
     
-    return allPurchaseOrders
-      .filter(po => 
-        po.sourcePiId?.toString() === currentPiId &&
-        po.manufacturerId?.toString() === selectedManufacturerId
-      )
-      .map(po => ({ value: po.id.toString(), label: po.poNumber }));
-  }, [watchedPerformaInvoiceId, watchedManufacturerDetails, allPurchaseOrders]);
+    if (isEditing && initialData?.purchaseOrderId) {
+      const savedPo = allPurchaseOrders.find(po => String(po.id) === String(initialData.purchaseOrderId));
+      if (savedPo && !filteredPos.some(po => String(po.id) === String(savedPo.id))) {
+        filteredPos.push(savedPo);
+      }
+    }
+
+    return filteredPos.map(po => ({ value: po.id.toString(), label: po.poNumber }));
+  }, [watchedPerformaInvoiceId, watchedManufacturerDetails, allPurchaseOrders, isEditing, initialData]);
 
 
   const exporterOptions: ComboboxOption[] = useMemo(() =>
@@ -807,9 +826,6 @@ export function ExportDocumentFormV2({
   const formDescription = isEditing ? "Modify the details for this document in the database." :
                           sourcePoId ? `This document is linked to PO ID: ${sourcePoId}. It will be saved to the database.` :
                           "Fill in the details for the new document to save to the database.";
-                          
-  const debugPI = initialData?.performaInvoiceId ? allPerformaInvoices.find(pi => String(pi.id) === String(initialData.performaInvoiceId)) : null;
-  const debugPO = initialData?.purchaseOrderId ? allPurchaseOrders.find(po => String(po.id) === String(initialData.purchaseOrderId)) : null;
 
   return (
     <Card className="w-full max-w-6xl mx-auto shadow-xl mb-8">
@@ -819,15 +835,6 @@ export function ExportDocumentFormV2({
           {formTitle}
         </CardTitle>
         <CardDescription>{formDescription}</CardDescription>
-        {isEditing && initialData && (
-            <div className="p-2 border-2 border-dashed border-red-500 bg-red-50 text-red-800 text-xs rounded-md">
-                <h4 className="font-bold">Debug Info:</h4>
-                <p>Performa Invoice ID: {initialData.performaInvoiceId}</p>
-                <p>PI Number: {debugPI ? debugPI.invoiceNumber : 'Not Found'}</p>
-                <p>Purchase Order ID: {initialData.purchaseOrderId}</p>
-                <p>PO Number: {debugPO ? debugPO.poNumber : 'Not Found'}</p>
-            </div>
-        )}
       </CardHeader>
       <CardContent>
         <Form {...form}>
