@@ -281,7 +281,7 @@ function drawCustomInvoice(
     const discountUSD = docData.discount || 0;
     const finalTotalUSD = grandTotalAmountUSD + freightUSD - discountUSD;
 
-    const conversationRate = docData.conversationRate || 0;
+    const conversationRate = parseFloat(String(docData.conversationRate)) || 0;
     const totalAmountInr = finalTotalUSD * conversationRate;
     const gstString = docData.gst || "0";
     const gstRate = parseFloat(gstString.replace('%', '')) / 100 || 0;
