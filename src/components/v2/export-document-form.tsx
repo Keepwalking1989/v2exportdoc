@@ -807,6 +807,9 @@ export function ExportDocumentFormV2({
   const formDescription = isEditing ? "Modify the details for this document in the database." :
                           sourcePoId ? `This document is linked to PO ID: ${sourcePoId}. It will be saved to the database.` :
                           "Fill in the details for the new document to save to the database.";
+                          
+  const debugPI = initialData?.performaInvoiceId ? allPerformaInvoices.find(pi => pi.id === initialData.performaInvoiceId) : null;
+  const debugPO = initialData?.purchaseOrderId ? allPurchaseOrders.find(po => po.id === initialData.purchaseOrderId) : null;
 
   return (
     <Card className="w-full max-w-6xl mx-auto shadow-xl mb-8">
@@ -816,6 +819,15 @@ export function ExportDocumentFormV2({
           {formTitle}
         </CardTitle>
         <CardDescription>{formDescription}</CardDescription>
+        {isEditing && initialData && (
+          <div className="text-xs text-muted-foreground bg-muted p-2 rounded-md">
+            <p><strong>Debug Info:</strong></p>
+            <p>Performa Invoice ID: {initialData.performaInvoiceId || 'None'}</p>
+            <p>PI Number: {debugPI ? debugPI.invoiceNumber : 'Not Found'}</p>
+            <p>Purchase Order ID: {initialData.purchaseOrderId || 'None'}</p>
+            <p>PO Number: {debugPO ? debugPO.poNumber : 'Not Found'}</p>
+          </div>
+        )}
       </CardHeader>
       <CardContent>
         <Form {...form}>
@@ -932,5 +944,7 @@ export function ExportDocumentFormV2({
     </Card>
   );
 }
+
+    
 
     
