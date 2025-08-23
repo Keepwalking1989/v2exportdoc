@@ -28,6 +28,22 @@ const FONT_CAT3_SIZE = 8;
 const CELL_PADDING = 4;
 const MIN_ROW_HEIGHT = 60; // Minimum height for a product row with an image
 
+// Standalone Helper Function for Headers/Footers
+function addHeaderFooterToAllPages(
+    doc: jsPDF, 
+    headerImage: Uint8Array | null, 
+    footerImage: Uint8Array | null,
+    headerHeight: number,
+    footerHeight: number
+) {
+    const pageCount = doc.internal.getNumberOfPages();
+    for (let i = 1; i <= pageCount; i++) {
+        doc.setPage(i);
+        if (headerImage) doc.addImage(headerImage, 'PNG', 0, 0, doc.internal.pageSize.getWidth(), headerHeight);
+        if (footerImage) doc.addImage(footerImage, 'PNG', 0, doc.internal.pageSize.getHeight() - footerHeight, doc.internal.pageSize.getWidth(), footerHeight);
+    }
+};
+
 export async function generatePurchaseOrderPdf(
   po: PurchaseOrder,
   exporter: Company,
@@ -61,7 +77,6 @@ export async function generatePurchaseOrderPdf(
                     if (imgResponse.ok) {
                         const arrayBuffer = await imgResponse.arrayBuffer();
                         const ext = url.split('.').pop()?.toUpperCase() || 'PNG';
-                        // Find the first product that uses this image to get a stable key
                         const product = po.items.find(item => item.imageUrl === url);
                         if (product) {
                            productImageMap.set(product.productId, { data: new Uint8Array(arrayBuffer), ext });
@@ -72,19 +87,11 @@ export async function generatePurchaseOrderPdf(
         }));
     } catch (error) { console.error("Error fetching assets for PDF:", error); }
   
-    const addHeaderFooter = () => {
-        const pageCount = doc.internal.getNumberOfPages();
-        for (let i = 1; i <= pageCount; i++) {
-            doc.setPage(i);
-            if (headerImage) doc.addImage(headerImage, 'PNG', 0, 0, doc.internal.pageSize.getWidth(), headerHeight);
-            if (footerImage) doc.addImage(footerImage, 'PNG', 0, doc.internal.pageSize.getHeight() - footerHeight, doc.internal.pageSize.getWidth(), footerHeight);
-        }
-    };
-    
     const doc = new jsPDF({ unit: 'pt', format: 'a4' });
     let yPos = headerHeight > 0 ? headerHeight + 10 : PAGE_MARGIN_X;
     
-    // Title
+    addHeaderFooterToAllPages(doc, headerImage, footerImage, headerHeight, footerHeight);
+
     autoTable(doc, {
         startY: yPos,
         body: [['PURCHASE ORDER']],
@@ -103,7 +110,6 @@ export async function generatePurchaseOrderPdf(
     // @ts-ignore
     yPos = doc.lastAutoTable.finalY + 5;
 
-    // --- Manufacturer and PO Details ---
     const manuDetailsBody = [
         [{ content: 'TO', styles: { fillColor: COLOR_BLUE_RGB, fontStyle: 'bold', fontSize: FONT_CAT2_SIZE, halign: 'center' }}],
         [{ content: manufacturer.companyName.toUpperCase(), styles: { fontSize: FONT_MANUFACTURER_NAME_SIZE, fontStyle: 'bold', halign: 'center' }}],
@@ -162,7 +168,6 @@ export async function generatePurchaseOrderPdf(
     // @ts-ignore
     yPos = doc.lastAutoTable.finalY;
 
-    // --- Product Table ---
     const tableHead = [['SR', 'DESCRIPTION OF GOODS', 'Image', 'WEIGHT/BOX (Kg)', 'BOXES', 'THICKNESS']];
     let totalBoxesOverall = 0;
     const actualTableBodyItems = po.items.map((item, index) => {
@@ -217,14 +222,14 @@ export async function generatePurchaseOrderPdf(
                     const imgY = cell.y + (cell.height - imgSize) / 2;
                     try { doc.addImage(imgData.data, imgData.ext, imgX, imgY, imgSize, imgSize); } catch (e) { console.error(e); }
                 }
-                data.cell.text = ''; // Clear the placeholder text
+                data.cell.text = '';
             }
         },
+        didDrawPage: () => addHeaderFooterToAllPages(doc, headerImage, footerImage, headerHeight, footerHeight),
     });
     // @ts-ignore
     let finalY = doc.lastAutoTable.finalY;
 
-    // Check if there's enough space for the terms and signature
     const termsTableHeight = 40 + (doc.splitTextToSize(po.termsAndConditions, CONTENT_WIDTH).length * 12);
     const signatureTableHeight = 80;
     const requiredSpace = termsTableHeight + signatureTableHeight;
@@ -234,7 +239,6 @@ export async function generatePurchaseOrderPdf(
         finalY = headerHeight + 10;
     }
 
-    // --- Terms and Signature ---
     autoTable(doc, {
         startY: finalY,
         body: [
@@ -244,6 +248,7 @@ export async function generatePurchaseOrderPdf(
         theme: 'grid',
         margin: { left: PAGE_MARGIN_X, right: PAGE_MARGIN_X, top: headerHeight, bottom: footerHeight },
         styles: { lineWidth: 0.5, lineColor: COLOR_BORDER_RGB, cellPadding: CELL_PADDING },
+        didDrawPage: () => addHeaderFooterToAllPages(doc, headerImage, footerImage, headerHeight, footerHeight),
     });
     // @ts-ignore
     finalY = doc.lastAutoTable.finalY;
@@ -253,7 +258,7 @@ export async function generatePurchaseOrderPdf(
         body: [
             [
                 {
-                    content: '', // Placeholder for signature
+                    content: '',
                     styles: {
                         didDrawCell: (data) => {
                             autoTable(doc, {
@@ -286,6 +291,6 @@ export async function generatePurchaseOrderPdf(
         margin: { left: PAGE_MARGIN_X + (CONTENT_WIDTH / 2), right: PAGE_MARGIN_X },
     });
 
-    addHeaderFooterToAllPages(doc);
+    addHeaderFooterToAllPages(doc, headerImage, footerImage, headerHeight, footerHeight);
     doc.save(`Purchase_Order_${po.poNumber.replace(/\//g, '_')}.pdf`);
 }
