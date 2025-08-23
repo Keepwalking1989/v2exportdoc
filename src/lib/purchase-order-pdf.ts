@@ -224,12 +224,16 @@ export async function generatePurchaseOrderPdf(
       const uniqueImageUrls = [...new Set(po.items.map(item => item.imageUrl).filter(Boolean))];
       for (const imageUrl of uniqueImageUrls) {
           if (imageUrl) {
+            try {
               const imgResponse = await fetch(imageUrl);
               if (imgResponse.ok) {
                   const arrayBuffer = await imgResponse.arrayBuffer();
                   const ext = imageUrl.split('.').pop()?.toUpperCase() || 'PNG';
                   productImageMap.set(imageUrl, { data: new Uint8Array(arrayBuffer), ext });
               }
+            } catch (e) {
+                console.error(`Failed to fetch image for PO: ${imageUrl}`, e);
+            }
           }
       }
 
@@ -238,11 +242,14 @@ export async function generatePurchaseOrderPdf(
   }
 
   const addHeaderFooter = () => {
-    if (headerImage) {
-      doc.addImage(headerImage, 'PNG', 0, 0, pageWidth, headerHeight);
-    }
-    if (footerImage) {
-      doc.addImage(footerImage, 'PNG', 0, pageHeight - footerHeight, pageWidth, footerHeight);
+    for (let i = 1; i <= doc.internal.getNumberOfPages(); i++) {
+        doc.setPage(i);
+        if (headerImage) {
+            doc.addImage(headerImage, 'PNG', 0, 0, pageWidth, headerHeight);
+        }
+        if (footerImage) {
+            doc.addImage(footerImage, 'PNG', 0, pageHeight - footerHeight, pageWidth, footerHeight);
+        }
     }
   };
 
@@ -502,8 +509,7 @@ export async function generatePurchaseOrderPdf(
     yPos = headerHeight + 10;
   }
   
-  const signatureY = pageHeight - footerHeight - signatureBlockHeight;
-  const finalSignatureY = Math.max(yPos, signatureY);
+  const signatureY = Math.max(yPos, pageHeight - footerHeight - signatureBlockHeight);
 
   const signatureTableBody = [
       [{ content: `FOR, ${exporter.companyName.toUpperCase()}`, styles: { halign: 'center', fontStyle: 'bold', fontSize: FONT_CAT2_SIZE } }],
@@ -512,7 +518,7 @@ export async function generatePurchaseOrderPdf(
   ];
 
   autoTable(doc, {
-      startY: finalSignatureY,
+      startY: signatureY,
       body: signatureTableBody,
       theme: 'plain',
       tableWidth: 'wrap',
