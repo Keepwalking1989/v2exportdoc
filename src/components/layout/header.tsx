@@ -83,7 +83,7 @@ export function Header() {
   const mobileMenuItems = (
     <nav className="flex flex-col space-y-1 p-4">
       <Button variant="ghost" className="justify-start font-headline text-lg" asChild onClick={() => setIsMobileMenuOpen(false)}>
-        <Link href="/v2/dashboard"><LayoutDashboard className="mr-2 h-5 w-5" />DASHBOARD</Link>
+        <Link href="/"><LayoutDashboard className="mr-2 h-5 w-5" />DASHBOARD</Link>
       </Button>
       <Separator />
 
@@ -120,7 +120,7 @@ export function Header() {
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="container flex h-16 items-center justify-between">
-        <Link href="/v2/dashboard" className="flex items-center space-x-2">
+        <Link href="/" className="flex items-center space-x-2">
           <Building className="h-6 w-6 text-primary" />
           <span className="font-headline text-xl font-bold text-primary">HEMITH ERP</span>
         </Link>
@@ -134,7 +134,7 @@ export function Header() {
             </SheetTrigger>
             <SheetContent side="right" className="w-[300px] sm:w-[400px] p-0 overflow-y-auto">
               <div className="flex justify-between items-center p-4 border-b">
-                 <Link href="/v2/dashboard" className="flex items-center space-x-2" onClick={() => setIsMobileMenuOpen(false)}>
+                 <Link href="/" className="flex items-center space-x-2" onClick={() => setIsMobileMenuOpen(false)}>
                     <Building className="h-6 w-6 text-primary" />
                     <span className="font-headline text-xl font-bold text-primary">HEMITH ERP</span>
                   </Link>
@@ -149,7 +149,7 @@ export function Header() {
         ) : (
           <div className="flex items-center gap-1">
             <Button asChild variant="ghost" className="font-headline">
-              <Link href="/v2/dashboard"><LayoutDashboard className="mr-2 h-4 w-4"/>DASHBOARD</Link>
+              <Link href="/"><LayoutDashboard className="mr-2 h-4 w-4"/>DASHBOARD</Link>
             </Button>
             <Menubar className="border-none bg-transparent shadow-none">{menuItems}</Menubar>
           </div>
