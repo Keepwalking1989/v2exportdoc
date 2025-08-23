@@ -227,14 +227,23 @@ export default function DashboardPage() {
         const payablesBreakdown = allPayableParties.map(party => {
             let billed = 0;
             if (party.partyType === 'manufacturer') {
-                billed = relevantManuBills.filter(b => String(b.manufacturerId) === String(party.id)).reduce((sum, b) => sum + (Number(b.grandTotal) || 0), 0);
+                billed = relevantManuBills
+                    .filter(b => String(b.manufacturerId) === String(party.id))
+                    .reduce((sum, b) => sum + (Number(b.grandTotal) || 0), 0);
             } else if (party.partyType === 'transporter') {
-                billed = relevantTransBills.filter(b => String(b.transporterId) === String(party.id)).reduce((sum, b) => sum + (Number(b.totalPayable) || 0), 0);
+                billed = relevantTransBills
+                    .filter(b => String(b.transporterId) === String(party.id))
+                    .reduce((sum, b) => sum + (Number(b.totalPayable) || 0), 0);
             } else if (party.partyType === 'supplier' || party.partyType === 'pallet') {
-                billed = relevantSupplyBills.filter(b => String(b.supplierId) === String(party.id)).reduce((sum, b) => sum + (Number(b.grandTotal) || 0), 0);
+                billed = relevantSupplyBills
+                    .filter(b => String(b.supplierId) === String(party.id))
+                    .reduce((sum, b) => sum + (Number(b.grandTotal) || 0), 0);
             }
 
-            const paid = supplierPayments.filter(p => String(p.partyId) === String(party.id)).reduce((sum, p) => sum + (Number(p.amount) || 0), 0);
+            const paid = supplierPayments
+                .filter(p => String(p.partyId) === String(party.id))
+                .reduce((sum, p) => sum + (Number(p.amount) || 0), 0);
+                
             return { id: party.id, name: party.companyName, balance: billed - paid, partyType: party.partyType };
         }).filter(p => p.balance > 0.01);
 
@@ -484,5 +493,7 @@ export default function DashboardPage() {
         </div>
     );
 }
+
+    
 
     
