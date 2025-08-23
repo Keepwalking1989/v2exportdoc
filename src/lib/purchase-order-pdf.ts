@@ -247,6 +247,45 @@ function drawPurchaseOrder(
     });
 }
 
+// Function to calculate content height without drawing
+function calculatePostTableHeight(doc: jsPDF, po: PurchaseOrder, exporter: Company): number {
+    let height = 0;
+    const margin = { left: PAGE_MARGIN_X, right: PAGE_MARGIN_X };
+
+    // Simulate terms table
+    autoTable(doc, {
+        body: [
+            [{ content: 'Terms & Conditions:', styles: { fillColor: COLOR_BLUE_RGB, fontStyle: 'bold' } }],
+            [{ content: po.termsAndConditions, styles: { fontSize: FONT_CAT3_SIZE, valign: 'top', minCellHeight: 40 } }],
+        ],
+        startY: doc.internal.pageSize.getHeight() * 2, // Start off-page
+        theme: 'grid',
+        margin,
+        styles: { lineWidth: 0.5, lineColor: COLOR_BORDER_RGB, cellPadding: CELL_PADDING },
+        didDrawPage: () => { /* Prevent drawing */ return false; }
+    });
+    // @ts-ignore
+    height += doc.lastAutoTable.finalY - (doc.internal.pageSize.getHeight() * 2);
+
+    // Simulate signature table
+    autoTable(doc, {
+        body: [
+            [{ content: `FOR, ${exporter.companyName.toUpperCase()}`, styles: { halign: 'center', fontStyle: 'bold' } }],
+            [{ content: '', styles: { minCellHeight: 40 } }],
+            [{ content: 'AUTHORISED SIGNATURE', styles: { halign: 'center', fontStyle: 'bold' } }]
+        ],
+        startY: doc.internal.pageSize.getHeight() * 2, // Start off-page
+        theme: 'plain',
+        tableWidth: 'wrap',
+        margin: { left: PAGE_MARGIN_X + (CONTENT_WIDTH / 2), right: PAGE_MARGIN_X },
+        styles: { fontSize: FONT_CAT2_SIZE },
+        didDrawPage: () => { /* Prevent drawing */ return false; }
+    });
+    // @ts-ignore
+    height += doc.lastAutoTable.finalY - (doc.internal.pageSize.getHeight() * 2);
+    
+    return height;
+}
 
 export async function generatePurchaseOrderPdf(
   po: PurchaseOrder,
@@ -300,29 +339,32 @@ export async function generatePurchaseOrderPdf(
         }
     };
 
-    // --- Dry Run to calculate optimal empty rows ---
-    const dryRunDoc = new jsPDF({ unit: 'pt', format: 'a4' });
-    drawPurchaseOrder(dryRunDoc, po, exporter, manufacturer, poSize, allProducts, sourcePi, productImageMap, signatureImage, headerHeight, footerHeight, 0);
-    const pageCountDry = dryRunDoc.internal.getNumberOfPages();
-    
+    // --- Logic to determine empty rows ---
+    const tempDoc = new jsPDF({ unit: 'pt', format: 'a4' });
     let emptyRowsToAdd = 0;
+    
+    // Draw initial tables to get starting Y for the main product table
+    drawPurchaseOrder(tempDoc, po, exporter, manufacturer, poSize, allProducts, sourcePi, productImageMap, signatureImage, headerHeight, footerHeight, -1); // Use -1 to signal not to draw products
     // @ts-ignore
-    const lastTable = dryRunDoc.lastAutoTable;
-    if (pageCountDry === 1 && lastTable) {
-        const finalYDry = lastTable.finalY;
-        const availableSpace = dryRunDoc.internal.pageSize.getHeight() - finalYDry - footerHeight;
-        
-        // Find the product table from the dry run
-        // @ts-ignore
-        const productTable = lastTable.previous.previous; 
-        if (productTable) {
-             const rowHeight = 60; // based on minCellHeight in bodyStyles
-             if (availableSpace > 0) {
-                emptyRowsToAdd = Math.floor(availableSpace / rowHeight);
-             }
-        }
-    }
+    const productTableStartY = tempDoc.lastAutoTable.finalY || yPos;
 
+    // Calculate height of content AFTER the product table
+    const postContentHeight = calculatePostTableHeight(tempDoc, po, exporter) + 20; // Add some buffer
+
+    // Calculate available space on first page for the product table
+    const availableSpace = tempDoc.internal.pageSize.getHeight() - productTableStartY - postContentHeight - footerHeight;
+
+    // Simulate product table height
+    const rowHeight = 60; // From minCellHeight
+    const headHeight = 25; // Approximate
+    const footHeight = 25; // Approximate
+    const actualTableHeight = headHeight + (po.items.length * rowHeight) + footHeight;
+
+    if (actualTableHeight < availableSpace) {
+        const remainingSpace = availableSpace - actualTableHeight;
+        emptyRowsToAdd = Math.floor(remainingSpace / rowHeight);
+    }
+    
     // --- Final Drawing with optimal empty rows ---
     const finalDoc = new jsPDF({ unit: 'pt', format: 'a4' });
     drawPurchaseOrder(finalDoc, po, exporter, manufacturer, poSize, allProducts, sourcePi, productImageMap, signatureImage, headerHeight, footerHeight, emptyRowsToAdd);
