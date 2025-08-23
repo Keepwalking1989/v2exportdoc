@@ -277,7 +277,7 @@ export async function generatePerformaInvoicePdf(
                 const cell = data.cell;
                 const availableWidth = cell.width - cell.padding('horizontal');
                 const availableHeight = cell.height - cell.padding('vertical');
-                const imgSize = Math.min(availableWidth, availableHeight, 50); // Set max size to 50pt
+                const imgSize = Math.min(availableWidth, availableHeight); 
                 
                 const imgX = cell.x + (cell.width - imgSize) / 2;
                 const imgY = cell.y + (cell.height - imgSize) / 2;
@@ -306,11 +306,11 @@ export async function generatePerformaInvoicePdf(
         const emptyRowsToAdd = MIN_ROWS_FIRST_PAGE - tableBodyContent.length;
         const table = data.table;
         for (let i = 0; i < emptyRowsToAdd; i++) {
-          const row = {};
+          const row: {[key: number]: any} = {};
           table.columns.forEach((col, index) => {
-            // @ts-ignore
             row[index] = { content: ' ', styles: { minCellHeight: 60 } };
           });
+          // @ts-ignore
           table.body.push(row);
         }
       }
