@@ -277,8 +277,11 @@ export async function generatePerformaInvoicePdf(
             const imgData = productImageMap.get(productId);
             if (imgData) {
                 const cell = data.cell;
-                // Double the size of the image, ensuring it fits the cell
-                const imgSize = (cell.height - (cell.padding('vertical'))) * 2; 
+                // Constrain image size by both cell width and height
+                const availableWidth = cell.width - cell.padding('horizontal');
+                const availableHeight = cell.height - cell.padding('vertical');
+                const imgSize = Math.min(availableWidth, availableHeight);
+
                 const imgX = cell.x + (cell.width - imgSize) / 2;
                 const imgY = cell.y + (cell.height - imgSize) / 2;
                 try {
