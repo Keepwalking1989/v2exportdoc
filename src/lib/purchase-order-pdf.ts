@@ -492,14 +492,24 @@ export async function generatePurchaseOrderPdf(
   // @ts-ignore
   let finalY = doc.lastAutoTable.finalY;
   yPos = finalY + 10;
-
-  const termsHeaderH = calculateNaturalCellHeight(doc, "Terms & Conditions:", CONTENT_WIDTH, 2);
-  yPos = drawPdfCell(doc, "Terms & Conditions:", PAGE_MARGIN_X, yPos, CONTENT_WIDTH, 2, termsHeaderH, 'left');
   
-  const poTermsText = po.termsAndConditions || "Ø Tiles should be stamped with MADE IN INDIA, & No any punch should be there on the back side of tiles.\nØ Dispatch Immediately.\nØ Quality check under supervision by seller and exporter.";
-  const poTermsHeight = calculateNaturalCellHeight(doc, poTermsText.split('\n'), CONTENT_WIDTH, 3);
-  yPos = drawPdfCell(doc, poTermsText.split('\n'), PAGE_MARGIN_X, yPos, CONTENT_WIDTH, 3, poTermsHeight, 'left');
-  yPos += 15; 
+  const termsHeader = { content: 'Terms & Conditions:', styles: { ...getPdfCellStyle(2), halign: 'left' } };
+  const termsBody = { content: po.termsAndConditions || defaultPOTerms, styles: { ...getPdfCellStyle(3), halign: 'left', valign: 'top' } };
+
+  autoTable(doc, {
+    startY: yPos,
+    body: [
+      [termsHeader],
+      [termsBody],
+    ],
+    theme: 'grid',
+    margin: { left: PAGE_MARGIN_X, right: PAGE_MARGIN_X, top: headerHeight, bottom: footerHeight },
+    didDrawPage: addHeaderFooter,
+  });
+
+  // @ts-ignore
+  yPos = doc.lastAutoTable.finalY + 15;
+
 
   // Signature Block
   const signatureBlockHeight = 80;
