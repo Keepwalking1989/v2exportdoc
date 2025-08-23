@@ -15,7 +15,8 @@ import {
 } from "@/components/ui/table";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
-import { Search, ChevronLeft, ChevronRight, PackageSearch, Palette, Edit, Trash2 } from "lucide-react";
+import { Search, ChevronLeft, ChevronRight, PackageSearch, Palette, Edit, Trash2, Image as ImageIcon } from "lucide-react";
+import Image from "next/image";
 
 interface ProductListProps {
   products: (Product & { sizeName?: string, hsnCode?: string })[];
@@ -82,7 +83,8 @@ export function ProductListV2({ products: initialProducts, onEditProduct, onDele
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="font-headline flex items-center gap-1"><Palette className="h-4 w-4" />Design Name</TableHead>
+                  <TableHead className="w-[80px]">Image</TableHead>
+                  <TableHead className="font-headline"><Palette className="inline-block mr-2 h-4 w-4" />Design Name</TableHead>
                   <TableHead className="font-headline">Size</TableHead>
                   <TableHead className="font-headline text-right">Actions</TableHead>
                 </TableRow>
@@ -90,6 +92,21 @@ export function ProductListV2({ products: initialProducts, onEditProduct, onDele
               <TableBody>
                 {paginatedProducts.map((product) => (
                   <TableRow key={product.id}>
+                    <TableCell>
+                      {product.imageUrl ? (
+                        <Image
+                          src={product.imageUrl}
+                          alt={product.designName}
+                          width={48}
+                          height={48}
+                          className="rounded-md object-cover w-12 h-12"
+                        />
+                      ) : (
+                        <div className="w-12 h-12 bg-muted rounded-md flex items-center justify-center">
+                          <ImageIcon className="h-6 w-6 text-muted-foreground"/>
+                        </div>
+                      )}
+                    </TableCell>
                     <TableCell className="font-medium">{product.designName}</TableCell>
                     <TableCell>{product.sizeName || "N/A"}</TableCell>
                     <TableCell className="text-right space-x-1">

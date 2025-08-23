@@ -36,23 +36,20 @@ export async function GET() {
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { sizeId, designName, salesPrice, boxWeight } = body;
+    const { sizeId, salesPrice, boxWeight, productsToCreate } = body;
 
-    if (!sizeId || !designName || salesPrice === undefined || boxWeight === undefined) {
+    if (!sizeId || !productsToCreate || !Array.isArray(productsToCreate) || productsToCreate.length === 0) {
       return NextResponse.json({ message: 'Missing required fields' }, { status: 400 });
-    }
-
-    const designNames = designName.split(',').map((name: string) => name.trim()).filter((name: string) => name);
-    if (designNames.length === 0) {
-        return NextResponse.json({ message: 'No valid design names provided' }, { status: 400 });
     }
 
     const connection = await pool.getConnection();
     
-    const values = designNames.map((name: string) => [sizeId, name, salesPrice, boxWeight]);
+    const values = productsToCreate.map((product: { designName: string, imageUrl?: string }) => 
+      [sizeId, product.designName, salesPrice, boxWeight, product.imageUrl || null]
+    );
     
     const [result] = await connection.query<OkPacket>(
-      'INSERT INTO products (sizeId, designName, salesPrice, boxWeight) VALUES ?',
+      'INSERT INTO products (sizeId, designName, salesPrice, boxWeight, imageUrl) VALUES ?',
       [values]
     );
 
@@ -76,12 +73,12 @@ export async function PUT(request: Request) {
     
     try {
         const body: Product = await request.json();
-        const { sizeId, designName, salesPrice, boxWeight } = body;
+        const { sizeId, designName, salesPrice, boxWeight, imageUrl } = body;
 
         const connection = await pool.getConnection();
         await connection.query(
-            'UPDATE products SET sizeId = ?, designName = ?, salesPrice = ?, boxWeight = ? WHERE id = ?',
-            [sizeId, designName, salesPrice, boxWeight, id]
+            'UPDATE products SET sizeId = ?, designName = ?, salesPrice = ?, boxWeight = ?, imageUrl = ? WHERE id = ?',
+            [sizeId, designName, salesPrice, boxWeight, imageUrl || null, id]
         );
         connection.release();
 

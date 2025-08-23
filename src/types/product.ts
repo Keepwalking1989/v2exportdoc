@@ -5,5 +5,6 @@ export interface Product {
   designName: string;
   salesPrice?: number;
   boxWeight?: number;
+  imageUrl?: string;
   isDeleted?: boolean;
 }
