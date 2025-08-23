@@ -2,7 +2,7 @@
 export interface PurchaseOrderItem {
   id: string; // Unique ID for this item in the purchase order
   productId: string; // ID of the product (from the source PI's items, filtered by PO's selected size)
-  designImage: string; // Text field, "AS PER SAMPLE" or future image reference
+  imageUrl?: string; // Storing the image URL for display
   weightPerBox: number; // Auto-filled from Size data based on selected product, editable
   boxes: number; // Can be pre-filled from source PI item if product matches, editable
   thickness: string; // Pre-filled "8.5 MM to 9.0 MM", editable

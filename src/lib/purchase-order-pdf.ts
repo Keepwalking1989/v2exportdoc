@@ -193,6 +193,7 @@ export async function generatePurchaseOrderPdf(
   let headerImage: Uint8Array | null = null;
   let footerImage: Uint8Array | null = null;
   let signatureImage: Uint8Array | null = null;
+  const productImageMap = new Map<string, {data: Uint8Array, ext: string}>();
   let headerHeight = 0;
   let footerHeight = 0;
 
@@ -219,6 +220,19 @@ export async function generatePurchaseOrderPdf(
       } else {
           console.warn('Signature image not found at /signature.png');
       }
+      
+      const uniqueImageUrls = [...new Set(po.items.map(item => item.imageUrl).filter(Boolean))];
+      for (const imageUrl of uniqueImageUrls) {
+          if (imageUrl) {
+              const imgResponse = await fetch(imageUrl);
+              if (imgResponse.ok) {
+                  const arrayBuffer = await imgResponse.arrayBuffer();
+                  const ext = imageUrl.split('.').pop()?.toUpperCase() || 'PNG';
+                  productImageMap.set(imageUrl, { data: new Uint8Array(arrayBuffer), ext });
+              }
+          }
+      }
+
   } catch (error) {
       console.error("Error fetching images for PDF:", error);
   }
@@ -358,7 +372,7 @@ export async function generatePurchaseOrderPdf(
   yPos = Math.max(yPosCol1, initialYCol2 + heightCol2);
   yPos += 5;
 
-  const tableHead = [['SR', 'DESCRIPTION OF GOODS', 'Design Image Ref.', 'WEIGHT/BOX (Kg)', 'BOXES', 'THICKNESS']];
+  const tableHead = [['SR', 'DESCRIPTION OF GOODS', 'Image', 'WEIGHT/BOX (Kg)', 'BOXES', 'THICKNESS']];
   let totalBoxesOverall = 0;
 
   const actualTableBodyItems = po.items.map((item, index) => {
@@ -369,7 +383,7 @@ export async function generatePurchaseOrderPdf(
     return [
       (index + 1).toString(),
       goodsDesc,
-      item.designImage || "AS PER SAMPLE",
+      item.imageUrl || '',
       item.weightPerBox.toFixed(2),
       item.boxes.toString(),
       item.thickness,
@@ -417,6 +431,7 @@ export async function generatePurchaseOrderPdf(
       textColor: COLOR_BLACK_RGB,
       fontSize: FONT_CAT3_SIZE,
       valign: 'middle',
+      minCellHeight: 60,
     },
     footStyles: {
       lineWidth: 0.5,
@@ -427,10 +442,28 @@ export async function generatePurchaseOrderPdf(
     columnStyles: {
       0: { halign: 'center', cellWidth: 30 }, // SR
       1: { halign: 'left', cellWidth: 'auto' }, // DESCRIPTION
-      2: { halign: 'left', cellWidth: 'auto' }, // Design Image
+      2: { halign: 'center', cellWidth: 60 }, // Image
       3: { halign: 'right', cellWidth: 70 }, // WEIGHT/BOX
       4: { halign: 'right', cellWidth: 50 }, // BOXES
       5: { halign: 'center', cellWidth: 70 }, // THICKNESS
+    },
+    didDrawCell: (data) => {
+      if (data.section === 'body' && data.column.index === 2) {
+          const imageUrl = data.cell.raw as string;
+          if (!imageUrl) return;
+          const imgData = productImageMap.get(imageUrl);
+          if (imgData) {
+              const cell = data.cell;
+              const imgSize = Math.min(cell.width - 4, cell.height - 4, 50);
+              const imgX = cell.x + (cell.width - imgSize) / 2;
+              const imgY = cell.y + (cell.height - imgSize) / 2;
+              try {
+                  doc.addImage(imgData.data, imgData.ext, imgX, imgY, imgSize, imgSize);
+              } catch (e) {
+                  console.error("Error adding image to PO PDF:", e);
+              }
+          }
+      }
     },
     didParseCell: function (data) {
       if (data.section === 'foot') {
