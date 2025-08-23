@@ -195,46 +195,55 @@ function drawPurchaseOrder(
     let finalY = doc.lastAutoTable.finalY;
 
     // --- Terms and Signature ---
-    const termsAndSignatureBody = [
-        [{ content: 'Terms & Conditions:', styles: { fillColor: COLOR_BLUE_RGB, fontStyle: 'bold' } }],
-        [{ content: po.termsAndConditions, styles: { fontSize: FONT_CAT3_SIZE, valign: 'top', minCellHeight: 40 } }],
-        [
-            {
-                content: '', // Placeholder for signature
-                styles: {
-                    didDrawCell: (data) => {
-                        autoTable(doc, {
-                            body: [
-                                [{ content: `FOR, ${exporter.companyName.toUpperCase()}`, styles: { halign: 'center', fontStyle: 'bold' } }],
-                                [{ content: '', styles: { minCellHeight: 40 } }],
-                                [{ content: 'AUTHORISED SIGNATURE', styles: { halign: 'center', fontStyle: 'bold' } }]
-                            ],
-                            startY: data.cell.y,
-                            margin: { left: data.cell.x },
-                            theme: 'plain',
-                            tableWidth: data.cell.width,
-                            styles: { fontSize: FONT_CAT2_SIZE },
-                            didDrawCell: (sigData) => {
-                                if (sigData.section === 'body' && sigData.row.index === 1 && signatureImage) {
-                                    const cell = sigData.cell;
-                                    const imgWidth = 80, imgHeight = 40;
-                                    const imgX = cell.x + (cell.width - imgWidth) / 2;
-                                    const imgY = cell.y + (cell.height - imgHeight) / 2;
-                                    doc.addImage(signatureImage, 'PNG', imgX, imgY, imgWidth, imgHeight);
-                                }
-                            }
-                        });
-                    }
-                }
-            }
-        ]
-    ];
     autoTable(doc, {
         startY: finalY,
-        body: termsAndSignatureBody,
+        body: [
+            [{ content: 'Terms & Conditions:', styles: { fillColor: COLOR_BLUE_RGB, fontStyle: 'bold' } }],
+            [{ content: po.termsAndConditions, styles: { fontSize: FONT_CAT3_SIZE, valign: 'top', minCellHeight: 40 } }],
+        ],
         theme: 'grid',
         margin: { left: PAGE_MARGIN_X, right: PAGE_MARGIN_X, top: headerHeight, bottom: footerHeight },
         styles: { lineWidth: 0.5, lineColor: COLOR_BORDER_RGB, cellPadding: CELL_PADDING },
+    });
+    // @ts-ignore
+    finalY = doc.lastAutoTable.finalY;
+
+    autoTable(doc, {
+        startY: finalY,
+        body: [
+            [
+                {
+                    content: '', // Placeholder for signature
+                    styles: {
+                        didDrawCell: (data) => {
+                            autoTable(doc, {
+                                body: [
+                                    [{ content: `FOR, ${exporter.companyName.toUpperCase()}`, styles: { halign: 'center', fontStyle: 'bold' } }],
+                                    [{ content: '', styles: { minCellHeight: 40 } }],
+                                    [{ content: 'AUTHORISED SIGNATURE', styles: { halign: 'center', fontStyle: 'bold' } }]
+                                ],
+                                startY: data.cell.y,
+                                margin: { left: data.cell.x },
+                                theme: 'plain',
+                                tableWidth: data.cell.width,
+                                styles: { fontSize: FONT_CAT2_SIZE },
+                                didDrawCell: (sigData) => {
+                                    if (sigData.section === 'body' && sigData.row.index === 1 && signatureImage) {
+                                        const cell = sigData.cell;
+                                        const imgWidth = 80, imgHeight = 40;
+                                        const imgX = cell.x + (cell.width - imgWidth) / 2;
+                                        const imgY = cell.y + (cell.height - imgHeight) / 2;
+                                        doc.addImage(signatureImage, 'PNG', imgX, imgY, imgWidth, imgHeight);
+                                    }
+                                }
+                            });
+                        }
+                    }
+                }
+            ]
+        ],
+        theme: 'plain',
+        margin: { left: PAGE_MARGIN_X + (CONTENT_WIDTH / 2), right: PAGE_MARGIN_X },
     });
 }
 
@@ -295,25 +304,23 @@ export async function generatePurchaseOrderPdf(
     const dryRunDoc = new jsPDF({ unit: 'pt', format: 'a4' });
     drawPurchaseOrder(dryRunDoc, po, exporter, manufacturer, poSize, allProducts, sourcePi, productImageMap, signatureImage, headerHeight, footerHeight, 0);
     const pageCountDry = dryRunDoc.internal.getNumberOfPages();
-    // @ts-ignore
-    const finalYDry = dryRunDoc.lastAutoTable.finalY;
-    const bodyHeightOnLastPage = finalYDry - (pageCountDry > 1 ? 0 : headerHeight);
-    const availableSpace = dryRunDoc.internal.pageSize.getHeight() - headerHeight - footerHeight;
-
+    
     let emptyRowsToAdd = 0;
-    if (pageCountDry === 1 && bodyHeightOnLastPage < availableSpace) {
-        // @ts-ignore
-        const productTable = dryRunDoc.lastAutoTable.previous;
-        const productTableHeight = productTable.finalY - productTable.startY;
-        const spaceAfterTable = availableSpace - productTable.finalY;
-        const rowHeight = 60; // based on minCellHeight in bodyStyles
+    // @ts-ignore
+    const lastTable = dryRunDoc.lastAutoTable;
+    if (pageCountDry === 1 && lastTable) {
+        const finalYDry = lastTable.finalY;
+        const availableSpace = dryRunDoc.internal.pageSize.getHeight() - finalYDry - footerHeight;
         
-        if (spaceAfterTable > 0) {
-            emptyRowsToAdd = Math.floor(spaceAfterTable / rowHeight);
+        // Find the product table from the dry run
+        // @ts-ignore
+        const productTable = lastTable.previous.previous; 
+        if (productTable) {
+             const rowHeight = 60; // based on minCellHeight in bodyStyles
+             if (availableSpace > 0) {
+                emptyRowsToAdd = Math.floor(availableSpace / rowHeight);
+             }
         }
-    } else if (pageCountDry > 1) {
-       // if it's already multi-page, we don't add empty rows to avoid making it longer.
-       emptyRowsToAdd = 0;
     }
 
     // --- Final Drawing with optimal empty rows ---
