@@ -28,6 +28,7 @@ const FONT_CAT3_SIZE = 8;
 const CELL_PADDING = 4;
 const MIN_ROW_HEIGHT = 60; // Minimum height for a product row with an image
 
+
 // Standalone Helper Function for Headers/Footers
 function addHeaderFooterToAllPages(
     doc: jsPDF, 
@@ -69,20 +70,20 @@ export async function generatePurchaseOrderPdf(
         if (footerRes.ok) { footerImage = new Uint8Array(await footerRes.arrayBuffer()); footerHeight = 80; }
         if (signatureRes.ok) { signatureImage = new Uint8Array(await signatureRes.arrayBuffer()); }
 
-        const uniqueImageUrls = [...new Set(po.items.map(item => item.imageUrl).filter(Boolean))];
-        await Promise.all(uniqueImageUrls.map(async (url) => {
-            if (url) {
+        const productIdsWithImages = po.items.map(item => item.productId).filter(Boolean);
+        const uniqueProductIds = [...new Set(productIdsWithImages)];
+        
+        await Promise.all(uniqueProductIds.map(async (productId) => {
+            const product = allProducts.find(p => p.id === productId);
+            if (product?.imageUrl && !productImageMap.has(product.id)) {
                 try {
-                    const imgResponse = await fetch(url);
+                    const imgResponse = await fetch(product.imageUrl);
                     if (imgResponse.ok) {
                         const arrayBuffer = await imgResponse.arrayBuffer();
-                        const ext = url.split('.').pop()?.toUpperCase() || 'PNG';
-                        const product = po.items.find(item => item.imageUrl === url);
-                        if (product) {
-                           productImageMap.set(product.productId, { data: new Uint8Array(arrayBuffer), ext });
-                        }
+                        const ext = product.imageUrl.split('.').pop()?.toUpperCase() || 'PNG';
+                        productImageMap.set(product.id, { data: new Uint8Array(arrayBuffer), ext });
                     }
-                } catch (e) { console.error(`Failed to fetch image for PO: ${url}`, e); }
+                } catch (e) { console.error(`Failed to fetch image for PO product ${product.id}:`, e); }
             }
         }));
     } catch (error) { console.error("Error fetching assets for PDF:", error); }
@@ -168,6 +169,7 @@ export async function generatePurchaseOrderPdf(
     // @ts-ignore
     yPos = doc.lastAutoTable.finalY;
 
+
     const tableHead = [['SR', 'DESCRIPTION OF GOODS', 'Image', 'WEIGHT/BOX (Kg)', 'BOXES', 'THICKNESS']];
     let totalBoxesOverall = 0;
     const actualTableBodyItems = po.items.map((item, index) => {
@@ -230,13 +232,15 @@ export async function generatePurchaseOrderPdf(
     // @ts-ignore
     let finalY = doc.lastAutoTable.finalY;
 
+    // --- Terms & Conditions and Signature ---
+    // Check if there's enough space for the remaining content
     const termsTableHeight = 40 + (doc.splitTextToSize(po.termsAndConditions, CONTENT_WIDTH).length * 12);
     const signatureTableHeight = 80;
     const requiredSpace = termsTableHeight + signatureTableHeight;
 
     if (finalY + requiredSpace > doc.internal.pageSize.getHeight() - footerHeight) {
         doc.addPage();
-        finalY = headerHeight + 10;
+        finalY = headerHeight + 10; // Reset Y position on new page
     }
 
     autoTable(doc, {
