@@ -11,18 +11,9 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Calendar } from "@/components/ui/calendar";
-import { Bar, BarChart, CartesianGrid, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer } from "recharts"
-import {
-  ChartContainer,
-  ChartTooltip as RechartsTooltip,
-  ChartTooltipContent,
-  ChartLegend,
-  ChartLegendContent,
-  type ChartConfig,
-} from "@/components/ui/chart"
 import { format } from 'date-fns';
 import type { DateRange } from 'react-day-picker';
-import { Calendar as CalendarIcon, IndianRupee, HandCoins, Handshake, Ship, TrendingUp, TrendingDown, ArrowLeftRight, Percent } from 'lucide-react';
+import { Calendar as CalendarIcon, IndianRupee, HandCoins, Handshake, Ship, TrendingUp, TrendingDown, ArrowLeftRight, Percent, FileText, FileSymlink } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 
@@ -56,9 +47,31 @@ const StatCard = ({ title, value, icon, description, colorClass, onClick }: { ti
     </Card>
 );
 
+const SummaryCard = ({ title, icon, stats, onClick }: { title: string; icon: React.ReactNode; stats: { label: string; value: string | number }[]; onClick?: () => void }) => (
+    <Card className={cn("hover:shadow-lg transition-shadow", onClick && "cursor-pointer")} onClick={onClick}>
+        <CardHeader className="pb-2">
+            <div className="flex items-center gap-2 text-primary font-headline">
+                {icon}
+                <CardTitle>{title}</CardTitle>
+            </div>
+        </CardHeader>
+        <CardContent>
+            <div className="space-y-2 pt-2">
+                {stats.map((stat, index) => (
+                    <div key={index} className="flex justify-between items-center text-sm">
+                        <span className="text-muted-foreground">{stat.label}</span>
+                        <span className="font-semibold">{stat.value}</span>
+                    </div>
+                ))}
+            </div>
+        </CardContent>
+    </Card>
+);
+
+
 const DashboardDetailModal = ({ open, onOpenChange, title, children }: { open: boolean, onOpenChange: (open: boolean) => void, title: string, children: React.ReactNode }) => (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl">
+      <DialogContent className="max-w-4xl">
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
           <DialogDescription>
@@ -252,6 +265,25 @@ export default function DashboardPage() {
             return { id: doc.id, invoiceNumber: doc.exportInvoiceNumber, clientName: client?.companyName || 'N/A', value: calculateDocTotal(doc) };
         });
 
+        // PI/PO summary
+        const relevantPi = allPerformaInvoices.filter(pi => !pi.isDeleted && isWithinRange(pi.invoiceDate));
+        const relevantPo = allPurchaseOrders.filter(po => !po.isDeleted && isWithinRange(po.poDate));
+        const relevantEd = exportDocuments.filter(ed => !ed.isDeleted && isWithinRange(ed.exportInvoiceDate));
+
+        const piToPoMap = new Set(relevantPo.map(po => String(po.sourcePiId)));
+        const poToEdMap = new Set(relevantEd.map(ed => String(ed.purchaseOrderId)));
+
+        const totalPi = relevantPi.length;
+        const convertedPi = relevantPi.filter(pi => piToPoMap.has(String(pi.id))).length;
+        const remainingPi = totalPi - convertedPi;
+        
+        const totalPo = relevantPo.length;
+        const convertedPo = relevantPo.filter(po => poToEdMap.has(String(po.id))).length;
+        const remainingPo = totalPo - convertedPo;
+
+        const remainingPiList = relevantPi.filter(pi => !piToPoMap.has(String(pi.id)));
+        const remainingPoList = relevantPo.filter(po => !poToEdMap.has(String(po.id)));
+
         return {
             totalReceivables: totalReceivablesUsd,
             totalPayables: totalPayablesInr,
@@ -261,20 +293,15 @@ export default function DashboardPage() {
             netGstReceivable,
             totalGstPaid,
             totalGstReceived,
-            receivablesForChart: totalReceivablesInr,
             receivablesBreakdown,
             payablesBreakdown,
-            exportValueBreakdown
+            exportValueBreakdown,
+            piSummary: { total: totalPi, converted: convertedPi, remaining: remainingPi, remainingList: remainingPiList },
+            poSummary: { total: totalPo, converted: convertedPo, remaining: remainingPo, remainingList: remainingPoList }
         };
     }, [date, exportDocuments, transactions, manuBills, transBills, supplyBills, products, sizes, allClients, allPerformaInvoices, allPurchaseOrders, manufacturers, transporters, suppliers, pallets]);
     
-    const chartData = [{ name: 'Financials', receivables: dashboardData.receivablesForChart, payables: dashboardData.totalPayables }];
-    const chartConfig = {
-        receivables: { label: "Receivables (INR)", color: "hsl(var(--chart-2))" },
-        payables: { label: "Payables (INR)", color: "hsl(var(--destructive))" },
-    } satisfies ChartConfig
-
-    const openModal = (type: 'receivables' | 'payables' | 'exportValue' | 'gst' | 'netPosition') => {
+    const openModal = (type: 'receivables' | 'payables' | 'exportValue' | 'gst' | 'netPosition' | 'piSummary' | 'poSummary') => {
         let title = '';
         let content: React.ReactNode = null;
 
@@ -364,6 +391,40 @@ export default function DashboardPage() {
                     </div>
                 );
                 break;
+            case 'piSummary':
+                title = 'Performa Invoices Awaiting Purchase Order';
+                content = (
+                    <Table>
+                        <TableHeader><TableRow><TableHead>PI Number</TableHead><TableHead>Client</TableHead><TableHead className="text-right">Date</TableHead></TableRow></TableHeader>
+                        <TableBody>
+                            {dashboardData.piSummary.remainingList.length > 0 ?
+                                dashboardData.piSummary.remainingList.map(pi => {
+                                    const client = allClients.find(c => String(c.id) === String(pi.clientId));
+                                    return <TableRow key={pi.id}><TableCell>{pi.invoiceNumber}</TableCell><TableCell>{client?.companyName || 'N/A'}</TableCell><TableCell className="text-right">{format(new Date(pi.invoiceDate), 'dd-MMM-yyyy')}</TableCell></TableRow>;
+                                })
+                                : <TableRow><TableCell colSpan={3} className="text-center">All Performa Invoices have been converted.</TableCell></TableRow>
+                            }
+                        </TableBody>
+                    </Table>
+                );
+                break;
+             case 'poSummary':
+                title = 'Purchase Orders Awaiting Export Document';
+                content = (
+                    <Table>
+                        <TableHeader><TableRow><TableHead>PO Number</TableHead><TableHead>Manufacturer</TableHead><TableHead className="text-right">Date</TableHead></TableRow></TableHeader>
+                        <TableBody>
+                            {dashboardData.poSummary.remainingList.length > 0 ?
+                                dashboardData.poSummary.remainingList.map(po => {
+                                    const manufacturer = manufacturers.find(m => String(m.id) === String(po.manufacturerId));
+                                    return <TableRow key={po.id}><TableCell>{po.poNumber}</TableCell><TableCell>{manufacturer?.companyName || 'N/A'}</TableCell><TableCell className="text-right">{format(new Date(po.poDate), 'dd-MMM-yyyy')}</TableCell></TableRow>;
+                                })
+                                : <TableRow><TableCell colSpan={3} className="text-center">All Purchase Orders have been converted.</TableCell></TableRow>
+                            }
+                        </TableBody>
+                    </Table>
+                );
+                break;
         }
         setModalState({ open: true, title, content });
     };
@@ -405,7 +466,7 @@ export default function DashboardPage() {
                     </Popover>
                 </div>
 
-                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
+                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3">
                     <StatCard 
                         title="Total Receivables"
                         value={`$ ${dashboardData.totalReceivables.toFixed(2)}`}
@@ -454,26 +515,27 @@ export default function DashboardPage() {
                     />
                 </div>
 
-                <div className="grid gap-8 md:grid-cols-1">
-                    <Card>
-                        <CardHeader>
-                            <CardTitle>Financial Overview (in INR)</CardTitle>
-                            <CardDescription>A visual comparison of your receivables and payables for the selected period.</CardDescription>
-                        </CardHeader>
-                        <CardContent className="h-[350px]">
-                            <ChartContainer config={chartConfig} className="min-h-[200px] w-full">
-                                <BarChart accessibilityLayer data={chartData}>
-                                    <CartesianGrid vertical={false} />
-                                    <XAxis dataKey="name" tickLine={false} tickMargin={10} axisLine={false} stroke="" />
-                                    <YAxis stroke="" tickFormatter={(value) => `₹${Number(value) / 1000}k`} />
-                                    <RechartsTooltip cursor={false} content={<ChartTooltipContent indicator="dot" />} />
-                                    <ChartLegend content={<ChartLegendContent />} />
-                                    <Bar dataKey="receivables" fill="var(--color-receivables)" radius={4} />
-                                    <Bar dataKey="payables" fill="var(--color-payables)" radius={4} />
-                                </BarChart>
-                            </ChartContainer>
-                        </CardContent>
-                    </Card>
+                <div className="grid gap-8 md:grid-cols-1 lg:grid-cols-2">
+                    <SummaryCard 
+                        title="Performa Invoice Summary"
+                        icon={<FileText />}
+                        stats={[
+                            { label: "Total PIs Created", value: dashboardData.piSummary.total },
+                            { label: "Converted to PO", value: dashboardData.piSummary.converted },
+                            { label: "Remaining", value: dashboardData.piSummary.remaining },
+                        ]}
+                        onClick={() => openModal('piSummary')}
+                    />
+                     <SummaryCard 
+                        title="Purchase Order Summary"
+                        icon={<FileSymlink />}
+                        stats={[
+                            { label: "Total POs Created", value: dashboardData.poSummary.total },
+                            { label: "Converted to Export", value: dashboardData.poSummary.converted },
+                            { label: "Remaining", value: dashboardData.poSummary.remaining },
+                        ]}
+                        onClick={() => openModal('poSummary')}
+                    />
                 </div>
                 
                 {modalState.open && (
@@ -493,7 +555,3 @@ export default function DashboardPage() {
         </div>
     );
 }
-
-    
-
-    
