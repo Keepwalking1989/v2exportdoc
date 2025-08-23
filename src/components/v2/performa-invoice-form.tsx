@@ -23,8 +23,9 @@ import { Combobox, type ComboboxOption } from "@/components/ui/combobox";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import { format, parseISO } from "date-fns";
-import { CalendarIcon, PlusCircle, Trash2, FileText, Users, DollarSign, Package, Map, Anchor, Ship, Weight, Percent, Edit3, StickyNote, Landmark, XCircle } from "lucide-react";
+import { CalendarIcon, PlusCircle, Trash2, FileText, Users, DollarSign, Package, Map, Anchor, Ship, Weight, Percent, Edit3, StickyNote, Landmark, XCircle, Image as ImageIcon } from "lucide-react";
 import React, { useEffect, useState, useMemo, useCallback } from "react";
+import Image from 'next/image';
 
 import type { PerformaInvoice, PerformaInvoiceItem } from "@/types/performa-invoice";
 import type { Company } from "@/types/company";
@@ -105,6 +106,7 @@ interface PerformaInvoiceItemCardProps {
   control: Control<PerformaInvoiceFormValues>;
   remove: (index: number) => void;
   sizes: Size[];
+  allProducts: Product[];
   sizeOptions: ComboboxOption[];
   getProductOptions: (sizeId: string) => ComboboxOption[];
   handleSizeChange: (index: number, newSizeId: string) => void;
@@ -118,6 +120,7 @@ const PerformaInvoiceItemCard: React.FC<PerformaInvoiceItemCardProps> = ({
   control,
   remove,
   sizes,
+  allProducts,
   sizeOptions,
   getProductOptions,
   handleSizeChange,
@@ -126,11 +129,13 @@ const PerformaInvoiceItemCard: React.FC<PerformaInvoiceItemCardProps> = ({
   fieldsLength,
 }) => {
   const currentItemValues = useWatch({ control: control, name: `items.${index}` });
-  const { sizeId, boxes, ratePerSqmt } = currentItemValues || {};
+  const { sizeId, productId, boxes, ratePerSqmt } = currentItemValues || {};
   
-  const { quantitySqmt, amount } = useMemo(() => {
+  const { quantitySqmt, amount, productImageUrl } = useMemo(() => {
     const sizeDetail = sizes.find(s => s.id === sizeId);
-    if (!sizeDetail) return { quantitySqmt: 0, amount: 0 };
+    const productDetail = allProducts.find(p => p.id === productId);
+
+    if (!sizeDetail) return { quantitySqmt: 0, amount: 0, productImageUrl: null };
 
     const numBoxes = parseFloat(String(boxes)) || 0;
     const numRatePerSqmt = parseFloat(String(ratePerSqmt)) || 0;
@@ -139,8 +144,8 @@ const PerformaInvoiceItemCard: React.FC<PerformaInvoiceItemCardProps> = ({
     const calculatedSqm = numBoxes * sqmPerBox;
     const calculatedAmount = calculatedSqm * numRatePerSqmt;
 
-    return { quantitySqmt: calculatedSqm, amount: calculatedAmount };
-  }, [sizeId, boxes, ratePerSqmt, sizes]);
+    return { quantitySqmt: calculatedSqm, amount: calculatedAmount, productImageUrl: productDetail?.imageUrl };
+  }, [sizeId, productId, boxes, ratePerSqmt, sizes, allProducts]);
 
   const productOptionsForThisItem = getProductOptions(sizeId);
 
@@ -157,97 +162,112 @@ const PerformaInvoiceItemCard: React.FC<PerformaInvoiceItemCardProps> = ({
         <Trash2 className="h-4 w-4" />
         <span className="sr-only">Remove Item</span>
       </Button>
-      <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
-        <FormField
-          control={control}
-          name={`items.${index}.sizeId`}
-          render={({ field }) => (
-            <FormItem className="md:col-span-2">
-              <FormLabel>Size</FormLabel>
-              <Select
-                onValueChange={(value) => handleSizeChange(index, value)}
-                value={field.value}
-                disabled={sizeOptions.length === 0}
-              >
-                <FormControl>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select size" />
-                  </SelectTrigger>
-                </FormControl>
-                <SelectContent>
-                  {sizeOptions.map(opt => <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>)}
-                </SelectContent>
-              </Select>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-        <FormField
-          control={control}
-          name={`items.${index}.productId`}
-          render={({ field }) => (
-            <FormItem className="md:col-span-3">
-              <FormLabel>Product</FormLabel>
-              <Combobox
-                options={productOptionsForThisItem}
-                value={field.value}
-                onChange={(value) => handleProductChange(index, value)}
-                placeholder="Select Product..."
-                searchPlaceholder="Search Products..."
-                emptySearchMessage="No product found for this size."
-                disabled={!sizeId || productOptionsForThisItem.length === 0}
-              />
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-      </div>
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <FormField
-          control={control}
-          name={`items.${index}.boxes`}
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Boxes</FormLabel>
-              <FormControl>
-                <Input type="number" {...field} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-        <FormField
-          control={control}
-          name={`items.${index}.ratePerSqmt`}
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Rate/Sqmt</FormLabel>
-              <FormControl>
-                <Input type="number" step="0.01" {...field} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-        <FormField
-          control={control}
-          name={`items.${index}.commission`}
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Commission</FormLabel>
-              <FormControl>
-                <Input type="number" step="0.01" {...field} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-        <div className="pt-8">
-          Qty Sqmt: {quantitySqmt.toFixed(2)}
+      <div className="grid grid-cols-1 md:grid-cols-6 gap-4">
+        <div className="md:col-span-2 space-y-2">
+            <FormField
+              control={control}
+              name={`items.${index}.sizeId`}
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Size</FormLabel>
+                  <Select
+                    onValueChange={(value) => handleSizeChange(index, value)}
+                    value={field.value}
+                    disabled={sizeOptions.length === 0}
+                  >
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select size" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {sizeOptions.map(opt => <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={control}
+              name={`items.${index}.productId`}
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Product</FormLabel>
+                  <Combobox
+                    options={productOptionsForThisItem}
+                    value={field.value}
+                    onChange={(value) => handleProductChange(index, value)}
+                    placeholder="Select Product..."
+                    searchPlaceholder="Search Products..."
+                    emptySearchMessage="No product found for this size."
+                    disabled={!sizeId || productOptionsForThisItem.length === 0}
+                  />
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
         </div>
-      </div>
-      <div className="text-right font-medium">
-        Item Amount: {amount.toFixed(2)} {getValues("currencyType")}
+        <div className="md:col-span-4 grid grid-cols-2 md:grid-cols-3 gap-4">
+             <FormField
+              control={control}
+              name={`items.${index}.boxes`}
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Boxes</FormLabel>
+                  <FormControl>
+                    <Input type="number" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={control}
+              name={`items.${index}.ratePerSqmt`}
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Rate/Sqmt</FormLabel>
+                  <FormControl>
+                    <Input type="number" step="0.01" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={control}
+              name={`items.${index}.commission`}
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Commission</FormLabel>
+                  <FormControl>
+                    <Input type="number" step="0.01" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+             <div className="pt-8">
+              Qty Sqmt: {quantitySqmt.toFixed(2)}
+            </div>
+             <div className="pt-8">
+              Amount: {amount.toFixed(2)}
+            </div>
+            {productImageUrl ? (
+                <div className="flex flex-col items-center">
+                    <FormLabel>Image</FormLabel>
+                    <Image src={productImageUrl} alt="Product image" width={64} height={64} className="mt-2 h-16 w-16 object-cover rounded-md border" />
+                </div>
+            ) : (
+                 <div className="flex flex-col items-center">
+                    <FormLabel>Image</FormLabel>
+                    <div className="mt-2 h-16 w-16 rounded-md border bg-muted flex items-center justify-center">
+                        <ImageIcon className="h-8 w-8 text-muted-foreground" />
+                    </div>
+                </div>
+            )}
+        </div>
       </div>
     </div>
   );
@@ -627,6 +647,7 @@ export function PerformaInvoiceFormV2({
                     control={form.control}
                     remove={remove}
                     sizes={sizes}
+                    allProducts={allProducts}
                     sizeOptions={sizeOptions}
                     getProductOptions={getProductOptions}
                     handleSizeChange={handleSizeChange}
@@ -728,7 +749,3 @@ export function PerformaInvoiceFormV2({
     </Card>
   );
 }
-
-
-
-    

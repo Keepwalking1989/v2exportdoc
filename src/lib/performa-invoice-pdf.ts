@@ -46,6 +46,7 @@ export async function generatePerformaInvoicePdf(
   let headerImage: Uint8Array | null = null;
   let footerImage: Uint8Array | null = null;
   let signatureImage: Uint8Array | null = null;
+  const productImageMap = new Map<string, {data: Uint8Array, ext: string}>();
 
   try {
     const headerResponse = await fetch('/Latter-pad-head.png');
@@ -70,6 +71,25 @@ export async function generatePerformaInvoicePdf(
     } else {
       console.warn('Signature image not found at /signature.png');
     }
+
+    // Pre-fetch all unique product images
+    const uniqueProductIdsWithImages = [...new Set(invoice.items.map(item => item.productId))];
+    for (const productId of uniqueProductIdsWithImages) {
+        const product = allProducts.find(p => p.id === productId);
+        if (product?.imageUrl && !productImageMap.has(product.id)) {
+            try {
+                const imgResponse = await fetch(product.imageUrl);
+                if (imgResponse.ok) {
+                    const arrayBuffer = await imgResponse.arrayBuffer();
+                    const ext = product.imageUrl.split('.').pop()?.toUpperCase() || 'PNG';
+                    productImageMap.set(product.id, { data: new Uint8Array(arrayBuffer), ext });
+                }
+            } catch (e) {
+                console.error(`Failed to fetch image for product ${product.id}:`, e);
+            }
+        }
+    }
+
   } catch (error) {
     console.error("Error fetching images for PDF:", error);
   }
@@ -184,7 +204,7 @@ export async function generatePerformaInvoicePdf(
   yPos = doc.lastAutoTable.finalY;
 
   // --- PRODUCT TABLE ---
-  const tableHeadContent = ['SR.\nNO.', 'HSN\nCODE', 'DESCRIPTION OF GOODS', 'TOTAL\nBOXES', 'TOTAL\nSQMT', `RATE\n(${currencySymbol})`, `AMOUNT\n(${currencySymbol})`];
+  const tableHeadContent = ['SR.\nNO.', 'HSN\nCODE', 'DESCRIPTION OF GOODS', 'IMAGE', 'TOTAL\nBOXES', 'TOTAL\nSQMT', `RATE\n(${currencySymbol})`, `AMOUNT\n(${currencySymbol})`];
   const tableBodyContent = invoice.items.map((item, index) => {
     const product = allProducts.find(p => p.id === item.productId);
     const size = allSizes.find(s => s.id === item.sizeId);
@@ -193,6 +213,7 @@ export async function generatePerformaInvoicePdf(
       (index + 1).toString(),
       size?.hsnCode || 'N/A',
       goodsDesc,
+      item.productId, // Use productId as a placeholder for the image
       item.boxes.toString(),
       (item.quantitySqmt || 0).toFixed(2),
       `${currencySymbol} ${item.ratePerSqmt.toFixed(2)}`,
@@ -203,7 +224,7 @@ export async function generatePerformaInvoicePdf(
   const actualItemCount = tableBodyContent.length;
   const emptyRowsNeeded = actualItemCount < 6 ? 5 : 3;
   for (let i = 0; i < emptyRowsNeeded; i++) {
-    tableBodyContent.push(['', '', '', '', '', '', '']);
+    tableBodyContent.push(['', '', '', '', '', '', '', '']);
   }
 
   const tableFooterContent = [];
@@ -224,17 +245,13 @@ export async function generatePerformaInvoicePdf(
   
   tableFooterContent.push([`GRAND TOTAL`, `${currencySymbol} ${(invoice.grandTotal || 0).toFixed(2)}`]);
 
-  // Adjusting the product table header style as requested
-  const productTableHeaderStyle = {
-    ...headerStyle,
-    fontSize: FONT_BODY, // Using a smaller font size for this specific header
-  };
+  const productTableHeaderStyle = { ...headerStyle, fontSize: FONT_BODY };
 
   autoTable(doc, {
     head: [tableHeadContent],
     body: tableBodyContent,
     foot: tableFooterContent.map(row => [
-      { content: row[0], colSpan: 6, styles: { halign: 'right' } },
+      { content: row[0], colSpan: 7, styles: { halign: 'right' } },
       { content: row[1], styles: { halign: 'right' } }
     ]),
     startY: yPos,
@@ -245,12 +262,36 @@ export async function generatePerformaInvoicePdf(
     bodyStyles: { ...bodyStyle, halign: 'left' },
     footStyles: { ...bodyStyle, fontStyle: 'bold', halign: 'right' },
     columnStyles: {
-      0: { halign: 'center' }, 1: { halign: 'center' }, 3: { halign: 'center' },
-      4: { halign: 'right' }, 5: { halign: 'right' }, 6: { halign: 'right' },
+      0: { halign: 'center', cellWidth: 30 }, 
+      1: { halign: 'center', cellWidth: 50 }, 
+      2: { halign: 'left', cellWidth: 'auto' },
+      3: { halign: 'center', cellWidth: 50 }, // Image
+      4: { halign: 'center', cellWidth: 50 }, 
+      5: { halign: 'right', cellWidth: 50 }, 
+      6: { halign: 'right', cellWidth: 60 },
+      7: { halign: 'right', cellWidth: 70 },
+    },
+    didDrawCell: (data) => {
+        if (data.section === 'body' && data.column.index === 3) { // Image column
+            const productId = data.cell.raw as string;
+            const imgData = productImageMap.get(productId);
+            if (imgData) {
+                const cell = data.cell;
+                const imgSize = cell.height - (cell.padding('vertical'));
+                const imgX = cell.x + (cell.width - imgSize) / 2;
+                const imgY = cell.y + (cell.height - imgSize) / 2;
+                try {
+                    doc.addImage(imgData.data, imgData.ext, imgX, imgY, imgSize, imgSize);
+                } catch(e) {
+                    console.error("Error adding image to PDF:", e);
+                }
+            }
+            data.cell.text = ''; // Clear the raw text (productId)
+        }
     },
     didParseCell: (data) => {
       if (data.section === 'foot') {
-        data.cell.styles.textColor = COLOR_BLACK_RGB; // Ensure footer value text is black
+        data.cell.styles.textColor = COLOR_BLACK_RGB;
         if (data.column.index === 0) {
           data.cell.styles.fillColor = COLOR_BLUE_RGB;
         }
@@ -261,7 +302,6 @@ export async function generatePerformaInvoicePdf(
   // @ts-ignore
   yPos = doc.lastAutoTable.finalY;
 
-  // --- TOTAL SQM and AMOUNT IN WORDS ---
   const totalSqmText = (invoice.items.reduce((sum, item) => sum + (item.quantitySqmt || 0), 0)).toFixed(2);
   const amountInWordsStr = amountToWords(invoice.grandTotal || 0, invoice.currencyType);
   const sqmValsWidth = 100;
@@ -317,7 +357,6 @@ export async function generatePerformaInvoicePdf(
   // @ts-ignore
   yPos = doc.lastAutoTable.finalY;
 
-  // --- Note Box ---
   autoTable(doc, {
     startY: yPos,
     body: [[
@@ -339,7 +378,6 @@ export async function generatePerformaInvoicePdf(
   // @ts-ignore
   yPos = doc.lastAutoTable.finalY;
 
-  // --- Bank Details Box ---
   autoTable(doc, {
     startY: yPos,
     body: [[
@@ -362,8 +400,6 @@ export async function generatePerformaInvoicePdf(
   // @ts-ignore
   yPos = doc.lastAutoTable.finalY;
 
-
-  // --- Declaration & Signature Block ---
   autoTable(doc, {
     startY: yPos,
     theme: 'plain',
@@ -392,13 +428,11 @@ export async function generatePerformaInvoicePdf(
     columnStyles: { 0: { cellWidth: CONTENT_WIDTH * 0.60 }, 1: { cellWidth: CONTENT_WIDTH * 0.40 } },
     margin: { left: PAGE_MARGIN_X, right: PAGE_MARGIN_X, top: headerHeight, bottom: footerHeight },
     didDrawCell: (data) => {
-      // Draw signature image in the dedicated empty cell
       if (data.section === 'body' && data.row.index === 2 && data.column.index === 1) {
         if (signatureImage) {
           const cell = data.cell;
-          const imgWidth = 80; // Define image width
-          const imgHeight = 40; // Define image height
-          // Center the image within the cell
+          const imgWidth = 80;
+          const imgHeight = 40;
           const imgX = cell.x + (cell.width - imgWidth) / 2;
           const imgY = cell.y + (cell.height - imgHeight) / 2;
           doc.addImage(signatureImage, 'PNG', imgX, imgY, imgWidth, imgHeight);
