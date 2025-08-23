@@ -24,6 +24,7 @@ import { format } from 'date-fns';
 import type { DateRange } from 'react-day-picker';
 import { Calendar as CalendarIcon, IndianRupee, HandCoins, Handshake, Ship, TrendingUp, TrendingDown, ArrowLeftRight, Percent } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useToast } from '@/hooks/use-toast';
 
 // Import all required types
 import type { Transaction } from '@/types/transaction';
@@ -41,23 +42,6 @@ import type { PerformaInvoice } from '@/types/performa-invoice';
 import type { PurchaseOrder } from '@/types/purchase-order';
 import type { Client } from '@/types/client';
 
-
-const LOCAL_STORAGE_KEYS = {
-    TRANSACTIONS: "bizform_transactions",
-    EXPORT_DOCS: "bizform_export_documents_v2",
-    MANU_BILLS: "bizform_manu_bills",
-    TRANS_BILLS: "bizform_trans_bills",
-    SUPPLY_BILLS: "bizform_supply_bills",
-    PRODUCTS: "bizform_products",
-    SIZES: "bizform_sizes",
-    MANUFACTURERS: "bizform_manufacturers",
-    TRANSPORTERS: "bizform_transporters",
-    SUPPLIERS: "bizform_suppliers",
-    PALLETS: "bizform_pallets",
-    PERFORMA_INVOICES: "bizform_performa_invoices",
-    PURCHASE_ORDERS: "bizform_purchase_orders",
-    CLIENTS: "bizform_clients",
-};
 
 const StatCard = ({ title, value, icon, description, colorClass, onClick }: { title: string; value: string; icon: React.ReactNode; description: string; colorClass?: string, onClick?: () => void }) => (
     <Card className={cn("hover:shadow-lg transition-shadow", onClick && "cursor-pointer")} onClick={onClick}>
@@ -90,7 +74,7 @@ const DashboardDetailModal = ({ open, onOpenChange, title, children }: { open: b
 
 export default function DashboardPage() {
     const router = useRouter();
-    const [isClient, setIsClient] = useState(false);
+    const { toast } = useToast();
     const [isLoading, setIsLoading] = useState(true);
     const [modalState, setModalState] = useState<{ open: boolean, title: string, content: React.ReactNode | null }>({ open: false, title: '', content: null });
 
@@ -117,31 +101,52 @@ export default function DashboardPage() {
 
 
     useEffect(() => {
-        setIsClient(true);
-        if (typeof window !== "undefined") {
-            try {
-                setTransactions(JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEYS.TRANSACTIONS) || '[]'));
-                setExportDocuments(JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEYS.EXPORT_DOCS) || '[]'));
-                setManuBills(JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEYS.MANU_BILLS) || '[]'));
-                setTransBills(JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEYS.TRANS_BILLS) || '[]'));
-                setSupplyBills(JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEYS.SUPPLY_BILLS) || '[]'));
-                setProducts(JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEYS.PRODUCTS) || '[]'));
-                setSizes(JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEYS.SIZES) || '[]'));
-                setManufacturers(JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEYS.MANUFACTURERS) || '[]'));
-                setTransporters(JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEYS.TRANSPORTERS) || '[]'));
-                setSuppliers(JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEYS.SUPPLIERS) || '[]'));
-                setPallets(JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEYS.PALLETS) || '[]'));
-                setAllPerformaInvoices(JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEYS.PERFORMA_INVOICES) || '[]'));
-                setAllPurchaseOrders(JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEYS.PURCHASE_ORDERS) || '[]'));
-                setAllClients(JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEYS.CLIENTS) || '[]'));
+      const fetchData = async () => {
+        setIsLoading(true);
+        try {
+          const apiEndpoints = [
+            '/api/v2/transaction-data',
+            '/api/v2/export-document-data',
+            '/api/v2/manu-bill-data',
+            '/api/v2/trans-bill-data',
+            '/api/v2/supply-bill-data',
+            '/api/v2/product-data',
+            '/api/v2/size-data',
+            '/api/v2/manufacturer-data',
+            '/api/v2/transporter-data',
+            '/api/v2/supplier-data',
+            '/api/v2/pallet-data',
+            '/api/v2/performa-invoice-data',
+            '/api/v2/purchase-order-data',
+            '/api/v2/client-data'
+          ];
+          const responses = await Promise.all(apiEndpoints.map(url => fetch(url)));
+          const data = await Promise.all(responses.map(res => res.ok ? res.json() : [])); // Use [] as fallback
 
-            } catch (error) {
-                console.error("Failed to load dashboard data from localStorage", error);
-            } finally {
-                setIsLoading(false);
-            }
+          setTransactions(data[0] || []);
+          setExportDocuments(data[1] || []);
+          setManuBills(data[2] || []);
+          setTransBills(data[3] || []);
+          setSupplyBills(data[4] || []);
+          setProducts(data[5] || []);
+          setSizes(data[6] || []);
+          setManufacturers(data[7] || []);
+          setTransporters(data[8] || []);
+          setSuppliers(data[9] || []);
+          setPallets(data[10] || []);
+          setAllPerformaInvoices(data[11] || []);
+          setAllPurchaseOrders(data[12] || []);
+          setAllClients(data[13] || []);
+
+        } catch (error: any) {
+            console.error("Failed to load dashboard data from database", error);
+            toast({ variant: 'destructive', title: 'Error Loading Dashboard', description: error.message });
+        } finally {
+            setIsLoading(false);
         }
-    }, []);
+      }
+      fetchData();
+    }, [toast]);
 
     const dashboardData = useMemo(() => {
         const fromDate = date?.from;
@@ -165,10 +170,10 @@ export default function DashboardPage() {
                     if (!product) return;
                     const size = sizes.find(s => s.id === product.sizeId);
                     if (!size || !size.sqmPerBox) return;
-                    total += (item.boxes || 0) * size.sqmPerBox * (item.rate || 0);
+                    total += (Number(item.boxes) || 0) * (Number(size.sqmPerBox) || 0) * (Number(item.rate) || 0);
                 });
             });
-            return total + (doc.freight || 0);
+            return total + (Number(doc.freight) || 0);
         };
         
         const relevantManuBills = manuBills.filter(b => !b.isDeleted && isWithinRange(b.invoiceDate));
@@ -178,24 +183,25 @@ export default function DashboardPage() {
         
         // PAYABLES
         const totalBilledInr = 
-            relevantManuBills.reduce((sum, b) => sum + b.grandTotal, 0) +
-            relevantTransBills.reduce((sum, b) => sum + b.totalPayable, 0) +
-            relevantSupplyBills.reduce((sum, b) => sum + b.grandTotal, 0);
-        const totalPaidInr = supplierPayments.reduce((sum, t) => sum + t.amount, 0);
+            relevantManuBills.reduce((sum, b) => sum + (Number(b.grandTotal) || 0), 0) +
+            relevantTransBills.reduce((sum, b) => sum + (Number(b.totalPayable) || 0), 0) +
+            relevantSupplyBills.reduce((sum, b) => sum + (Number(b.grandTotal) || 0), 0);
+        const totalPaidInr = supplierPayments.reduce((sum, t) => sum + (Number(t.amount) || 0), 0);
         const totalPayablesInr = totalBilledInr - totalPaidInr;
 
         // GST
-        const totalGstPaid = relevantManuBills.reduce((sum, bill) => sum + (bill.centralTaxAmount || 0) + (bill.stateTaxAmount || 0), 0) +
-            relevantTransBills.reduce((sum, bill) => sum + bill.totalTax, 0) +
-            relevantSupplyBills.reduce((sum, bill) => sum + (bill.centralTaxAmount || 0) + (bill.stateTaxAmount || 0), 0);
+        const totalGstPaid = 
+            relevantManuBills.reduce((sum, bill) => sum + (Number(bill.centralTaxAmount) || 0) + (Number(bill.stateTaxAmount) || 0), 0) +
+            relevantTransBills.reduce((sum, bill) => sum + (Number(bill.totalTax) || 0), 0) +
+            relevantSupplyBills.reduce((sum, bill) => sum + (Number(bill.centralTaxAmount) || 0) + (Number(bill.stateTaxAmount) || 0), 0);
         
         const gstReceivedTransactions = transactions.filter(t => !t.isDeleted && t.partyType === 'gst' && t.type === 'credit' && isWithinRange(t.date));
-        const totalGstReceived = gstReceivedTransactions.reduce((sum, t) => sum + t.amount, 0);
+        const totalGstReceived = gstReceivedTransactions.reduce((sum, t) => sum + (Number(t.amount) || 0), 0);
         const netGstReceivable = totalGstPaid - totalGstReceived;
 
         // RECEIVABLES
         const totalInvoicedUsd = relevantExportDocs.reduce((sum, doc) => sum + calculateDocTotal(doc), 0);
-        const totalReceivedUsd = clientPayments.reduce((sum, t) => sum + t.amount, 0);
+        const totalReceivedUsd = clientPayments.reduce((sum, t) => sum + (Number(t.amount) || 0), 0);
         const totalReceivablesUsd = totalInvoicedUsd - totalReceivedUsd;
 
         const CONVERSION_RATE = 84;
@@ -213,24 +219,24 @@ export default function DashboardPage() {
             });
 
             const invoiced = clientExportDocs.reduce((sum, doc) => sum + calculateDocTotal(doc), 0);
-            const received = clientPayments.filter(p => p.partyId === client.id).reduce((sum, p) => sum + p.amount, 0);
+            const received = clientPayments.filter(p => p.partyId === client.id).reduce((sum, p) => sum + (Number(p.amount) || 0), 0);
             return { id: client.id, name: client.companyName, balance: invoiced - received };
         }).filter(c => c.balance > 0.01);
 
         const allPayableParties = [
-            ...manufacturers.map(p => ({ ...p, partyType: 'manufacturer' })),
-            ...transporters.map(p => ({ ...p, partyType: 'transporter' })),
-            ...suppliers.map(p => ({ ...p, partyType: 'supplier' })),
-            ...pallets.map(p => ({ ...p, partyType: 'pallet' }))
+            ...(Array.isArray(manufacturers) ? manufacturers.map(p => ({ ...p, partyType: 'manufacturer' })) : []),
+            ...(Array.isArray(transporters) ? transporters.map(p => ({ ...p, partyType: 'transporter' })) : []),
+            ...(Array.isArray(suppliers) ? suppliers.map(p => ({ ...p, partyType: 'supplier' })) : []),
+            ...(Array.isArray(pallets) ? pallets.map(p => ({ ...p, partyType: 'pallet' })) : [])
         ];
 
         const payablesBreakdown = allPayableParties.map(party => {
             let billed = 0;
-            if (party.partyType === 'manufacturer') billed = relevantManuBills.filter(b => b.manufacturerId === party.id).reduce((sum, b) => sum + b.grandTotal, 0);
-            else if (party.partyType === 'transporter') billed = relevantTransBills.filter(b => b.transporterId === party.id).reduce((sum, b) => sum + b.totalPayable, 0);
-            else if (party.partyType === 'supplier' || party.partyType === 'pallet') billed = relevantSupplyBills.filter(b => b.supplierId === party.id).reduce((sum, b) => sum + b.grandTotal, 0);
+            if (party.partyType === 'manufacturer') billed = relevantManuBills.filter(b => b.manufacturerId === party.id).reduce((sum, b) => sum + (Number(b.grandTotal) || 0), 0);
+            else if (party.partyType === 'transporter') billed = relevantTransBills.filter(b => b.transporterId === party.id).reduce((sum, b) => sum + (Number(b.totalPayable) || 0), 0);
+            else if (party.partyType === 'supplier' || party.partyType === 'pallet') billed = relevantSupplyBills.filter(b => b.supplierId === party.id).reduce((sum, b) => sum + (Number(b.grandTotal) || 0), 0);
 
-            const paid = supplierPayments.filter(p => p.partyId === party.id).reduce((sum, p) => sum + p.amount, 0);
+            const paid = supplierPayments.filter(p => p.partyId === party.id).reduce((sum, p) => sum + (Number(p.amount) || 0), 0);
             return { id: party.id, name: party.companyName, balance: billed - paid, partyType: party.partyType };
         }).filter(p => p.balance > 0.01);
 
@@ -306,9 +312,9 @@ export default function DashboardPage() {
                 content = (
                      <Table>
                         <TableBody>
-                            <TableRow><TableCell>Total GST Paid (Input)</TableCell><TableCell className="text-right font-mono text-destructive">₹ {dashboardData.totalGstPaid.toFixed(2)}</TableCell></TableRow>
-                            <TableRow><TableCell>Total GST Received (Refund)</TableCell><TableCell className="text-right font-mono text-green-600">₹ {dashboardData.totalGstReceived.toFixed(2)}</TableCell></TableRow>
-                            <TableRow className="font-bold"><TableCell>Net Receivable</TableCell><TableCell className="text-right font-mono text-primary">₹ {dashboardData.netGstReceivable.toFixed(2)}</TableCell></TableRow>
+                            <TableRow><TableCell>Total GST Paid (Input)</TableCell><TableCell className="text-right font-mono text-destructive">₹ {Number(dashboardData.totalGstPaid).toFixed(2)}</TableCell></TableRow>
+                            <TableRow><TableCell>Total GST Received (Refund)</TableCell><TableCell className="text-right font-mono text-green-600">₹ {Number(dashboardData.totalGstReceived).toFixed(2)}</TableCell></TableRow>
+                            <TableRow className="font-bold"><TableCell>Net Receivable</TableCell><TableCell className="text-right font-mono text-primary">₹ {Number(dashboardData.netGstReceivable).toFixed(2)}</TableCell></TableRow>
                         </TableBody>
                     </Table>
                 );
@@ -342,7 +348,7 @@ export default function DashboardPage() {
         setModalState({ open: true, title, content });
     };
 
-    if (!isClient || isLoading) {
+    if (isLoading) {
         return (
             <div className="flex flex-col min-h-screen">
               <Header />
@@ -416,11 +422,11 @@ export default function DashboardPage() {
                         value={dashboardData.totalContainers.toString()}
                         icon={<Ship className="h-4 w-4 text-orange-500" />}
                         description="Total containers in export docs."
-                        onClick={() => router.push('/export-document')}
+                        onClick={() => router.push('/v2/export-document')}
                     />
                      <StatCard 
                         title="GST Receivable"
-                        value={`₹ ${dashboardData.netGstReceivable.toFixed(2)}`}
+                        value={`₹ ${Number(dashboardData.netGstReceivable).toFixed(2)}`}
                         icon={<Percent className="h-4 w-4 text-indigo-500" />}
                         description="GST Paid minus GST Received."
                         colorClass="text-indigo-500"
@@ -467,3 +473,5 @@ export default function DashboardPage() {
         </div>
     );
 }
+
+    
