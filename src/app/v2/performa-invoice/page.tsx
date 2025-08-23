@@ -157,7 +157,7 @@ export default function PerformaInvoicePageV2() {
       toast({ variant: "destructive", title: "Error", description: "Exporter or Client data missing for this invoice." });
       return;
     }
-    await generatePerformaInvoicePdf(invoice, exporter, client, sizes, allProducts, selectedBank);
+    await generatePerformaInvoicePdf(invoice, exporter, client, sizes, products, selectedBank);
   };
 
   if (isLoading) {
