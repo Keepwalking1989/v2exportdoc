@@ -28,21 +28,60 @@ const FONT_CAT3_SIZE = 8;
 const CELL_PADDING = 4;
 const MIN_ROW_HEIGHT = 60; // Minimum height for a product row with an image
 
-function drawPurchaseOrder(
-    doc: jsPDF,
-    po: PurchaseOrder,
-    exporter: Company,
-    manufacturer: Manufacturer,
-    poSize: Size | undefined,
-    allProducts: Product[],
-    sourcePi: PerformaInvoice | undefined,
-    productImageMap: Map<string, {data: Uint8Array, ext: string}>,
-    signatureImage: Uint8Array | null,
-    headerHeight: number,
-    footerHeight: number,
-    numEmptyRows: number // Dynamic parameter
+export async function generatePurchaseOrderPdf(
+  po: PurchaseOrder,
+  exporter: Company,
+  manufacturer: Manufacturer,
+  poSize: Size | undefined,
+  allProducts: Product[],
+  sourcePi: PerformaInvoice | undefined
 ) {
-    const pageHeight = doc.internal.pageSize.getHeight();
+    let headerImage: Uint8Array | null = null;
+    let footerImage: Uint8Array | null = null;
+    let signatureImage: Uint8Array | null = null;
+    const productImageMap = new Map<string, {data: Uint8Array, ext: string}>();
+    let headerHeight = 0;
+    let footerHeight = 0;
+
+    try {
+        const [headerRes, footerRes, signatureRes] = await Promise.all([
+            fetch('/Latter-pad-head.png'),
+            fetch('/Latter-pad-bottom.png'),
+            fetch('/signature.png')
+        ]);
+        if (headerRes.ok) { headerImage = new Uint8Array(await headerRes.arrayBuffer()); headerHeight = 70; }
+        if (footerRes.ok) { footerImage = new Uint8Array(await footerRes.arrayBuffer()); footerHeight = 80; }
+        if (signatureRes.ok) { signatureImage = new Uint8Array(await signatureRes.arrayBuffer()); }
+
+        const uniqueImageUrls = [...new Set(po.items.map(item => item.imageUrl).filter(Boolean))];
+        await Promise.all(uniqueImageUrls.map(async (url) => {
+            if (url) {
+                try {
+                    const imgResponse = await fetch(url);
+                    if (imgResponse.ok) {
+                        const arrayBuffer = await imgResponse.arrayBuffer();
+                        const ext = url.split('.').pop()?.toUpperCase() || 'PNG';
+                        // Find the first product that uses this image to get a stable key
+                        const product = po.items.find(item => item.imageUrl === url);
+                        if (product) {
+                           productImageMap.set(product.productId, { data: new Uint8Array(arrayBuffer), ext });
+                        }
+                    }
+                } catch (e) { console.error(`Failed to fetch image for PO: ${url}`, e); }
+            }
+        }));
+    } catch (error) { console.error("Error fetching assets for PDF:", error); }
+  
+    const addHeaderFooter = () => {
+        const pageCount = doc.internal.getNumberOfPages();
+        for (let i = 1; i <= pageCount; i++) {
+            doc.setPage(i);
+            if (headerImage) doc.addImage(headerImage, 'PNG', 0, 0, doc.internal.pageSize.getWidth(), headerHeight);
+            if (footerImage) doc.addImage(footerImage, 'PNG', 0, doc.internal.pageSize.getHeight() - footerHeight, doc.internal.pageSize.getWidth(), footerHeight);
+        }
+    };
+    
+    const doc = new jsPDF({ unit: 'pt', format: 'a4' });
     let yPos = headerHeight > 0 ? headerHeight + 10 : PAGE_MARGIN_X;
     
     // Title
@@ -123,8 +162,6 @@ function drawPurchaseOrder(
     // @ts-ignore
     yPos = doc.lastAutoTable.finalY;
 
-    if (numEmptyRows === -1) return; // Stop here for dry run to get yPos
-
     // --- Product Table ---
     const tableHead = [['SR', 'DESCRIPTION OF GOODS', 'Image', 'WEIGHT/BOX (Kg)', 'BOXES', 'THICKNESS']];
     let totalBoxesOverall = 0;
@@ -136,18 +173,12 @@ function drawPurchaseOrder(
         return [
             (index + 1).toString(),
             goodsDesc,
-            item.imageUrl || '',
+            item.productId,
             item.weightPerBox.toFixed(2),
             item.boxes.toString(),
             item.thickness,
         ];
     });
-
-    const tableBodyWithEmptyRows = [...actualTableBodyItems];
-    const emptyRowData = Array(tableHead[0].length).fill(' ');
-    for (let i = 0; i < numEmptyRows; i++) {
-        tableBodyWithEmptyRows.push([...emptyRowData]);
-    }
 
     const tableFooter = [[
         { content: 'Total Box:', colSpan: 4, styles: { halign: 'right', fontStyle: 'bold', fillColor: COLOR_BLUE_RGB, textColor: COLOR_BLACK_RGB, fontSize: FONT_CAT2_SIZE, cellPadding: CELL_PADDING } },
@@ -157,7 +188,7 @@ function drawPurchaseOrder(
     
     autoTable(doc, {
         head: tableHead,
-        body: tableBodyWithEmptyRows,
+        body: actualTableBodyItems,
         foot: tableFooter,
         startY: yPos,
         theme: 'grid',
@@ -176,13 +207,9 @@ function drawPurchaseOrder(
         },
         didDrawCell: (data) => {
             if (data.section === 'body' && data.column.index === 2) {
-                const imageUrl = data.cell.raw as string;
-                const product = po.items[data.row.index];
-                const finalImageUrl = imageUrl || product?.imageUrl;
+                const productId = data.cell.raw as string;
+                const imgData = productImageMap.get(productId);
 
-                if (!finalImageUrl) return;
-                
-                const imgData = productImageMap.get(finalImageUrl);
                 if (imgData) {
                     const cell = data.cell;
                     const imgSize = Math.min(cell.width - 4, cell.height - 4, 50);
@@ -190,16 +217,22 @@ function drawPurchaseOrder(
                     const imgY = cell.y + (cell.height - imgSize) / 2;
                     try { doc.addImage(imgData.data, imgData.ext, imgX, imgY, imgSize, imgSize); } catch (e) { console.error(e); }
                 }
+                data.cell.text = ''; // Clear the placeholder text
             }
         },
-        didParseCell: (data) => {
-            if ((data.section === 'foot' || data.section === 'body') && (data.cell.raw === '' || data.cell.raw === undefined || (typeof data.cell.raw === 'object' && 'content' in data.cell.raw && data.cell.raw.content === ' '))) {
-                data.cell.styles.fillColor = COLOR_WHITE_RGB;
-            }
-        }
     });
     // @ts-ignore
     let finalY = doc.lastAutoTable.finalY;
+
+    // Check if there's enough space for the terms and signature
+    const termsTableHeight = 40 + (doc.splitTextToSize(po.termsAndConditions, CONTENT_WIDTH).length * 12);
+    const signatureTableHeight = 80;
+    const requiredSpace = termsTableHeight + signatureTableHeight;
+
+    if (finalY + requiredSpace > doc.internal.pageSize.getHeight() - footerHeight) {
+        doc.addPage();
+        finalY = headerHeight + 10;
+    }
 
     // --- Terms and Signature ---
     autoTable(doc, {
@@ -252,123 +285,7 @@ function drawPurchaseOrder(
         theme: 'plain',
         margin: { left: PAGE_MARGIN_X + (CONTENT_WIDTH / 2), right: PAGE_MARGIN_X },
     });
-}
 
-function calculatePostTableHeight(doc: jsPDF, po: PurchaseOrder, exporter: Company): number {
-    let height = 0;
-    const margin = { left: PAGE_MARGIN_X, right: PAGE_MARGIN_X };
-    const startY = doc.internal.pageSize.getHeight() * 2; // Start way off-page
-
-    autoTable(doc, {
-        body: [
-            [{ content: 'Terms & Conditions:', styles: { fillColor: COLOR_BLUE_RGB, fontStyle: 'bold' } }],
-            [{ content: po.termsAndConditions, styles: { fontSize: FONT_CAT3_SIZE, valign: 'top', minCellHeight: 40 } }],
-        ],
-        startY: startY,
-        theme: 'grid',
-        margin,
-        styles: { lineWidth: 0.5, lineColor: COLOR_BORDER_RGB, cellPadding: CELL_PADDING },
-        didDrawPage: () => false
-    });
-    // @ts-ignore
-    height += doc.lastAutoTable.finalY - startY;
-
-    autoTable(doc, {
-        body: [
-            [{ content: `FOR, ${exporter.companyName.toUpperCase()}`, styles: { halign: 'center', fontStyle: 'bold' } }],
-            [{ content: '', styles: { minCellHeight: 40 } }],
-            [{ content: 'AUTHORISED SIGNATURE', styles: { halign: 'center', fontStyle: 'bold' } }]
-        ],
-        startY: startY, // Use a fresh off-page startY
-        theme: 'plain',
-        tableWidth: (CONTENT_WIDTH / 2),
-        margin: { left: PAGE_MARGIN_X + (CONTENT_WIDTH / 2) },
-        styles: { fontSize: FONT_CAT2_SIZE },
-        didDrawPage: () => false
-    });
-    // @ts-ignore
-    height += doc.lastAutoTable.finalY - startY;
-    
-    return height;
-}
-
-export async function generatePurchaseOrderPdf(
-  po: PurchaseOrder,
-  exporter: Company,
-  manufacturer: Manufacturer,
-  poSize: Size | undefined,
-  allProducts: Product[],
-  sourcePi: PerformaInvoice | undefined
-) {
-    let headerImage: Uint8Array | null = null;
-    let footerImage: Uint8Array | null = null;
-    let signatureImage: Uint8Array | null = null;
-    const productImageMap = new Map<string, {data: Uint8Array, ext: string}>();
-    let headerHeight = 0;
-    let footerHeight = 0;
-
-    try {
-        const [headerRes, footerRes, signatureRes] = await Promise.all([
-            fetch('/Latter-pad-head.png'),
-            fetch('/Latter-pad-bottom.png'),
-            fetch('/signature.png')
-        ]);
-        if (headerRes.ok) { headerImage = new Uint8Array(await headerRes.arrayBuffer()); headerHeight = 70; }
-        if (footerRes.ok) { footerImage = new Uint8Array(await footerRes.arrayBuffer()); footerHeight = 80; }
-        if (signatureRes.ok) { signatureImage = new Uint8Array(await signatureRes.arrayBuffer()); }
-
-        const uniqueImageUrls = [...new Set(po.items.map(item => item.imageUrl).filter(Boolean))];
-        await Promise.all(uniqueImageUrls.map(async (url) => {
-            if (url) {
-                try {
-                    const imgResponse = await fetch(url);
-                    if (imgResponse.ok) {
-                        const arrayBuffer = await imgResponse.arrayBuffer();
-                        const ext = url.split('.').pop()?.toUpperCase() || 'PNG';
-                        const product = po.items.find(item => item.imageUrl === url);
-                        if(product) {
-                           productImageMap.set(product.productId, { data: new Uint8Array(arrayBuffer), ext });
-                        }
-                    }
-                } catch (e) { console.error(`Failed to fetch image for PO: ${url}`, e); }
-            }
-        }));
-    } catch (error) { console.error("Error fetching assets for PDF:", error); }
-  
-    const addHeaderFooterToAllPages = (doc: jsPDF) => {
-        const pageCount = doc.internal.getNumberOfPages();
-        for (let i = 1; i <= pageCount; i++) {
-            doc.setPage(i);
-            if (headerImage) doc.addImage(headerImage, 'PNG', 0, 0, doc.internal.pageSize.getWidth(), headerHeight);
-            if (footerImage) doc.addImage(footerImage, 'PNG', 0, doc.internal.pageSize.getHeight() - footerHeight, doc.internal.pageSize.getWidth(), footerHeight);
-        }
-    };
-
-    const tempDoc = new jsPDF({ unit: 'pt', format: 'a4' });
-    let emptyRowsToAdd = 0;
-    
-    drawPurchaseOrder(tempDoc, po, exporter, manufacturer, poSize, allProducts, sourcePi, productImageMap, signatureImage, headerHeight, footerHeight, -1);
-    // @ts-ignore
-    const productTableStartY = tempDoc.lastAutoTable.finalY;
-
-    const postContentHeight = calculatePostTableHeight(tempDoc, po, exporter);
-    const availableSpace = tempDoc.internal.pageSize.getHeight() - productTableStartY - postContentHeight - footerHeight;
-
-    const rowHeight = MIN_ROW_HEIGHT;
-    const headHeight = 25; 
-    const footHeight = 25; 
-    const actualTableHeight = headHeight + (po.items.length * rowHeight) + footHeight;
-
-    if (actualTableHeight < availableSpace) {
-        const remainingSpace = availableSpace - actualTableHeight;
-        if (remainingSpace > 0) {
-           emptyRowsToAdd = Math.floor(remainingSpace / rowHeight);
-        }
-    }
-    
-    const finalDoc = new jsPDF({ unit: 'pt', format: 'a4' });
-    drawPurchaseOrder(finalDoc, po, exporter, manufacturer, poSize, allProducts, sourcePi, productImageMap, signatureImage, headerHeight, footerHeight, emptyRowsToAdd);
-    addHeaderFooterToAllPages(finalDoc);
-
-    finalDoc.save(`Purchase_Order_${po.poNumber.replace(/\//g, '_')}.pdf`);
+    addHeaderFooterToAllPages(doc);
+    doc.save(`Purchase_Order_${po.poNumber.replace(/\//g, '_')}.pdf`);
 }
