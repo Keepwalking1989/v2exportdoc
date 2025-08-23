@@ -95,11 +95,14 @@ export async function generatePerformaInvoicePdf(
   }
   
   const addHeaderFooter = () => {
-    if (headerImage) {
-      doc.addImage(headerImage, 'PNG', 0, 0, pageWidth, headerHeight);
-    }
-    if (footerImage) {
-      doc.addImage(footerImage, 'PNG', 0, pageHeight - footerHeight, pageWidth, footerHeight);
+    for (let i = 1; i <= doc.internal.getNumberOfPages(); i++) {
+      doc.setPage(i);
+      if (headerImage) {
+        doc.addImage(headerImage, 'PNG', 0, 0, pageWidth, headerHeight);
+      }
+      if (footerImage) {
+        doc.addImage(footerImage, 'PNG', 0, pageHeight - footerHeight, pageWidth, footerHeight);
+      }
     }
   };
   
@@ -221,12 +224,6 @@ export async function generatePerformaInvoicePdf(
     ];
   });
   
-  const actualItemCount = tableBodyContent.length;
-  const emptyRowsNeeded = actualItemCount < 6 ? 5 : 3;
-  for (let i = 0; i < emptyRowsNeeded; i++) {
-    tableBodyContent.push(['', '', '', '', '', '', '', '']);
-  }
-
   const tableFooterContent = [];
   
   const showSubTotal = (invoice.freight && invoice.freight > 0.5) || (invoice.discount && invoice.discount > 0.5);
@@ -259,13 +256,13 @@ export async function generatePerformaInvoicePdf(
     margin: { left: PAGE_MARGIN_X, right: PAGE_MARGIN_X, top: headerHeight, bottom: footerHeight },
     styles: { lineWidth: 0.5, lineColor: COLOR_BORDER_RGB, cellPadding: CELL_PADDING },
     headStyles: productTableHeaderStyle,
-    bodyStyles: { ...bodyStyle, halign: 'left', minCellHeight: 60 }, // Increased minCellHeight
+    bodyStyles: { ...bodyStyle, halign: 'left', minCellHeight: 60 },
     footStyles: { ...bodyStyle, fontStyle: 'bold', halign: 'right' },
     columnStyles: {
       0: { halign: 'center', cellWidth: 30 }, 
       1: { halign: 'center', cellWidth: 50 }, 
       2: { halign: 'left', cellWidth: 'auto' },
-      3: { halign: 'center', cellWidth: 60 }, // Image column wider
+      3: { halign: 'center', cellWidth: 60 },
       4: { halign: 'center', cellWidth: 50 }, 
       5: { halign: 'right', cellWidth: 50 }, 
       6: { halign: 'right', cellWidth: 60 },
@@ -274,14 +271,14 @@ export async function generatePerformaInvoicePdf(
     didDrawCell: (data) => {
         if (data.section === 'body' && data.column.index === 3) { // Image column
             const productId = data.cell.raw as string;
+            if (!productId) return;
             const imgData = productImageMap.get(productId);
             if (imgData) {
                 const cell = data.cell;
-                // Constrain image size by both cell width and height
                 const availableWidth = cell.width - cell.padding('horizontal');
                 const availableHeight = cell.height - cell.padding('vertical');
-                const imgSize = Math.min(availableWidth, availableHeight);
-
+                const imgSize = Math.min(availableWidth, availableHeight, 50); // Set max size to 50pt
+                
                 const imgX = cell.x + (cell.width - imgSize) / 2;
                 const imgY = cell.y + (cell.height - imgSize) / 2;
                 try {
@@ -301,7 +298,23 @@ export async function generatePerformaInvoicePdf(
         }
       }
     },
-    didDrawPage: addHeaderFooter,
+    didDrawPage: (data) => {
+      addHeaderFooter();
+      const MIN_ROWS_FIRST_PAGE = 8;
+      // Add empty rows only on the first page if needed
+      if (data.pageNumber === 1 && tableBodyContent.length < MIN_ROWS_FIRST_PAGE) {
+        const emptyRowsToAdd = MIN_ROWS_FIRST_PAGE - tableBodyContent.length;
+        const table = data.table;
+        for (let i = 0; i < emptyRowsToAdd; i++) {
+          const row = {};
+          table.columns.forEach((col, index) => {
+            // @ts-ignore
+            row[index] = { content: ' ', styles: { minCellHeight: 60 } };
+          });
+          table.body.push(row);
+        }
+      }
+    },
   });
   // @ts-ignore
   yPos = doc.lastAutoTable.finalY;
