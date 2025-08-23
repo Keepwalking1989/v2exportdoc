@@ -89,7 +89,7 @@ export default function DashboardPage() {
     const [manuBills, setManuBills] = useState<ManuBill[]>([]);
     const [transBills, setTransBills] = useState<TransBill[]>([]);
     const [supplyBills, setSupplyBills] = useState<SupplyBill[]>([]);
-    const [products, setProducts] = useState<Product[]>([]);
+    const [products, setProducts] = useState<(Product & { sizeName: string })[]>([]);
     const [sizes, setSizes] = useState<Size[]>([]);
     const [manufacturers, setManufacturers] = useState<Manufacturer[]>([]);
     const [transporters, setTransporters] = useState<Transporter[]>([]);
@@ -208,42 +208,38 @@ export default function DashboardPage() {
         const totalReceivablesInr = totalReceivablesUsd * CONVERSION_RATE;
 
         // Breakdown data for modals
-        const piToClientMap = new Map(allPerformaInvoices.map(pi => [pi.id, pi.clientId]));
-        const poToPiMap = new Map(allPurchaseOrders.map(po => [po.id, po.sourcePiId]));
-
         const receivablesBreakdown = allClients.map(client => {
-            const clientExportDocs = relevantExportDocs.filter(doc => {
-                if (!doc.purchaseOrderId) return false;
-                const piId = poToPiMap.get(doc.purchaseOrderId);
-                return piId ? piToClientMap.get(piId) === client.id : false;
-            });
+            const clientExportDocs = relevantExportDocs.filter(doc => String(doc.clientId) === String(client.id));
 
             const invoiced = clientExportDocs.reduce((sum, doc) => sum + calculateDocTotal(doc), 0);
-            const received = clientPayments.filter(p => p.partyId === client.id).reduce((sum, p) => sum + (Number(p.amount) || 0), 0);
+            const received = clientPayments.filter(p => String(p.partyId) === String(client.id)).reduce((sum, p) => sum + (Number(p.amount) || 0), 0);
+            
             return { id: client.id, name: client.companyName, balance: invoiced - received };
         }).filter(c => c.balance > 0.01);
-
+        
         const allPayableParties = [
-            ...(Array.isArray(manufacturers) ? manufacturers.map(p => ({ ...p, partyType: 'manufacturer' })) : []),
-            ...(Array.isArray(transporters) ? transporters.map(p => ({ ...p, partyType: 'transporter' })) : []),
-            ...(Array.isArray(suppliers) ? suppliers.map(p => ({ ...p, partyType: 'supplier' })) : []),
-            ...(Array.isArray(pallets) ? pallets.map(p => ({ ...p, partyType: 'pallet' })) : [])
+            ...(Array.isArray(manufacturers) ? manufacturers.map(p => ({ ...p, partyType: 'manufacturer' as const })) : []),
+            ...(Array.isArray(transporters) ? transporters.map(p => ({ ...p, partyType: 'transporter' as const })) : []),
+            ...(Array.isArray(suppliers) ? suppliers.map(p => ({ ...p, partyType: 'supplier' as const })) : []),
+            ...(Array.isArray(pallets) ? pallets.map(p => ({ ...p, partyType: 'pallet' as const })) : [])
         ];
 
         const payablesBreakdown = allPayableParties.map(party => {
             let billed = 0;
-            if (party.partyType === 'manufacturer') billed = relevantManuBills.filter(b => b.manufacturerId === party.id).reduce((sum, b) => sum + (Number(b.grandTotal) || 0), 0);
-            else if (party.partyType === 'transporter') billed = relevantTransBills.filter(b => b.transporterId === party.id).reduce((sum, b) => sum + (Number(b.totalPayable) || 0), 0);
-            else if (party.partyType === 'supplier' || party.partyType === 'pallet') billed = relevantSupplyBills.filter(b => b.supplierId === party.id).reduce((sum, b) => sum + (Number(b.grandTotal) || 0), 0);
+            if (party.partyType === 'manufacturer') {
+                billed = relevantManuBills.filter(b => String(b.manufacturerId) === String(party.id)).reduce((sum, b) => sum + (Number(b.grandTotal) || 0), 0);
+            } else if (party.partyType === 'transporter') {
+                billed = relevantTransBills.filter(b => String(b.transporterId) === String(party.id)).reduce((sum, b) => sum + (Number(b.totalPayable) || 0), 0);
+            } else if (party.partyType === 'supplier' || party.partyType === 'pallet') {
+                billed = relevantSupplyBills.filter(b => String(b.supplierId) === String(party.id)).reduce((sum, b) => sum + (Number(b.grandTotal) || 0), 0);
+            }
 
-            const paid = supplierPayments.filter(p => p.partyId === party.id).reduce((sum, p) => sum + (Number(p.amount) || 0), 0);
+            const paid = supplierPayments.filter(p => String(p.partyId) === String(party.id)).reduce((sum, p) => sum + (Number(p.amount) || 0), 0);
             return { id: party.id, name: party.companyName, balance: billed - paid, partyType: party.partyType };
         }).filter(p => p.balance > 0.01);
 
         const exportValueBreakdown = relevantExportDocs.map(doc => {
-            const piId = poToPiMap.get(doc.purchaseOrderId || '');
-            const clientId = piId ? piToClientMap.get(piId) : undefined;
-            const client = clientId ? allClients.find(c => c.id === clientId) : undefined;
+            const client = allClients.find(c => String(c.id) === String(doc.clientId));
             return { id: doc.id, invoiceNumber: doc.exportInvoiceNumber, clientName: client?.companyName || 'N/A', value: calculateDocTotal(doc) };
         });
 
@@ -280,7 +276,10 @@ export default function DashboardPage() {
                     <Table>
                         <TableHeader><TableRow><TableHead>Client</TableHead><TableHead className="text-right">Balance</TableHead></TableRow></TableHeader>
                         <TableBody>
-                            {dashboardData.receivablesBreakdown.map(item => <TableRow key={item.id}><TableCell>{item.name}</TableCell><TableCell className="text-right font-mono">$ {item.balance.toFixed(2)}</TableCell></TableRow>)}
+                            {dashboardData.receivablesBreakdown.length > 0 ? 
+                                dashboardData.receivablesBreakdown.map(item => <TableRow key={item.id}><TableCell>{item.name}</TableCell><TableCell className="text-right font-mono">$ {item.balance.toFixed(2)}</TableCell></TableRow>)
+                                : <TableRow><TableCell colSpan={2} className="text-center">No outstanding receivables.</TableCell></TableRow>
+                            }
                         </TableBody>
                     </Table>
                 );
@@ -291,7 +290,10 @@ export default function DashboardPage() {
                      <Table>
                         <TableHeader><TableRow><TableHead>Supplier</TableHead><TableHead className="text-right">Balance</TableHead></TableRow></TableHeader>
                         <TableBody>
-                            {dashboardData.payablesBreakdown.map(item => <TableRow key={item.id}><TableCell>{item.name}</TableCell><TableCell className="text-right font-mono">₹ {item.balance.toFixed(2)}</TableCell></TableRow>)}
+                             {dashboardData.payablesBreakdown.length > 0 ?
+                                dashboardData.payablesBreakdown.map(item => <TableRow key={`${item.partyType}-${item.id}`}><TableCell>{item.name}</TableCell><TableCell className="text-right font-mono">₹ {item.balance.toFixed(2)}</TableCell></TableRow>)
+                                : <TableRow><TableCell colSpan={2} className="text-center">No outstanding payables.</TableCell></TableRow>
+                             }
                         </TableBody>
                     </Table>
                 );
@@ -302,7 +304,10 @@ export default function DashboardPage() {
                      <Table>
                         <TableHeader><TableRow><TableHead>Invoice #</TableHead><TableHead>Client</TableHead><TableHead className="text-right">Value</TableHead></TableRow></TableHeader>
                         <TableBody>
-                            {dashboardData.exportValueBreakdown.map(item => <TableRow key={item.id}><TableCell>{item.invoiceNumber}</TableCell><TableCell>{item.clientName}</TableCell><TableCell className="text-right font-mono">$ {item.value.toFixed(2)}</TableCell></TableRow>)}
+                            {dashboardData.exportValueBreakdown.length > 0 ?
+                                dashboardData.exportValueBreakdown.map(item => <TableRow key={item.id}><TableCell>{item.invoiceNumber}</TableCell><TableCell>{item.clientName}</TableCell><TableCell className="text-right font-mono">$ {item.value.toFixed(2)}</TableCell></TableRow>)
+                                : <TableRow><TableCell colSpan={3} className="text-center">No export invoices in this period.</TableCell></TableRow>
+                            }
                         </TableBody>
                     </Table>
                 );
@@ -328,7 +333,10 @@ export default function DashboardPage() {
                             <Table>
                                 <TableHeader><TableRow><TableHead>Client</TableHead><TableHead className="text-right">Balance (INR)</TableHead></TableRow></TableHeader>
                                 <TableBody>
-                                    {dashboardData.receivablesBreakdown.map(item => <TableRow key={item.id}><TableCell>{item.name}</TableCell><TableCell className="text-right font-mono text-green-600">₹ {(item.balance * 84).toFixed(2)}</TableCell></TableRow>)}
+                                     {dashboardData.receivablesBreakdown.length > 0 ?
+                                        dashboardData.receivablesBreakdown.map(item => <TableRow key={item.id}><TableCell>{item.name}</TableCell><TableCell className="text-right font-mono text-green-600">₹ {(item.balance * 84).toFixed(2)}</TableCell></TableRow>)
+                                        : <TableRow><TableCell colSpan={2} className="text-center">No outstanding receivables.</TableCell></TableRow>
+                                     }
                                 </TableBody>
                             </Table>
                         </div>
@@ -337,7 +345,10 @@ export default function DashboardPage() {
                             <Table>
                                 <TableHeader><TableRow><TableHead>Supplier</TableHead><TableHead className="text-right">Balance (INR)</TableHead></TableRow></TableHeader>
                                 <TableBody>
-                                    {dashboardData.payablesBreakdown.map(item => <TableRow key={item.id}><TableCell>{item.name}</TableCell><TableCell className="text-right font-mono text-destructive">₹ {item.balance.toFixed(2)}</TableCell></TableRow>)}
+                                    {dashboardData.payablesBreakdown.length > 0 ?
+                                        dashboardData.payablesBreakdown.map(item => <TableRow key={`${item.partyType}-${item.id}`}><TableCell>{item.name}</TableCell><TableCell className="text-right font-mono text-destructive">₹ {item.balance.toFixed(2)}</TableCell></TableRow>)
+                                        : <TableRow><TableCell colSpan={2} className="text-center">No outstanding payables.</TableCell></TableRow>
+                                    }
                                 </TableBody>
                             </Table>
                         </div>
