@@ -221,18 +221,19 @@ export async function generatePurchaseOrderPdf(
           console.warn('Signature image not found at /signature.png');
       }
       
-      const uniqueImageUrls = [...new Set(po.items.map(item => item.imageUrl).filter(Boolean))];
-      for (const imageUrl of uniqueImageUrls) {
-          if (imageUrl) {
+      const uniqueProductIds = [...new Set(po.items.map(item => item.productId).filter(Boolean))];
+      for (const productId of uniqueProductIds) {
+          const product = allProducts.find(p => p.id === productId);
+          if (product?.imageUrl && !productImageMap.has(product.id)) {
             try {
-              const imgResponse = await fetch(imageUrl);
+              const imgResponse = await fetch(product.imageUrl);
               if (imgResponse.ok) {
                   const arrayBuffer = await imgResponse.arrayBuffer();
-                  const ext = imageUrl.split('.').pop()?.toUpperCase() || 'PNG';
-                  productImageMap.set(imageUrl, { data: new Uint8Array(arrayBuffer), ext });
+                  const ext = product.imageUrl.split('.').pop()?.toUpperCase() || 'PNG';
+                  productImageMap.set(product.id, { data: new Uint8Array(arrayBuffer), ext });
               }
             } catch (e) {
-                console.error(`Failed to fetch image for PO: ${imageUrl}`, e);
+                console.error(`Failed to fetch image for PO: ${product.imageUrl}`, e);
             }
           }
       }
@@ -390,7 +391,7 @@ export async function generatePurchaseOrderPdf(
     return [
       (index + 1).toString(),
       goodsDesc,
-      item.imageUrl || '',
+      item.productId, // Pass productId as the raw value for the image cell
       item.weightPerBox.toFixed(2),
       item.boxes.toString(),
       item.thickness,
@@ -456,9 +457,9 @@ export async function generatePurchaseOrderPdf(
     },
     didDrawCell: (data) => {
       if (data.section === 'body' && data.column.index === 2) {
-          const imageUrl = data.cell.raw as string;
-          if (!imageUrl) return;
-          const imgData = productImageMap.get(imageUrl);
+          const productId = data.cell.raw as string;
+          if (!productId) return;
+          const imgData = productImageMap.get(productId);
           if (imgData) {
               const cell = data.cell;
               const imgSize = Math.min(cell.width - 4, cell.height - 4, 50);
@@ -470,6 +471,7 @@ export async function generatePurchaseOrderPdf(
                   console.error("Error adding image to PO PDF:", e);
               }
           }
+          data.cell.text = ''; // Clear the raw value so it doesn't print
       }
     },
     didParseCell: function (data) {
