@@ -26,6 +26,7 @@ const FONT_CAT2_SIZE = 10;
 const FONT_CAT3_SIZE = 8;
 
 const CELL_PADDING = 4;
+const MIN_ROW_HEIGHT = 60; // Minimum height for a product row with an image
 
 function drawPurchaseOrder(
     doc: jsPDF,
@@ -93,7 +94,7 @@ function drawPurchaseOrder(
                         autoTable(doc, {
                             body: manuDetailsBody,
                             startY: data.cell.y,
-                            margin: { left: data.cell.x, right: pageWidth - (data.cell.x + data.cell.width) },
+                            margin: { left: data.cell.x, right: doc.internal.pageSize.getWidth() - (data.cell.x + data.cell.width) },
                             theme: 'grid',
                             styles: { lineWidth: 0.5, lineColor: COLOR_BORDER_RGB, cellPadding: CELL_PADDING },
                         });
@@ -107,7 +108,7 @@ function drawPurchaseOrder(
                          autoTable(doc, {
                             body: poDetailsBody,
                             startY: data.cell.y,
-                            margin: { left: data.cell.x, right: pageWidth - (data.cell.x + data.cell.width) },
+                            margin: { left: data.cell.x, right: doc.internal.pageSize.getWidth() - (data.cell.x + data.cell.width) },
                             theme: 'grid',
                             styles: { lineWidth: 0.5, lineColor: COLOR_BORDER_RGB, cellPadding: CELL_PADDING, halign: 'center' },
                         });
@@ -121,6 +122,8 @@ function drawPurchaseOrder(
     });
     // @ts-ignore
     yPos = doc.lastAutoTable.finalY;
+
+    if (numEmptyRows === -1) return; // Stop here for dry run to get yPos
 
     // --- Product Table ---
     const tableHead = [['SR', 'DESCRIPTION OF GOODS', 'Image', 'WEIGHT/BOX (Kg)', 'BOXES', 'THICKNESS']];
@@ -161,7 +164,7 @@ function drawPurchaseOrder(
         margin: { left: PAGE_MARGIN_X, right: PAGE_MARGIN_X, top: headerHeight, bottom: footerHeight },
         styles: { lineWidth: 0.5, lineColor: COLOR_BORDER_RGB, cellPadding: CELL_PADDING },
         headStyles: { fillColor: COLOR_BLUE_RGB, textColor: COLOR_BLACK_RGB, fontStyle: 'bold', fontSize: FONT_CAT2_SIZE, halign: 'center', valign: 'middle' },
-        bodyStyles: { fillColor: COLOR_WHITE_RGB, textColor: COLOR_BLACK_RGB, fontSize: FONT_CAT3_SIZE, valign: 'middle', minCellHeight: 60 },
+        bodyStyles: { fillColor: COLOR_WHITE_RGB, textColor: COLOR_BLACK_RGB, fontSize: FONT_CAT3_SIZE, valign: 'middle', minCellHeight: MIN_ROW_HEIGHT },
         footStyles: { lineWidth: 0.5, lineColor: COLOR_BORDER_RGB, cellPadding: CELL_PADDING, valign: 'middle' },
         columnStyles: {
             0: { halign: 'center', cellWidth: 30 },
@@ -174,8 +177,12 @@ function drawPurchaseOrder(
         didDrawCell: (data) => {
             if (data.section === 'body' && data.column.index === 2) {
                 const imageUrl = data.cell.raw as string;
-                if (!imageUrl) return;
-                const imgData = productImageMap.get(imageUrl);
+                const product = po.items[data.row.index];
+                const finalImageUrl = imageUrl || product?.imageUrl;
+
+                if (!finalImageUrl) return;
+                
+                const imgData = productImageMap.get(finalImageUrl);
                 if (imgData) {
                     const cell = data.cell;
                     const imgSize = Math.min(cell.width - 4, cell.height - 4, 50);
@@ -223,7 +230,7 @@ function drawPurchaseOrder(
                                     [{ content: 'AUTHORISED SIGNATURE', styles: { halign: 'center', fontStyle: 'bold' } }]
                                 ],
                                 startY: data.cell.y,
-                                margin: { left: data.cell.x },
+                                margin: { left: data.cell.x, right: doc.internal.pageSize.getWidth() - (data.cell.x + data.cell.width) },
                                 theme: 'plain',
                                 tableWidth: data.cell.width,
                                 styles: { fontSize: FONT_CAT2_SIZE },
@@ -247,42 +254,40 @@ function drawPurchaseOrder(
     });
 }
 
-// Function to calculate content height without drawing
 function calculatePostTableHeight(doc: jsPDF, po: PurchaseOrder, exporter: Company): number {
     let height = 0;
     const margin = { left: PAGE_MARGIN_X, right: PAGE_MARGIN_X };
+    const startY = doc.internal.pageSize.getHeight() * 2; // Start way off-page
 
-    // Simulate terms table
     autoTable(doc, {
         body: [
             [{ content: 'Terms & Conditions:', styles: { fillColor: COLOR_BLUE_RGB, fontStyle: 'bold' } }],
             [{ content: po.termsAndConditions, styles: { fontSize: FONT_CAT3_SIZE, valign: 'top', minCellHeight: 40 } }],
         ],
-        startY: doc.internal.pageSize.getHeight() * 2, // Start off-page
+        startY: startY,
         theme: 'grid',
         margin,
         styles: { lineWidth: 0.5, lineColor: COLOR_BORDER_RGB, cellPadding: CELL_PADDING },
-        didDrawPage: () => { /* Prevent drawing */ return false; }
+        didDrawPage: () => false
     });
     // @ts-ignore
-    height += doc.lastAutoTable.finalY - (doc.internal.pageSize.getHeight() * 2);
+    height += doc.lastAutoTable.finalY - startY;
 
-    // Simulate signature table
     autoTable(doc, {
         body: [
             [{ content: `FOR, ${exporter.companyName.toUpperCase()}`, styles: { halign: 'center', fontStyle: 'bold' } }],
             [{ content: '', styles: { minCellHeight: 40 } }],
             [{ content: 'AUTHORISED SIGNATURE', styles: { halign: 'center', fontStyle: 'bold' } }]
         ],
-        startY: doc.internal.pageSize.getHeight() * 2, // Start off-page
+        startY: startY, // Use a fresh off-page startY
         theme: 'plain',
-        tableWidth: 'wrap',
-        margin: { left: PAGE_MARGIN_X + (CONTENT_WIDTH / 2), right: PAGE_MARGIN_X },
+        tableWidth: (CONTENT_WIDTH / 2),
+        margin: { left: PAGE_MARGIN_X + (CONTENT_WIDTH / 2) },
         styles: { fontSize: FONT_CAT2_SIZE },
-        didDrawPage: () => { /* Prevent drawing */ return false; }
+        didDrawPage: () => false
     });
     // @ts-ignore
-    height += doc.lastAutoTable.finalY - (doc.internal.pageSize.getHeight() * 2);
+    height += doc.lastAutoTable.finalY - startY;
     
     return height;
 }
@@ -320,15 +325,15 @@ export async function generatePurchaseOrderPdf(
                     if (imgResponse.ok) {
                         const arrayBuffer = await imgResponse.arrayBuffer();
                         const ext = url.split('.').pop()?.toUpperCase() || 'PNG';
-                        productImageMap.set(url, { data: new Uint8Array(arrayBuffer), ext });
+                        const product = po.items.find(item => item.imageUrl === url);
+                        if(product) {
+                           productImageMap.set(product.productId, { data: new Uint8Array(arrayBuffer), ext });
+                        }
                     }
                 } catch (e) { console.error(`Failed to fetch image for PO: ${url}`, e); }
             }
         }));
-
-    } catch (error) {
-        console.error("Error fetching assets for PDF:", error);
-    }
+    } catch (error) { console.error("Error fetching assets for PDF:", error); }
   
     const addHeaderFooterToAllPages = (doc: jsPDF) => {
         const pageCount = doc.internal.getNumberOfPages();
@@ -339,33 +344,28 @@ export async function generatePurchaseOrderPdf(
         }
     };
 
-    // --- Logic to determine empty rows ---
     const tempDoc = new jsPDF({ unit: 'pt', format: 'a4' });
     let emptyRowsToAdd = 0;
     
-    // Draw initial tables to get starting Y for the main product table
-    drawPurchaseOrder(tempDoc, po, exporter, manufacturer, poSize, allProducts, sourcePi, productImageMap, signatureImage, headerHeight, footerHeight, -1); // Use -1 to signal not to draw products
+    drawPurchaseOrder(tempDoc, po, exporter, manufacturer, poSize, allProducts, sourcePi, productImageMap, signatureImage, headerHeight, footerHeight, -1);
     // @ts-ignore
-    const productTableStartY = tempDoc.lastAutoTable.finalY || yPos;
+    const productTableStartY = tempDoc.lastAutoTable.finalY;
 
-    // Calculate height of content AFTER the product table
-    const postContentHeight = calculatePostTableHeight(tempDoc, po, exporter) + 20; // Add some buffer
-
-    // Calculate available space on first page for the product table
+    const postContentHeight = calculatePostTableHeight(tempDoc, po, exporter);
     const availableSpace = tempDoc.internal.pageSize.getHeight() - productTableStartY - postContentHeight - footerHeight;
 
-    // Simulate product table height
-    const rowHeight = 60; // From minCellHeight
-    const headHeight = 25; // Approximate
-    const footHeight = 25; // Approximate
+    const rowHeight = MIN_ROW_HEIGHT;
+    const headHeight = 25; 
+    const footHeight = 25; 
     const actualTableHeight = headHeight + (po.items.length * rowHeight) + footHeight;
 
     if (actualTableHeight < availableSpace) {
         const remainingSpace = availableSpace - actualTableHeight;
-        emptyRowsToAdd = Math.floor(remainingSpace / rowHeight);
+        if (remainingSpace > 0) {
+           emptyRowsToAdd = Math.floor(remainingSpace / rowHeight);
+        }
     }
     
-    // --- Final Drawing with optimal empty rows ---
     const finalDoc = new jsPDF({ unit: 'pt', format: 'a4' });
     drawPurchaseOrder(finalDoc, po, exporter, manufacturer, poSize, allProducts, sourcePi, productImageMap, signatureImage, headerHeight, footerHeight, emptyRowsToAdd);
     addHeaderFooterToAllPages(finalDoc);
