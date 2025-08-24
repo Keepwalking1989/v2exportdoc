@@ -152,9 +152,22 @@ export async function PUT(request: Request) {
 
         // Construct a clean update object
         const updateData = {
-            ...invoiceData,
-            selectedBankId: selectedBankIdForDb,
+            exporterId: invoiceData.exporterId,
+            invoiceNumber: invoiceData.invoiceNumber,
             invoiceDate: formattedInvoiceDate,
+            clientId: invoiceData.clientId,
+            selectedBankId: selectedBankIdForDb,
+            finalDestination: invoiceData.finalDestination,
+            currencyType: invoiceData.currencyType,
+            totalGrossWeight: invoiceData.totalGrossWeight,
+            freight: invoiceData.freight,
+            discount: invoiceData.discount,
+            notifyPartyLine1: invoiceData.notifyPartyLine1,
+            notifyPartyLine2: invoiceData.notifyPartyLine2,
+            termsAndConditions: invoiceData.termsAndConditions,
+            note: invoiceData.note,
+            subTotal: invoiceData.subTotal,
+            grandTotal: invoiceData.grandTotal,
             items_json,
             containers_json,
         };
