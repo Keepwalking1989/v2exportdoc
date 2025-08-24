@@ -84,18 +84,35 @@ export async function POST(request: Request) {
     await connection.beginTransaction();
 
     const formattedInvoiceDate = format(new Date(invoiceData.invoiceDate), 'yyyy-MM-dd HH:mm:ss');
-    const items_json = JSON.stringify(items);
-    const containers_json = JSON.stringify(containers);
+    const items_json = JSON.stringify(items || []);
+    const containers_json = JSON.stringify(containers || []);
+
+    // Create a clean object for insertion, removing fields not in the table
+    const insertData = {
+        exporterId: invoiceData.exporterId,
+        invoiceNumber: invoiceData.invoiceNumber,
+        invoiceDate: formattedInvoiceDate,
+        clientId: invoiceData.clientId,
+        selectedBankId: invoiceData.selectedBankId || null,
+        finalDestination: invoiceData.finalDestination,
+        currencyType: invoiceData.currencyType,
+        totalGrossWeight: invoiceData.totalGrossWeight,
+        freight: invoiceData.freight,
+        discount: invoiceData.discount,
+        notifyPartyLine1: invoiceData.notifyPartyLine1,
+        notifyPartyLine2: invoiceData.notifyPartyLine2,
+        termsAndConditions: invoiceData.termsAndConditions,
+        note: invoiceData.note,
+        subTotal: invoiceData.subTotal,
+        grandTotal: invoiceData.grandTotal,
+        items_json,
+        containers_json,
+    };
+
 
     const [result] = await connection.query<OkPacket>(
       'INSERT INTO performa_invoices SET ?',
-      {
-        ...invoiceData,
-        invoiceDate: formattedInvoiceDate,
-        items_json,
-        containers_json,
-        id: undefined, // Let DB auto-increment
-      }
+      insertData
     );
 
     await connection.commit();
@@ -123,30 +140,28 @@ export async function PUT(request: Request) {
     const connection = await pool.getConnection();
     try {
         const invoice: PerformaInvoice = await request.json();
-        // Destructure to remove fields that should not be in the SET clause of the UPDATE query
-        const { items, containers, id: invoiceId, isDeleted, ...invoiceData } = invoice;
+        const { items, containers, id: invoiceId, isDeleted, createdAt, ...invoiceData } = invoice;
 
         await connection.beginTransaction();
 
         const formattedInvoiceDate = format(new Date(invoiceData.invoiceDate), 'yyyy-MM-dd HH:mm:ss');
-        const items_json = JSON.stringify(items);
-        const containers_json = JSON.stringify(containers);
+        const items_json = JSON.stringify(items || []);
+        const containers_json = JSON.stringify(containers || []);
         
-        // Handle potentially empty selectedBankId by setting it to null for the database
         const selectedBankIdForDb = invoiceData.selectedBankId ? invoiceData.selectedBankId : null;
+
+        // Construct a clean update object
+        const updateData = {
+            ...invoiceData,
+            selectedBankId: selectedBankIdForDb,
+            invoiceDate: formattedInvoiceDate,
+            items_json,
+            containers_json,
+        };
 
         await connection.query<OkPacket>(
             'UPDATE performa_invoices SET ? WHERE id = ?',
-            [
-                {
-                    ...invoiceData,
-                    selectedBankId: selectedBankIdForDb,
-                    invoiceDate: formattedInvoiceDate,
-                    items_json,
-                    containers_json,
-                },
-                id
-            ]
+            [updateData, id]
         );
         
         await connection.commit();
