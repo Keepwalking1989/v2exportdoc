@@ -93,6 +93,8 @@ export default function PerformaInvoicePageV2() {
     const method = isEditing ? 'PUT' : 'POST';
 
     try {
+      // The invoiceData from the form is already correctly calculated and structured.
+      // No need for recalculations here. Just send it to the API.
       const response = await fetch(url, {
         method: method,
         headers: { 'Content-Type': 'application/json' },
