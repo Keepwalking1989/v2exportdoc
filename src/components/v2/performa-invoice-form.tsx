@@ -27,7 +27,7 @@ import { CalendarIcon, PlusCircle, Trash2, FileText, Users, DollarSign, Package,
 import React, { useEffect, useState, useMemo, useCallback } from "react";
 import Image from 'next/image';
 
-import type { PerformaInvoice, PerformaInvoiceItem } from "@/types/performa-invoice";
+import type { PerformaInvoice, PerformaInvoiceItem, PerformaInvoiceContainer } from "@/types/performa-invoice";
 import type { Company } from "@/types/company";
 import type { Client } from "@/types/client";
 import type { Size } from "@/types/size";
@@ -43,6 +43,11 @@ const performaInvoiceItemSchema = z.object({
   commission: z.coerce.number().min(0, "Commission must be non-negative").optional().default(0),
 });
 
+const containerSchema = z.object({
+  size: z.enum(["20 ft", "40 ft"]),
+  quantity: z.coerce.number().min(1, "Quantity must be at least 1"),
+});
+
 const formSchema = z.object({
   exporterId: z.string().min(1, "Exporter is required"),
   invoiceNumber: z.string(), // Will be read-only, set by logic
@@ -50,8 +55,7 @@ const formSchema = z.object({
   clientId: z.string().min(1, "Client is required"),
   selectedBankId: z.string().optional().default(""), // Optional for now, can be made mandatory
   finalDestination: z.string().min(2, "Final destination is required"),
-  totalContainer: z.coerce.number().min(0, "Total containers must be non-negative").default(0),
-  containerSize: z.enum(["20 ft", "40 ft"]),
+  containers: z.array(containerSchema).min(1, "At least one container type is required."),
   currencyType: z.enum(["INR", "USD", "Euro"]),
   totalGrossWeight: z.string().min(1, "Total gross weight is required"),
   freight: z.coerce.number().min(0, "Freight must be non-negative").optional().default(0),
@@ -88,8 +92,7 @@ const getDefaultFormValues = (invoiceNumber: string): PerformaInvoiceFormValues 
   clientId: "",
   selectedBankId: "",
   finalDestination: "",
-  totalContainer: 0,
-  containerSize: "20 ft",
+  containers: [{ size: "20 ft", quantity: 1 }],
   currencyType: "USD",
   totalGrossWeight: "NA",
   freight: 0,
@@ -292,9 +295,14 @@ export function PerformaInvoiceFormV2({
     defaultValues: getDefaultFormValues(nextInvoiceNumber),
   });
 
-  const { fields, append, remove, replace } = useFieldArray({
+  const { fields: itemFields, append: appendItem, remove: removeItem } = useFieldArray({
     control: form.control,
     name: "items",
+  });
+
+  const { fields: containerFields, append: appendContainer, remove: removeContainer } = useFieldArray({
+    control: form.control,
+    name: "containers",
   });
 
   useEffect(() => {
@@ -305,6 +313,7 @@ export function PerformaInvoiceFormV2({
         clientId: String(initialDataForForm.clientId),
         invoiceDate: new Date(initialDataForForm.invoiceDate),
         selectedBankId: initialDataForForm.selectedBankId?.toString() || "",
+        containers: initialDataForForm.containers?.length > 0 ? initialDataForForm.containers : [{ size: "20 ft" as const, quantity: 1 }],
         items: initialDataForForm.items.map(item => ({
           id: item.id,
           sizeId: item.sizeId,
@@ -558,41 +567,59 @@ export function PerformaInvoiceFormV2({
               />
             </div>
             
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-               <FormField
-                control={form.control}
-                name="totalContainer"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="flex items-center gap-2"><Package className="h-4 w-4 text-muted-foreground" />Total Containers</FormLabel>
-                    <FormControl>
-                      <Input type="number" placeholder="e.g. 1" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="containerSize"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="flex items-center gap-2"><Anchor className="h-4 w-4 text-muted-foreground" />Container Size</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select container size" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value="20 ft">20 ft</SelectItem>
-                        <SelectItem value="40 ft">40 ft</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+            <Card>
+                <CardHeader>
+                    <CardTitle className="flex items-center justify-between">
+                    Container Details
+                    <Button type="button" size="sm" onClick={() => appendContainer({ size: "20 ft", quantity: 1 })}>
+                        <PlusCircle className="mr-2 h-4 w-4" /> Add Container Type
+                    </Button>
+                    </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                    {containerFields.map((field, index) => (
+                    <div key={field.id} className="flex items-center gap-4 p-2 border rounded-md">
+                        <FormField
+                        control={form.control}
+                        name={`containers.${index}.size`}
+                        render={({ field }) => (
+                            <FormItem className="flex-1">
+                            <Select onValueChange={field.onChange} value={field.value}>
+                                <FormControl>
+                                <SelectTrigger>
+                                    <SelectValue placeholder="Select size" />
+                                </SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                <SelectItem value="20 ft">20 ft</SelectItem>
+                                <SelectItem value="40 ft">40 ft</SelectItem>
+                                </SelectContent>
+                            </Select>
+                            <FormMessage />
+                            </FormItem>
+                        )}
+                        />
+                        <FormField
+                        control={form.control}
+                        name={`containers.${index}.quantity`}
+                        render={({ field }) => (
+                            <FormItem>
+                            <FormControl>
+                                <Input type="number" placeholder="Qty" className="w-24" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                            </FormItem>
+                        )}
+                        />
+                        <Button type="button" variant="destructive" size="icon" onClick={() => removeContainer(index)} disabled={containerFields.length <= 1}>
+                        <Trash2 className="h-4 w-4" />
+                        </Button>
+                    </div>
+                    ))}
+                </CardContent>
+            </Card>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <FormField
                 control={form.control}
                 name="currencyType"
@@ -634,18 +661,18 @@ export function PerformaInvoiceFormV2({
               <CardHeader>
                 <CardTitle className="flex items-center justify-between">
                   Product Items
-                  <Button type="button" size="sm" onClick={() => append({ sizeId: "", productId: "", boxes: 1, ratePerSqmt: 0, commission: 0 })}>
+                  <Button type="button" size="sm" onClick={() => appendItem({ sizeId: "", productId: "", boxes: 1, ratePerSqmt: 0, commission: 0 })}>
                     <PlusCircle className="mr-2 h-4 w-4" /> Add Item
                   </Button>
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                {fields.map((fieldItem, index) => (
+                {itemFields.map((fieldItem, index) => (
                   <PerformaInvoiceItemCard
                     key={fieldItem.id}
                     index={index}
                     control={form.control}
-                    remove={remove}
+                    remove={removeItem}
                     sizes={sizes}
                     allProducts={allProducts}
                     sizeOptions={sizeOptions}
@@ -653,7 +680,7 @@ export function PerformaInvoiceFormV2({
                     handleSizeChange={handleSizeChange}
                     handleProductChange={handleProductChange}
                     getValues={form.getValues}
-                    fieldsLength={fields.length}
+                    fieldsLength={itemFields.length}
                   />
                 ))}
               </CardContent>

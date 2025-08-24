@@ -315,22 +315,44 @@ function calculatePostTableHeight(
     footerHeight: number
 ) {
     let height = 0;
-    const startY = doc.internal.pageSize.getHeight() * 2; // Start way off-page
+    // Simulate drawing all tables after the main product table to get their combined height.
+    // Use a starting Y position that's guaranteed to be off-page.
+    const startY = doc.internal.pageSize.getHeight() * 2; 
+    let currentY = startY;
 
-    autoTable(doc, {
-        startY,
-        body: [[
-            { content: "TOTAL INVOICE AMOUNT IN WORDS:", styles: { ...{fillColor: COLOR_BLUE_RGB, textColor: COLOR_BLACK_RGB, fontStyle: 'bold', fontSize: FONT_HEADER, halign: 'left'}, cellPadding: CELL_PADDING } },
-            { content: "TOTAL SQM", styles: {fillColor: COLOR_BLUE_RGB, textColor: COLOR_BLACK_RGB, fontStyle: 'bold', fontSize: FONT_HEADER, halign: 'center'} }
-        ]],
-        didDrawPage: () => false
-    });
-    // @ts-ignore
-    height += doc.lastAutoTable.finalY - startY;
-
-    // ... and so on for all other tables below the product list
-    // This is a simplified example. You would simulate drawing ALL tables.
+    const totalSqmText = (invoice.items.reduce((sum, item) => sum + (item.quantitySqmt || 0), 0)).toFixed(2);
+    const amountInWordsStr = amountToWords(invoice.grandTotal || 0, invoice.currencyType);
+    const sqmValsWidth = 100;
     
+    // Simulate each autoTable call and accumulate height
+    autoTable(doc, { startY: currentY, body: [[ 'TOTAL INVOICE AMOUNT IN WORDS:', 'TOTAL SQM' ]], didDrawPage: () => false, columnStyles: { 0: { cellWidth: CONTENT_WIDTH - sqmValsWidth }, 1: { cellWidth: sqmValsWidth } } });
+    // @ts-ignore
+    currentY = doc.lastAutoTable.finalY;
+
+    autoTable(doc, { startY: currentY, body: [[ amountInWordsStr.toUpperCase(), totalSqmText ]], didDrawPage: () => false, columnStyles: { 0: { cellWidth: CONTENT_WIDTH - sqmValsWidth }, 1: { cellWidth: sqmValsWidth } } });
+    // @ts-ignore
+    currentY = doc.lastAutoTable.finalY;
+
+    autoTable(doc, { startY: currentY, body: [['Note:']], didDrawPage: () => false });
+    // @ts-ignore
+    currentY = doc.lastAutoTable.finalY;
+    autoTable(doc, { startY: currentY, body: [[invoice.note || 'N/A']], didDrawPage: () => false });
+    // @ts-ignore
+    currentY = doc.lastAutoTable.finalY;
+
+    autoTable(doc, { startY: currentY, body: [['Bank Details']], didDrawPage: () => false });
+    // @ts-ignore
+    currentY = doc.lastAutoTable.finalY;
+    const bankDetailsText = `BENEFICIARY NAME: ...`; // A representative text
+    autoTable(doc, { startY: currentY, body: [[bankDetailsText]], didDrawPage: () => false });
+    // @ts-ignore
+    currentY = doc.lastAutoTable.finalY;
+
+    autoTable(doc, { startY: currentY, body: [['Declaration:', 'Signature']], didDrawPage: () => false });
+    // @ts-ignore
+    currentY = doc.lastAutoTable.finalY;
+
+    height = currentY - startY;
     return height;
 }
 
@@ -380,20 +402,21 @@ export async function generatePerformaInvoicePdf(
   };
 
   const tempDoc = new jsPDF({ unit: 'pt', format: 'a4' });
-  drawPerformaInvoice(tempDoc, invoice, exporter, client, allSizes, allProducts, selectedBank, productImageMap, signatureImage, headerHeight, footerHeight, 100); // Draw with lots of rows to force page breaks
-  const totalPages = tempDoc.internal.getNumberOfPages();
+  drawPerformaInvoice(tempDoc, invoice, exporter, client, allSizes, allProducts, selectedBank, productImageMap, signatureImage, headerHeight, footerHeight, 100); 
+  
   let numEmptyRows = 0;
 
-  if (totalPages === 1) {
-    const tempDocOnePage = new jsPDF({ unit: 'pt', format: 'a4' });
-    drawPerformaInvoice(tempDocOnePage, invoice, exporter, client, allSizes, allProducts, selectedBank, productImageMap, signatureImage, headerHeight, footerHeight, 0); // Draw with no empty rows
-    // @ts-ignore
-    const finalY = tempDocOnePage.lastAutoTable.finalY;
-    const availableSpace = tempDocOnePage.internal.pageSize.getHeight() - footerHeight - finalY;
+  // @ts-ignore
+  const mainTable = tempDoc.lastAutoTable.previous.previous.previous.previous.previous.previous.previous.previous;
+  const postTableHeight = calculatePostTableHeight(tempDoc, invoice, exporter, selectedBank, headerHeight, footerHeight);
+
+  if (mainTable.pageCount === 1) {
+    const availableSpace = tempDoc.internal.pageSize.getHeight() - footerHeight - mainTable.finalY - postTableHeight;
     if (availableSpace > 0) {
       numEmptyRows = Math.floor(availableSpace / MIN_ROW_HEIGHT);
     }
   }
+
 
   const finalDoc = new jsPDF({ unit: 'pt', format: 'a4' });
   drawPerformaInvoice(finalDoc, invoice, exporter, client, allSizes, allProducts, selectedBank, productImageMap, signatureImage, headerHeight, footerHeight, numEmptyRows);

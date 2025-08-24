@@ -1,4 +1,9 @@
 
+export interface PerformaInvoiceContainer {
+  size: "20 ft" | "40 ft";
+  quantity: number;
+}
+
 export interface PerformaInvoiceItem {
   id: string; // Unique ID for the line item itself
   sizeId: string;
@@ -19,8 +24,7 @@ export interface PerformaInvoice {
   clientId: string;
   selectedBankId?: string; // ID of the bank selected for this invoice
   finalDestination: string;
-  totalContainer: number;
-  containerSize: "20 ft" | "40 ft";
+  containers: PerformaInvoiceContainer[]; // Replaces totalContainer and containerSize
   currencyType: "INR" | "USD" | "Euro";
   totalGrossWeight: string; // Can be "NA" or a number as string
   freight: number;

@@ -2,7 +2,7 @@
 "use client";
 
 import { useState, useMemo, useEffect } from "react";
-import type { PerformaInvoice } from "@/types/performa-invoice";
+import type { PerformaInvoice, PerformaInvoiceContainer } from "@/types/performa-invoice";
 import type { Company } from "@/types/company";
 import type { Client } from "@/types/client";
 import { Input } from "@/components/ui/input";
@@ -19,6 +19,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Search, ChevronLeft, ChevronRight, FileText, FilePenLine, Trash2, FileSymlink, Download } from "lucide-react";
 import { format } from "date-fns";
+import { Badge } from "@/components/ui/badge";
 
 interface PerformaInvoiceListProps {
   invoices: PerformaInvoice[];
@@ -31,6 +32,11 @@ interface PerformaInvoiceListProps {
 }
 
 const ITEMS_PER_PAGE = 5;
+
+const formatContainers = (containers: PerformaInvoiceContainer[] = []) => {
+    if (!containers || containers.length === 0) return "N/A";
+    return containers.map(c => `${c.quantity} x ${c.size}`).join(', ');
+};
 
 export function PerformaInvoiceListV2({
   invoices: initialInvoices,
@@ -111,9 +117,8 @@ export function PerformaInvoiceListV2({
               <TableHeader>
                 <TableRow>
                   <TableHead className="font-headline">Invoice #</TableHead>
-                  <TableHead className="font-headline hidden sm:table-cell">Date</TableHead>
-                  <TableHead className="font-headline">Exporter</TableHead>
                   <TableHead className="font-headline">Client</TableHead>
+                  <TableHead className="font-headline hidden md:table-cell">Containers</TableHead>
                   <TableHead className="font-headline hidden md:table-cell">Grand Total</TableHead>
                   <TableHead className="font-headline text-right">Actions</TableHead>
                 </TableRow>
@@ -121,12 +126,16 @@ export function PerformaInvoiceListV2({
               <TableBody>
                 {paginatedInvoices.map((invoice) => (
                   <TableRow key={invoice.id}>
-                    <TableCell className="font-medium">{invoice.invoiceNumber}</TableCell>
-                    <TableCell className="hidden sm:table-cell">{format(new Date(invoice.invoiceDate), "dd/MM/yyyy")}</TableCell>
-                    <TableCell>{invoice.exporterName}</TableCell>
+                    <TableCell className="font-medium">
+                      {invoice.invoiceNumber}
+                      <div className="text-xs text-muted-foreground">{format(new Date(invoice.invoiceDate), "dd-MMM-yyyy")}</div>
+                    </TableCell>
                     <TableCell>{invoice.clientName}</TableCell>
                     <TableCell className="hidden md:table-cell">
-                      {Number(invoice.grandTotal || 0).toFixed(2)} {invoice.currencyType}
+                      {formatContainers(invoice.containers)}
+                    </TableCell>
+                    <TableCell className="hidden md:table-cell">
+                      <Badge variant="secondary">{Number(invoice.grandTotal || 0).toFixed(2)} {invoice.currencyType}</Badge>
                     </TableCell>
                     <TableCell className="text-right space-x-1">
                       <Button variant="ghost" size="icon" onClick={() => onEditInvoice(invoice.id)} className="hover:text-primary">

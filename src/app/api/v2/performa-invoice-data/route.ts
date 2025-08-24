@@ -1,14 +1,15 @@
 
 import { NextResponse } from 'next/server';
 import { pool } from '@/lib/db';
-import type { PerformaInvoice } from "@/types/performa-invoice";
+import type { PerformaInvoice, PerformaInvoiceContainer } from "@/types/performa-invoice";
 import type { RowDataPacket, OkPacket } from 'mysql2';
 import { format } from 'date-fns';
 
 export const dynamic = 'force-dynamic';
 
-interface PerformaInvoiceRow extends RowDataPacket, Omit<PerformaInvoice, 'items'> {
+interface PerformaInvoiceRow extends RowDataPacket, Omit<PerformaInvoice, 'items' | 'containers'> {
     items_json: string;
+    containers_json: string;
 }
 
 // GET handler to fetch all non-deleted performa invoices or a single one by ID
@@ -36,7 +37,7 @@ export async function GET(request: Request) {
             id: row.id.toString(),
             invoiceDate: new Date(row.invoiceDate),
             items: JSON.parse(row.items_json || '[]'),
-            totalContainer: parseFloat(String(row.totalContainer || 0)),
+            containers: JSON.parse(row.containers_json || '[]'),
             freight: parseFloat(String(row.freight || 0)),
             discount: parseFloat(String(row.discount || 0)),
             subTotal: parseFloat(String(row.subTotal || 0)),
@@ -51,13 +52,13 @@ export async function GET(request: Request) {
         connection.release();
 
         const invoices: PerformaInvoice[] = rows.map(row => {
-            const { items_json, ...invoiceData } = row;
+            const { items_json, containers_json, ...invoiceData } = row;
             return {
                 ...invoiceData,
                 id: invoiceData.id.toString(),
                 invoiceDate: new Date(invoiceData.invoiceDate),
                 items: JSON.parse(items_json || '[]'),
-                totalContainer: parseFloat(String(invoiceData.totalContainer || 0)),
+                containers: JSON.parse(containers_json || '[]'),
                 freight: parseFloat(String(invoiceData.freight || 0)),
                 discount: parseFloat(String(invoiceData.discount || 0)),
                 subTotal: parseFloat(String(invoiceData.subTotal || 0)),
@@ -78,12 +79,13 @@ export async function POST(request: Request) {
   const connection = await pool.getConnection();
   try {
     const invoice: PerformaInvoice = await request.json();
-    const { items, ...invoiceData } = invoice;
+    const { items, containers, ...invoiceData } = invoice;
     
     await connection.beginTransaction();
 
     const formattedInvoiceDate = format(new Date(invoiceData.invoiceDate), 'yyyy-MM-dd HH:mm:ss');
     const items_json = JSON.stringify(items);
+    const containers_json = JSON.stringify(containers);
 
     const [result] = await connection.query<OkPacket>(
       'INSERT INTO performa_invoices SET ?',
@@ -91,6 +93,7 @@ export async function POST(request: Request) {
         ...invoiceData,
         invoiceDate: formattedInvoiceDate,
         items_json,
+        containers_json,
         id: undefined, // Let DB auto-increment
       }
     );
@@ -121,12 +124,13 @@ export async function PUT(request: Request) {
     try {
         const invoice: PerformaInvoice = await request.json();
         // Destructure to remove fields that should not be in the SET clause of the UPDATE query
-        const { items, id: invoiceId, isDeleted, ...invoiceData } = invoice;
+        const { items, containers, id: invoiceId, isDeleted, ...invoiceData } = invoice;
 
         await connection.beginTransaction();
 
         const formattedInvoiceDate = format(new Date(invoiceData.invoiceDate), 'yyyy-MM-dd HH:mm:ss');
         const items_json = JSON.stringify(items);
+        const containers_json = JSON.stringify(containers);
         
         // Handle potentially empty selectedBankId by setting it to null for the database
         const selectedBankIdForDb = invoiceData.selectedBankId ? invoiceData.selectedBankId : null;
@@ -139,6 +143,7 @@ export async function PUT(request: Request) {
                     selectedBankId: selectedBankIdForDb,
                     invoiceDate: formattedInvoiceDate,
                     items_json,
+                    containers_json,
                 },
                 id
             ]
