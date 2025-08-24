@@ -440,7 +440,7 @@ export function PerformaInvoiceFormV2({
       <CardHeader>
         <CardTitle className="font-headline text-2xl flex items-center gap-2">
           <FileText className="h-6 w-6 text-primary" />
-          {isEditing ? "Edit Performa Invoice (DB)" : "Create Performa Invoice (DB)"}
+          {isEditing ? "Edit Performa Invoice" : "Create Performa Invoice"}
         </CardTitle>
         <CardDescription>{isEditing ? "Modify the details of the performa invoice." : "Fill in the details to generate a new performa invoice."}</CardDescription>
       </CardHeader>
