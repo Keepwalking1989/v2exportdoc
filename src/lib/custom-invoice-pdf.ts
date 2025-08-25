@@ -17,16 +17,16 @@ const FONT_BODY_SIZE = 9;
 // --- Helper for amount in words ---
 function amountToWordsUSD(amount: number): string {
     if (amount === null || amount === undefined) return 'Zero Dollars only';
-    
+
     const ones = ['', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine', 'Ten', 'Eleven', 'Twelve', 'Thirteen', 'Fourteen', 'Fifteen', 'Sixteen', 'Seventeen', 'Eighteen', 'Nineteen'];
     const tens = ['', '', 'Twenty', 'Thirty', 'Forty', 'Fifty', 'Sixty', 'Seventy', 'Eighty', 'Ninety'];
     const scales = ['', 'Thousand', 'Million', 'Billion'];
 
     function convertLessThanOneThousand(n: number): string {
         if (n === 0) return '';
-        if (n < 20) return ones[n] + ' ';
-        if (n < 100) return tens[Math.floor(n / 10)] + ' ' + (ones[n % 10] || '') + ' ';
-        return ones[Math.floor(n / 100)] + ' Hundred ' + convertLessThanOneThousand(n % 100);
+        if (n < 20) return ones[n];
+        if (n < 100) return tens[Math.floor(n / 10)] + (n % 10 !== 0 ? ' ' + ones[n % 10] : '');
+        return ones[Math.floor(n / 100)] + ' Hundred' + (n % 100 !== 0 ? ' ' + convertLessThanOneThousand(n % 100) : '');
     }
 
     if (amount === 0) return 'Zero Dollars only';
@@ -35,15 +35,15 @@ function amountToWordsUSD(amount: number): string {
     const decimalPart = Math.round((amount - integerPart) * 100);
 
     let words = '';
-    let scaleIndex = 0;
-    let num = integerPart;
-
-    if (num === 0) {
-        words = '';
+    if (integerPart === 0) {
+        words = 'Zero';
     } else {
-         while (num > 0) {
+        let scaleIndex = 0;
+        let num = integerPart;
+        while (num > 0) {
             if (num % 1000 !== 0) {
-                words = convertLessThanOneThousand(num % 1000) + scales[scaleIndex] + ' ' + words;
+                const chunk = convertLessThanOneThousand(num % 1000);
+                words = chunk + (scales[scaleIndex] ? ' ' + scales[scaleIndex] : '') + (words ? ' ' + words : '');
             }
             num = Math.floor(num / 1000);
             scaleIndex++;
