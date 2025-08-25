@@ -239,29 +239,29 @@ export async function generatePerformaInvoicePdf(
     const amountInWordsStr = amountToWords(invoice.grandTotal || 0, invoice.currencyType);
     const sqmValsWidth = 100;
 
-    autoTable(doc, { startY: currentY, body: [[{ content: "TOTAL INVOICE AMOUNT IN WORDS:", styles: { ...headerStyle, halign: 'left' } }, { content: "TOTAL SQM", styles: headerStyle }]], margin: { left: PAGE_MARGIN_X, right: PAGE_MARGIN_X }, columnStyles: { 0: { cellWidth: CONTENT_WIDTH - sqmValsWidth }, 1: { cellWidth: sqmValsWidth } } });
+    autoTable(doc, { startY: currentY, body: [[{ content: "TOTAL INVOICE AMOUNT IN WORDS:", styles: { ...headerStyle, halign: 'left' } }, { content: "TOTAL SQM", styles: headerStyle }]], margin: { left: PAGE_MARGIN_X, right: PAGE_MARGIN_X }, columnStyles: { 0: { cellWidth: CONTENT_WIDTH - sqmValsWidth }, 1: { cellWidth: sqmValsWidth } }, didDrawPage});
     // @ts-ignore
     currentY = doc.lastAutoTable.finalY;
     
     autoTable(doc, {
         body: [[ { content: amountInWordsStr.toUpperCase(), styles: { ...bodyStyle, fontSize: FONT_BODY_SMALL, halign: 'left', valign: 'top' } }, { content: totalSqmText, styles: { ...bodyStyle, halign: 'center' } } ]],
-        startY: currentY, theme: 'grid', margin: { left: PAGE_MARGIN_X, right: PAGE_MARGIN_X }, columnStyles: { 0: { cellWidth: CONTENT_WIDTH - sqmValsWidth }, 1: { cellWidth: sqmValsWidth } },
+        startY: currentY, theme: 'grid', margin: { left: PAGE_MARGIN_X, right: PAGE_MARGIN_X }, columnStyles: { 0: { cellWidth: CONTENT_WIDTH - sqmValsWidth }, 1: { cellWidth: sqmValsWidth } }, didDrawPage
     });
     // @ts-ignore
     currentY = doc.lastAutoTable.finalY;
 
-    autoTable(doc, { startY: currentY, body: [[{ content: 'Note:', styles: { ...headerStyle, halign: 'left' } }]], margin: { left: PAGE_MARGIN_X, right: PAGE_MARGIN_X } });
+    autoTable(doc, { startY: currentY, body: [[{ content: 'Note:', styles: { ...headerStyle, halign: 'left' } }]], margin: { left: PAGE_MARGIN_X, right: PAGE_MARGIN_X }, didDrawPage });
     // @ts-ignore
     currentY = doc.lastAutoTable.finalY;
-    autoTable(doc, { startY: currentY, body: [[{ content: invoice.note || 'N/A', styles: { ...bodyStyle, halign: 'left', minCellHeight: 40, valign: 'top' } }]], margin: { left: PAGE_MARGIN_X, right: PAGE_MARGIN_X } });
+    autoTable(doc, { startY: currentY, body: [[{ content: invoice.note || 'N/A', styles: { ...bodyStyle, halign: 'left', minCellHeight: 40, valign: 'top' } }]], margin: { left: PAGE_MARGIN_X, right: PAGE_MARGIN_X }, didDrawPage });
     // @ts-ignore
     currentY = doc.lastAutoTable.finalY;
 
-    autoTable(doc, { startY: currentY, body: [[{ content: 'Bank Details', styles: { ...headerStyle, halign: 'left' } }]], margin: { left: PAGE_MARGIN_X, right: PAGE_MARGIN_X } });
+    autoTable(doc, { startY: currentY, body: [[{ content: 'Bank Details', styles: { ...headerStyle, halign: 'left' } }]], margin: { left: PAGE_MARGIN_X, right: PAGE_MARGIN_X }, didDrawPage });
     // @ts-ignore
     currentY = doc.lastAutoTable.finalY;
     const bankDetailsText = `BENEFICIARY NAME: ${exporter.companyName.toUpperCase()}\nBENEFICIARY BANK: ${selectedBank?.bankName.toUpperCase() || ''}, BRANCH: ${selectedBank?.bankAddress.toUpperCase() || ''}\nBENEFICIARY A/C NO: ${selectedBank?.accountNumber || ''}, SWIFT CODE: ${selectedBank?.swiftCode.toUpperCase() || ''}, IFSC CODE: ${selectedBank?.ifscCode.toUpperCase() || ''}`;
-    autoTable(doc, { startY: currentY, body: [[{ content: bankDetailsText, styles: { ...bodyStyle, halign: 'left', valign: 'top', minCellHeight: 60 } }]], margin: { left: PAGE_MARGIN_X, right: PAGE_MARGIN_X } });
+    autoTable(doc, { startY: currentY, body: [[{ content: bankDetailsText, styles: { ...bodyStyle, halign: 'left', valign: 'top', minCellHeight: 60 } }]], margin: { left: PAGE_MARGIN_X, right: PAGE_MARGIN_X }, didDrawPage });
     // @ts-ignore
     currentY = doc.lastAutoTable.finalY;
 
@@ -274,6 +274,7 @@ export async function generatePerformaInvoicePdf(
       ],
       columnStyles: { 0: { cellWidth: CONTENT_WIDTH * 0.60 }, 1: { cellWidth: CONTENT_WIDTH * 0.40 } },
       margin: { left: PAGE_MARGIN_X, right: PAGE_MARGIN_X },
+      didDrawPage,
       didDrawCell: (data) => {
         if (data.section === 'body' && data.row.index === 2 && data.column.index === 1 && signatureImage) {
           const cell = data.cell; const imgWidth = 80; const imgHeight = 40;
@@ -298,7 +299,7 @@ export async function generatePerformaInvoicePdf(
   }
   
   drawRemainingContent(yPos);
-  addHeaderFooterToAllPages(doc);
+  addHeaderFooter(doc, headerImage, footerImage, headerHeight, footerHeight);
 
   doc.save(`Performa_Invoice_${invoice.invoiceNumber.replace(/[\\/]/g, '_')}.pdf`);
 }
