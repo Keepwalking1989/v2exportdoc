@@ -7,67 +7,12 @@ import type { Company } from '@/types/company'; // For Exporter
 import type { Manufacturer } from '@/types/manufacturer';
 import type { Size } from '@/types/size';
 import type { Product } from '@/types/product';
+import { amountToWords } from '@/lib/utils'; // Import the correct function
 
 const FONT_CAT1_SIZE = 14;
 const FONT_CAT2_SIZE = 10;
 const FONT_CAT3_SIZE = 9;
 const FONT_BODY_SIZE = 9;
-
-
-// --- Helper for amount in words ---
-function amountToWordsUSD(amount: number): string {
-    if (amount === null || amount === undefined) return 'Zero Dollars only';
-    if (amount === 0) return 'Zero Dollars only';
-
-    const ones = ['', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine', 'Ten', 'Eleven', 'Twelve', 'Thirteen', 'Fourteen', 'Fifteen', 'Sixteen', 'Seventeen', 'Eighteen', 'Nineteen'];
-    const tens = ['', '', 'Twenty', 'Thirty', 'Forty', 'Fifty', 'Sixty', 'Seventy', 'Eighty', 'Ninety'];
-
-    function convertLessThanOneThousand(n: number): string {
-        if (n === 0) return '';
-        let currentWords = '';
-        if (n >= 100) {
-            currentWords += ones[Math.floor(n / 100)] + ' Hundred ';
-            n %= 100;
-        }
-        if (n >= 20) {
-            currentWords += tens[Math.floor(n / 10)] + ' ';
-            n %= 10;
-        }
-        if (n > 0) {
-            currentWords += ones[n] + ' ';
-        }
-        return currentWords.trim();
-    }
-    
-    const integerPart = Math.floor(amount);
-    const decimalPart = Math.round((amount - integerPart) * 100);
-
-    let integerWords = '';
-    if (integerPart > 0) {
-        let num = integerPart;
-        const scales = ['', 'Thousand', 'Million', 'Billion'];
-        let scaleIndex = 0;
-        let parts: string[] = [];
-        while (num > 0) {
-            const chunk = num % 1000;
-            if (chunk > 0) {
-                parts.unshift(convertLessThanOneThousand(chunk) + ' ' + scales[scaleIndex]);
-            }
-            num = Math.floor(num / 1000);
-            scaleIndex++;
-        }
-        integerWords = parts.join(' ').trim();
-    }
-
-    const dollarString = integerPart > 0 ? `${integerWords} Dollars` : 'Zero Dollars';
-    
-    let centString = '';
-    if (decimalPart > 0) {
-        centString = ` and ${convertLessThanOneThousand(decimalPart)} Cents`;
-    }
-
-    return `${dollarString}${centString} only`.replace(/\s\s+/g, ' ').trim();
-}
 
 
 // --- Reusable Drawing Function ---
@@ -350,7 +295,7 @@ function drawCustomInvoice(
         ]
     );
     
-    const amountInWordsStr = amountToWordsUSD(finalTotalUSD);
+    const amountInWordsStr = amountToWords(finalTotalUSD, "USD");
     const amountInWordsLines = doc.splitTextToSize(amountInWordsStr, (contentWidth * 0.65) - (2 * padding)); // Width of the first cell
     const amountInWordsHeight = (FONT_CAT3_SIZE + 2) * amountInWordsLines.length + (2 * padding);
     
