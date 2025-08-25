@@ -84,15 +84,23 @@ export default function ExportDocumentPageV2() {
       
       const [docs, exporters, manufacturers, transporters, products, sizes, clients, performaInvoices, purchaseOrders] = data;
       
-      setExportDocuments(docs.map((d: any) => ({
-        ...d,
-        id: String(d.id),
-        exporterId: String(d.exporterId),
-        clientId: String(d.clientId),
-        transporterId: String(d.transporterId),
-        purchaseOrderId: d.purchaseOrderId ? String(d.purchaseOrderId) : undefined,
-        manufacturerDetails: d.manufacturerDetails?.map((md: any) => ({ ...md, id: String(md.id), manufacturerId: String(md.manufacturerId) })) || [],
-      })));
+      const poToPiMap = new Map(purchaseOrders.map((po: PurchaseOrder) => [po.id, po.sourcePiId]));
+      const piToClientMap = new Map(performaInvoices.map((pi: PerformaInvoice) => [pi.id, pi.clientId]));
+
+      const enrichedDocs = docs.map((d: any) => {
+        const piId = poToPiMap.get(d.purchaseOrderId);
+        const clientId = piId ? piToClientMap.get(piId) : undefined;
+        return {
+          ...d,
+          clientId: clientId || d.clientId, // Prioritize link, fallback to existing
+          id: String(d.id),
+          exporterId: String(d.exporterId),
+          transporterId: String(d.transporterId),
+          purchaseOrderId: d.purchaseOrderId ? String(d.purchaseOrderId) : undefined,
+          manufacturerDetails: d.manufacturerDetails?.map((md: any) => ({ ...md, id: String(md.id), manufacturerId: String(md.manufacturerId) })) || [],
+        }
+      });
+      setExportDocuments(enrichedDocs);
       
       setAllExporters(exporters.map((e: any) => ({ ...e, id: String(e.id) })));
       setAllManufacturers(manufacturers.map((m: any) => ({ ...m, id: String(m.id) })));
