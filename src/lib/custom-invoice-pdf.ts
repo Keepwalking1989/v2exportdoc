@@ -245,6 +245,11 @@ function drawCustomInvoice(
     const gstAmount = totalAmountInr * gstRate; // GST is on the INR value
 
 
+    // ---- AMOUNT IN WORDS CALCULATION MOVED HERE ----
+    const amountInWordsStr = amountToWords(finalTotalUSD, "USD");
+    const amountInWordsLines = doc.splitTextToSize(amountInWordsStr, (contentWidth * 0.65) - (2 * padding)); // Width of the first cell
+    const amountInWordsHeight = (FONT_CAT3_SIZE + 2) * amountInWordsLines.length + (2 * padding);
+
     const tableFooter: any[] = [
         [
             { content: 'TOTAL', colSpan: 3, styles: {...classOneStyles, halign: 'center', fontSize: FONT_CAT2_SIZE} },
@@ -294,10 +299,6 @@ function drawCustomInvoice(
             { content: conversationRate.toFixed(2), colSpan: 2, styles: { ...classTwoStyles, halign: 'center' } }
         ]
     );
-    
-    const amountInWordsStr = amountToWords(finalTotalUSD, "USD");
-    const amountInWordsLines = doc.splitTextToSize(amountInWordsStr, (contentWidth * 0.65) - (2 * padding)); // Width of the first cell
-    const amountInWordsHeight = (FONT_CAT3_SIZE + 2) * amountInWordsLines.length + (2 * padding);
     
     tableFooter.push(
         [
