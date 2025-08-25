@@ -525,23 +525,7 @@ export async function generateCustomInvoicePdf(
     const finalPadding = pageCountWithLargePadding > 1 ? smallPadding : largePadding;
 
     const finalDoc = new jsPDF({ unit: 'pt', format: 'a4' });
-    const debugInfo = drawCustomInvoice(finalDoc, docData, exporter, manufacturersWithDetails, allProducts, allSizes, signatureImage, roundSealImage, finalPadding);
-
-    // --- Temporary Debug Info ---
-    const debugText = [
-        "--- DEBUG INFO (TEMPORARY) ---",
-        `Final Total (USD): ${debugInfo.finalTotalUSD}`,
-        `Conversation Rate: ${debugInfo.conversationRate}`,
-        `Total Amount (INR): ${debugInfo.totalAmountInr}`,
-        `Amount in Words: ${debugInfo.amountInWordsStr}`
-    ];
-    finalDoc.setFontSize(8);
-    finalDoc.setTextColor(255, 0, 0); // Red color for visibility
-    const lastPage = finalDoc.internal.getNumberOfPages();
-    finalDoc.setPage(lastPage);
-    finalDoc.text(debugText, 20, finalDoc.internal.pageSize.getHeight() - 40);
-    // --- End of Debug Info ---
-
+    drawCustomInvoice(finalDoc, docData, exporter, manufacturersWithDetails, allProducts, allSizes, signatureImage, roundSealImage, finalPadding);
 
     finalDoc.save(`Custom_Invoice_${docData.exportInvoiceNumber.replace(/[\\/:*?"<>|]/g, '_')}.pdf`);
 }
