@@ -230,8 +230,8 @@ function drawCustomInvoice(
     const emptyRowCount = 5;
     for (let i = 0; i < emptyRowCount; i++) { tableBody.push(['', '', '', '', '', '', '']); }
 
-    const freightUSD = docData.freight || 0;
-    const discountUSD = docData.discount || 0;
+    const freightUSD = parseFloat(String(docData.freight)) || 0;
+    const discountUSD = parseFloat(String(docData.discount)) || 0;
     const finalTotalUSD = grandTotalAmountUSD + freightUSD - discountUSD;
     
     const conversationRate = parseFloat(String(docData.conversationRate)) || 0;
