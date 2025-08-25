@@ -223,8 +223,6 @@ function drawCustomInvoice(
         groupedSamples.forEach(item => {
             grandTotalBoxes += item.boxes;
             grandTotalSqm += item.sqm;
-            // Samples don't add to total amount
-            // grandTotalAmountUSD += item.total;
             const effectiveRate = item.sqm > 0 ? item.total / item.sqm : 0;
             tableBody.push([item.hsnCode, srNoCounter++, item.description, item.boxes.toString(), item.sqm.toFixed(2), `$ ${effectiveRate.toFixed(2)}`, `$ ${item.total.toFixed(2)}`]);
         });
@@ -232,22 +230,20 @@ function drawCustomInvoice(
     const emptyRowCount = 5;
     for (let i = 0; i < emptyRowCount; i++) { tableBody.push(['', '', '', '', '', '', '']); }
 
-    // --- Corrected Calculation Flow ---
     const freightUSD = docData.freight || 0;
     const discountUSD = docData.discount || 0;
     const finalTotalUSD = grandTotalAmountUSD + freightUSD - discountUSD;
     
-    const conversationRate = parseFloat(String(docData.conversationRate)) || 0;
-    const totalAmountInr = finalTotalUSD * conversationRate; // Correctly calculate INR total based on final USD amount
+    const conversationRate = docData.conversationRate || 0;
+    const totalAmountInr = finalTotalUSD * conversationRate;
     
     const gstString = docData.gst || "0";
     const gstRate = parseFloat(gstString.replace('%', '')) / 100 || 0;
-    const gstAmount = totalAmountInr * gstRate; // GST is on the INR value
+    const gstAmount = totalAmountInr * gstRate;
 
 
-    // ---- AMOUNT IN WORDS CALCULATION MOVED HERE ----
     const amountInWordsStr = amountToWords(finalTotalUSD, "USD");
-    const amountInWordsLines = doc.splitTextToSize(amountInWordsStr, (contentWidth * 0.65) - (2 * padding)); // Width of the first cell
+    const amountInWordsLines = doc.splitTextToSize(amountInWordsStr, (contentWidth * 0.65) - (2 * padding));
     const amountInWordsHeight = (FONT_CAT3_SIZE + 2) * amountInWordsLines.length + (2 * padding);
 
     const tableFooter: any[] = [
@@ -274,7 +270,6 @@ function drawCustomInvoice(
         ]);
     }
 
-    // Always show final total if freight/discount is applied
     if (freightUSD > 0.1 || discountUSD > 0.1) {
         tableFooter.push([
             { content: 'TOTAL INVOICE VALUE', colSpan: 6, styles: { ...classOneStyles, halign: 'right' } },
@@ -550,5 +545,3 @@ export async function generateCustomInvoicePdf(
 
     finalDoc.save(`Custom_Invoice_${docData.exportInvoiceNumber.replace(/[\\/:*?"<>|]/g, '_')}.pdf`);
 }
-
-    
