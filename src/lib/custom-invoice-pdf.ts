@@ -17,48 +17,58 @@ const FONT_BODY_SIZE = 9;
 // --- Helper for amount in words ---
 function amountToWordsUSD(amount: number): string {
     if (amount === null || amount === undefined) return 'Zero Dollars only';
+    if (amount === 0) return 'Zero Dollars only';
 
     const ones = ['', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine', 'Ten', 'Eleven', 'Twelve', 'Thirteen', 'Fourteen', 'Fifteen', 'Sixteen', 'Seventeen', 'Eighteen', 'Nineteen'];
     const tens = ['', '', 'Twenty', 'Thirty', 'Forty', 'Fifty', 'Sixty', 'Seventy', 'Eighty', 'Ninety'];
 
     function convertLessThanOneThousand(n: number): string {
         if (n === 0) return '';
-        if (n < 20) return ones[n];
-        if (n < 100) return tens[Math.floor(n / 10)] + (n % 10 !== 0 ? ' ' + ones[n % 10] : '');
-        return ones[Math.floor(n / 100)] + ' Hundred' + (n % 100 !== 0 ? ' ' + convertLessThanOneThousand(n % 100) : '');
+        let currentWords = '';
+        if (n >= 100) {
+            currentWords += ones[Math.floor(n / 100)] + ' Hundred ';
+            n %= 100;
+        }
+        if (n >= 20) {
+            currentWords += tens[Math.floor(n / 10)] + ' ';
+            n %= 10;
+        }
+        if (n > 0) {
+            currentWords += ones[n] + ' ';
+        }
+        return currentWords.trim();
     }
-
-    if (amount === 0) return 'Zero Dollars only';
-
+    
     const integerPart = Math.floor(amount);
     const decimalPart = Math.round((amount - integerPart) * 100);
 
-    let words = '';
+    let integerWords = '';
     if (integerPart > 0) {
-      let num = integerPart;
-      const groups = [];
-      while(num > 0) {
-        groups.push(num % 1000);
-        num = Math.floor(num / 1000);
-      }
-      const scales = ['', 'Thousand', 'Million', 'Billion'];
-      words = groups.map((g, i) => {
-        if (g === 0) return '';
-        return convertLessThanOneThousand(g) + ' ' + scales[i];
-      }).reverse().join(' ').trim();
-    } else {
-        words = 'Zero';
+        let num = integerPart;
+        const scales = ['', 'Thousand', 'Million', 'Billion'];
+        let scaleIndex = 0;
+        let parts: string[] = [];
+        while (num > 0) {
+            const chunk = num % 1000;
+            if (chunk > 0) {
+                parts.unshift(convertLessThanOneThousand(chunk) + ' ' + scales[scaleIndex]);
+            }
+            num = Math.floor(num / 1000);
+            scaleIndex++;
+        }
+        integerWords = parts.join(' ').trim();
     }
+
+    const dollarString = integerPart > 0 ? `${integerWords} Dollars` : 'Zero Dollars';
     
-    let result = `${words.trim()} Dollars`;
-
+    let centString = '';
     if (decimalPart > 0) {
-        const centsText = convertLessThanOneThousand(decimalPart).trim();
-        result += ` and ${centsText} Cents`;
+        centString = ` and ${convertLessThanOneThousand(decimalPart)} Cents`;
     }
 
-    return result.replace(/\s\s+/g, ' ').trim() + " only";
+    return `${dollarString}${centString} only`.replace(/\s\s+/g, ' ').trim();
 }
+
 
 // --- Reusable Drawing Function ---
 function drawCustomInvoice(
