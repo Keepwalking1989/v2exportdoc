@@ -20,7 +20,6 @@ function amountToWordsUSD(amount: number): string {
 
     const ones = ['', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine', 'Ten', 'Eleven', 'Twelve', 'Thirteen', 'Fourteen', 'Fifteen', 'Sixteen', 'Seventeen', 'Eighteen', 'Nineteen'];
     const tens = ['', '', 'Twenty', 'Thirty', 'Forty', 'Fifty', 'Sixty', 'Seventy', 'Eighty', 'Ninety'];
-    const scales = ['', 'Thousand', 'Million', 'Billion'];
 
     function convertLessThanOneThousand(n: number): string {
         if (n === 0) return '';
@@ -35,19 +34,20 @@ function amountToWordsUSD(amount: number): string {
     const decimalPart = Math.round((amount - integerPart) * 100);
 
     let words = '';
-    if (integerPart === 0) {
-        words = 'Zero';
+    if (integerPart > 0) {
+      let num = integerPart;
+      const groups = [];
+      while(num > 0) {
+        groups.push(num % 1000);
+        num = Math.floor(num / 1000);
+      }
+      const scales = ['', 'Thousand', 'Million', 'Billion'];
+      words = groups.map((g, i) => {
+        if (g === 0) return '';
+        return convertLessThanOneThousand(g) + ' ' + scales[i];
+      }).reverse().join(' ').trim();
     } else {
-        let scaleIndex = 0;
-        let num = integerPart;
-        while (num > 0) {
-            if (num % 1000 !== 0) {
-                const chunk = convertLessThanOneThousand(num % 1000);
-                words = chunk + (scales[scaleIndex] ? ' ' + scales[scaleIndex] : '') + (words ? ' ' + words : '');
-            }
-            num = Math.floor(num / 1000);
-            scaleIndex++;
-        }
+        words = 'Zero';
     }
     
     let result = `${words.trim()} Dollars`;
@@ -277,15 +277,18 @@ function drawCustomInvoice(
     const emptyRowCount = 5;
     for (let i = 0; i < emptyRowCount; i++) { tableBody.push(['', '', '', '', '', '', '']); }
 
+    // --- Corrected Calculation Flow ---
     const freightUSD = docData.freight || 0;
     const discountUSD = docData.discount || 0;
     const finalTotalUSD = grandTotalAmountUSD + freightUSD - discountUSD;
-
+    
     const conversationRate = parseFloat(String(docData.conversationRate)) || 0;
-    const totalAmountInr = finalTotalUSD * conversationRate;
+    const totalAmountInr = finalTotalUSD * conversationRate; // Correctly calculate INR total based on final USD amount
+    
     const gstString = docData.gst || "0";
     const gstRate = parseFloat(gstString.replace('%', '')) / 100 || 0;
-    const gstAmount = totalAmountInr * gstRate;
+    const gstAmount = totalAmountInr * gstRate; // GST is on the INR value
+
 
     const tableFooter: any[] = [
         [
