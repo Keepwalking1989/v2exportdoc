@@ -1,308 +1,320 @@
+-- Main table for Exporter companies
+CREATE TABLE IF NOT EXISTS `companies` (
+  `id` INT AUTO_INCREMENT PRIMARY KEY,
+  `companyName` VARCHAR(255) NOT NULL,
+  `contactPerson` VARCHAR(255) NOT NULL,
+  `address` TEXT NOT NULL,
+  `phoneNumber` VARCHAR(50) NOT NULL,
+  `iecNumber` VARCHAR(100) NOT NULL,
+  `gstNumber` VARCHAR(15) NOT NULL,
+  `isDeleted` BOOLEAN DEFAULT FALSE,
+  `createdAt` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  `updatedAt` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);
 
-CREATE TABLE `banks` (
-  `id` int(11) NOT NULL AUTO_INCREMENT,
-  `bankName` varchar(255) NOT NULL,
-  `bankAddress` text NOT NULL,
-  `accountNumber` varchar(50) NOT NULL,
-  `swiftCode` varchar(20) NOT NULL,
-  `ifscCode` varchar(20) NOT NULL,
-  `isDeleted` tinyint(1) NOT NULL DEFAULT 0,
-  `createdAt` timestamp NOT NULL DEFAULT current_timestamp(),
-  `updatedAt` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
-  PRIMARY KEY (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+-- Main table for Client companies
+CREATE TABLE IF NOT EXISTS `clients` (
+  `id` INT AUTO_INCREMENT PRIMARY KEY,
+  `companyName` VARCHAR(255) NOT NULL,
+  `person` VARCHAR(255) NOT NULL,
+  `contactNumber` VARCHAR(50) NOT NULL,
+  `address` TEXT NOT NULL,
+  `city` VARCHAR(100) NOT NULL,
+  `country` VARCHAR(100) NOT NULL,
+  `pinCode` VARCHAR(20) NOT NULL,
+  `isDeleted` BOOLEAN DEFAULT FALSE,
+  `createdAt` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  `updatedAt` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);
 
-CREATE TABLE `clients` (
-  `id` int(11) NOT NULL AUTO_INCREMENT,
-  `companyName` varchar(255) NOT NULL,
-  `person` varchar(255) NOT NULL,
-  `contactNumber` varchar(50) NOT NULL,
-  `address` text NOT NULL,
-  `city` varchar(100) NOT NULL,
-  `country` varchar(100) NOT NULL,
-  `pinCode` varchar(20) NOT NULL,
-  `isDeleted` tinyint(1) NOT NULL DEFAULT 0,
-  `createdAt` timestamp NOT NULL DEFAULT current_timestamp(),
-  `updatedAt` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
-  PRIMARY KEY (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+-- Main table for Manufacturer companies
+CREATE TABLE IF NOT EXISTS `manufacturers` (
+  `id` INT AUTO_INCREMENT PRIMARY KEY,
+  `companyName` VARCHAR(255) NOT NULL,
+  `contactPerson` VARCHAR(255) NOT NULL,
+  `address` TEXT NOT NULL,
+  `gstNumber` VARCHAR(15) NOT NULL,
+  `stuffingPermissionNumber` VARCHAR(100) NOT NULL,
+  `stuffingPermissionDate` DATE NOT NULL,
+  `pinCode` VARCHAR(10) NOT NULL,
+  `isDeleted` BOOLEAN DEFAULT FALSE,
+  `createdAt` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  `updatedAt` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);
 
-CREATE TABLE `companies` (
-  `id` int(11) NOT NULL AUTO_INCREMENT,
-  `companyName` varchar(255) NOT NULL,
-  `contactPerson` varchar(255) NOT NULL,
-  `address` text NOT NULL,
-  `phoneNumber` varchar(50) NOT NULL,
-  `iecNumber` varchar(50) NOT NULL,
-  `gstNumber` varchar(50) NOT NULL,
-  `isDeleted` tinyint(1) NOT NULL DEFAULT 0,
-  `createdAt` timestamp NOT NULL DEFAULT current_timestamp(),
-  `updatedAt` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
-  PRIMARY KEY (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+-- Main table for Transporter companies
+CREATE TABLE IF NOT EXISTS `transporters` (
+  `id` INT AUTO_INCREMENT PRIMARY KEY,
+  `companyName` VARCHAR(255) NOT NULL,
+  `gstNumber` VARCHAR(15) NOT NULL,
+  `contactPerson` VARCHAR(255) NOT NULL,
+  `contactNumber` VARCHAR(50) NOT NULL,
+  `isDeleted` BOOLEAN DEFAULT FALSE,
+  `createdAt` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  `updatedAt` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);
 
-CREATE TABLE `export_documents` (
-  `id` int(11) NOT NULL AUTO_INCREMENT,
-  `exporterId` int(11) NOT NULL,
-  `clientId` int(11) NOT NULL,
-  `performaInvoiceId` int(11) DEFAULT NULL,
-  `purchaseOrderId` int(11) DEFAULT NULL,
-  `transporterId` int(11) NOT NULL,
-  `exportInvoiceNumber` varchar(100) NOT NULL,
-  `exportInvoiceDate` datetime NOT NULL,
-  `manufacturerDetails_json` json DEFAULT NULL,
-  `countryOfFinalDestination` varchar(100) NOT NULL,
-  `vesselFlightNo` varchar(100) DEFAULT NULL,
-  `portOfLoading` varchar(100) NOT NULL,
-  `portOfDischarge` varchar(100) NOT NULL,
-  `finalDestination` varchar(100) NOT NULL,
-  `termsOfDeliveryAndPayment` text NOT NULL,
-  `conversationRate` decimal(10,2) NOT NULL,
-  `exchangeNotification` varchar(100) NOT NULL,
-  `exchangeDate` datetime NOT NULL,
-  `freight` decimal(12,2) NOT NULL,
-  `gst` varchar(10) NOT NULL,
-  `discount` decimal(12,2) DEFAULT 0.00,
-  `containerItems_json` json DEFAULT NULL,
-  `ewayBillNumber` varchar(100) DEFAULT NULL,
-  `ewayBillDate` datetime DEFAULT NULL,
-  `ewayBillDocument` longtext DEFAULT NULL,
-  `shippingBillNumber` varchar(100) DEFAULT NULL,
-  `shippingBillDate` datetime DEFAULT NULL,
-  `shippingBillDocument` longtext DEFAULT NULL,
-  `blNumber` varchar(100) DEFAULT NULL,
-  `blDate` datetime DEFAULT NULL,
-  `blDocument` longtext DEFAULT NULL,
-  `brcDocument` longtext DEFAULT NULL,
-  `isDeleted` tinyint(1) NOT NULL DEFAULT 0,
-  `createdAt` timestamp NOT NULL DEFAULT current_timestamp(),
-  `updatedAt` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
-  PRIMARY KEY (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+-- Main table for general Supplier companies
+CREATE TABLE IF NOT EXISTS `suppliers` (
+  `id` INT AUTO_INCREMENT PRIMARY KEY,
+  `companyName` VARCHAR(255) NOT NULL,
+  `gstNumber` VARCHAR(15) NOT NULL,
+  `contactPerson` VARCHAR(255) NOT NULL,
+  `contactNumber` VARCHAR(50) NOT NULL,
+  `isDeleted` BOOLEAN DEFAULT FALSE,
+  `createdAt` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  `updatedAt` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);
 
-CREATE TABLE `manu_bills` (
-  `id` int(11) NOT NULL AUTO_INCREMENT,
-  `exportDocumentId` int(11) NOT NULL,
-  `manufacturerId` int(11) NOT NULL,
-  `invoiceNumber` varchar(100) NOT NULL,
-  `invoiceDate` datetime NOT NULL,
-  `ackNo` varchar(100) DEFAULT NULL,
-  `ackDate` datetime DEFAULT NULL,
-  `items_json` json NOT NULL,
-  `remarks` text DEFAULT NULL,
-  `subTotal` decimal(12,2) NOT NULL,
-  `discountAmount` decimal(12,2) DEFAULT 0.00,
-  `insuranceAmount` decimal(12,2) DEFAULT 0.00,
-  `freightAmount` decimal(12,2) DEFAULT 0.00,
-  `finalSubTotal` decimal(12,2) NOT NULL,
-  `centralTaxRate` decimal(5,2) NOT NULL,
-  `centralTaxAmount` decimal(12,2) NOT NULL,
-  `stateTaxRate` decimal(5,2) NOT NULL,
-  `stateTaxAmount` decimal(12,2) NOT NULL,
-  `roundOff` decimal(10,2) DEFAULT 0.00,
-  `grandTotal` decimal(12,2) NOT NULL,
-  `billDocumentUri` longtext DEFAULT NULL,
-  `ewayBillDocumentUri` longtext DEFAULT NULL,
-  `isDeleted` tinyint(1) NOT NULL DEFAULT 0,
-  `createdAt` timestamp NOT NULL DEFAULT current_timestamp(),
-  `updatedAt` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
-  PRIMARY KEY (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+-- Main table for Pallet Supplier companies
+CREATE TABLE IF NOT EXISTS `pallets` (
+  `id` INT AUTO_INCREMENT PRIMARY KEY,
+  `companyName` VARCHAR(255) NOT NULL,
+  `gstNumber` VARCHAR(15) NOT NULL,
+  `contactPerson` VARCHAR(255) NOT NULL,
+  `contactNumber` VARCHAR(50) NOT NULL,
+  `isDeleted` BOOLEAN DEFAULT FALSE,
+  `createdAt` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  `updatedAt` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);
 
-CREATE TABLE `manufacturers` (
-  `id` int(11) NOT NULL AUTO_INCREMENT,
-  `companyName` varchar(255) NOT NULL,
-  `contactPerson` varchar(255) NOT NULL,
-  `address` text NOT NULL,
-  `gstNumber` varchar(50) NOT NULL,
-  `stuffingPermissionNumber` varchar(100) NOT NULL,
-  `stuffingPermissionDate` date NOT NULL,
-  `pinCode` varchar(20) NOT NULL,
-  `isDeleted` tinyint(1) NOT NULL DEFAULT 0,
-  `createdAt` timestamp NOT NULL DEFAULT current_timestamp(),
-  `updatedAt` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
-  PRIMARY KEY (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+-- Main table for Banks
+CREATE TABLE IF NOT EXISTS `banks` (
+  `id` INT AUTO_INCREMENT PRIMARY KEY,
+  `bankName` VARCHAR(255) NOT NULL,
+  `bankAddress` TEXT NOT NULL,
+  `accountNumber` VARCHAR(100) NOT NULL,
+  `swiftCode` VARCHAR(20) NOT NULL,
+  `ifscCode` VARCHAR(20) NOT NULL,
+  `isDeleted` BOOLEAN DEFAULT FALSE,
+  `createdAt` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  `updatedAt` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);
 
-CREATE TABLE `pallets` (
-  `id` int(11) NOT NULL AUTO_INCREMENT,
-  `companyName` varchar(255) NOT NULL,
-  `gstNumber` varchar(50) NOT NULL,
-  `contactPerson` varchar(255) NOT NULL,
-  `contactNumber` varchar(50) NOT NULL,
-  `isDeleted` tinyint(1) NOT NULL DEFAULT 0,
-  `createdAt` timestamp NOT NULL DEFAULT current_timestamp(),
-  `updatedAt` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
-  PRIMARY KEY (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+-- Main table for Product Sizes
+CREATE TABLE IF NOT EXISTS `sizes` (
+  `id` INT AUTO_INCREMENT PRIMARY KEY,
+  `size` VARCHAR(100) NOT NULL,
+  `sqmPerBox` DECIMAL(10, 4) NOT NULL,
+  `boxWeight` DECIMAL(10, 2) NOT NULL,
+  `purchasePrice` DECIMAL(10, 2) NOT NULL,
+  `salesPrice` DECIMAL(10, 2) NOT NULL,
+  `hsnCode` VARCHAR(20) NOT NULL,
+  `palletDetails` TEXT NOT NULL,
+  `isDeleted` BOOLEAN DEFAULT FALSE,
+  `createdAt` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  `updatedAt` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);
 
-CREATE TABLE `performa_invoices` (
-  `id` int(11) NOT NULL AUTO_INCREMENT,
-  `exporterId` int(11) NOT NULL,
-  `invoiceNumber` varchar(100) NOT NULL,
-  `invoiceDate` datetime NOT NULL,
-  `clientId` int(11) NOT NULL,
-  `selectedBankId` int(11) DEFAULT NULL,
-  `finalDestination` varchar(100) NOT NULL,
-  `totalContainer` int(11) NOT NULL,
-  `containerSize` enum('20 ft','40 ft') NOT NULL,
-  `currencyType` enum('INR','USD','Euro') NOT NULL,
-  `totalGrossWeight` varchar(50) NOT NULL,
-  `freight` decimal(12,2) NOT NULL,
-  `discount` decimal(12,2) NOT NULL,
-  `notifyPartyLine1` varchar(255) DEFAULT NULL,
-  `notifyPartyLine2` varchar(255) DEFAULT NULL,
-  `termsAndConditions` text NOT NULL,
-  `note` text DEFAULT NULL,
-  `items_json` json NOT NULL,
-  `subTotal` decimal(12,2) DEFAULT NULL,
-  `grandTotal` decimal(12,2) DEFAULT NULL,
-  `isDeleted` tinyint(1) NOT NULL DEFAULT 0,
-  `createdAt` timestamp NOT NULL DEFAULT current_timestamp(),
-  `updatedAt` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
-  PRIMARY KEY (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+-- Main table for Products
+CREATE TABLE IF NOT EXISTS `products` (
+  `id` INT AUTO_INCREMENT PRIMARY KEY,
+  `sizeId` INT NOT NULL,
+  `designName` VARCHAR(255) NOT NULL,
+  `salesPrice` DECIMAL(10, 2),
+  `boxWeight` DECIMAL(10, 2),
+  `imageUrl` VARCHAR(255) NULL,
+  `isDeleted` BOOLEAN DEFAULT FALSE,
+  `createdAt` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  `updatedAt` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  FOREIGN KEY (`sizeId`) REFERENCES `sizes`(`id`)
+);
 
-CREATE TABLE `products` (
-  `id` int(11) NOT NULL AUTO_INCREMENT,
-  `sizeId` int(11) NOT NULL,
-  `designName` varchar(255) NOT NULL,
-  `salesPrice` decimal(10,2) DEFAULT NULL,
-  `boxWeight` decimal(10,2) DEFAULT NULL,
-  `isDeleted` tinyint(1) NOT NULL DEFAULT 0,
-  `createdAt` timestamp NOT NULL DEFAULT current_timestamp(),
-  `updatedAt` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
-  PRIMARY KEY (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+-- Main table for Performa Invoices
+CREATE TABLE IF NOT EXISTS `performa_invoices` (
+    `id` INT AUTO_INCREMENT PRIMARY KEY,
+    `exporterId` INT NOT NULL,
+    `invoiceNumber` VARCHAR(100) NOT NULL,
+    `invoiceDate` DATETIME NOT NULL,
+    `clientId` INT NOT NULL,
+    `selectedBankId` INT,
+    `finalDestination` VARCHAR(255) NOT NULL,
+    `currencyType` ENUM('INR', 'USD', 'Euro') NOT NULL,
+    `totalGrossWeight` VARCHAR(100) NOT NULL,
+    `freight` DECIMAL(12, 2) DEFAULT 0,
+    `discount` DECIMAL(12, 2) DEFAULT 0,
+    `notifyPartyLine1` VARCHAR(255),
+    `notifyPartyLine2` VARCHAR(255),
+    `termsAndConditions` TEXT,
+    `note` TEXT,
+    `subTotal` DECIMAL(15, 2),
+    `grandTotal` DECIMAL(15, 2),
+    `items_json` JSON,
+    `containers_json` JSON,
+    `isDeleted` BOOLEAN DEFAULT FALSE,
+    `createdAt` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    `updatedAt` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (`exporterId`) REFERENCES `companies`(`id`),
+    FOREIGN KEY (`clientId`) REFERENCES `clients`(`id`),
+    FOREIGN KEY (`selectedBankId`) REFERENCES `banks`(`id`)
+);
 
-CREATE TABLE `purchase_orders` (
-  `id` int(11) NOT NULL AUTO_INCREMENT,
-  `sourcePiId` int(11) NOT NULL,
-  `exporterId` int(11) NOT NULL,
-  `manufacturerId` int(11) NOT NULL,
-  `poNumber` varchar(100) NOT NULL,
-  `poDate` datetime NOT NULL,
-  `sizeId` int(11) NOT NULL,
-  `numberOfContainers` int(11) NOT NULL,
-  `items_json` json NOT NULL,
-  `termsAndConditions` text DEFAULT NULL,
-  `isDeleted` tinyint(1) NOT NULL DEFAULT 0,
-  `createdAt` timestamp NOT NULL DEFAULT current_timestamp(),
-  `updatedAt` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
-  PRIMARY KEY (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
-CREATE TABLE `sizes` (
-  `id` int(11) NOT NULL AUTO_INCREMENT,
-  `size` varchar(50) NOT NULL,
-  `sqmPerBox` decimal(10,2) NOT NULL,
-  `boxWeight` decimal(10,2) NOT NULL,
-  `purchasePrice` decimal(10,2) NOT NULL,
-  `salesPrice` decimal(10,2) NOT NULL,
-  `hsnCode` varchar(50) NOT NULL,
-  `palletDetails` text NOT NULL,
-  `isDeleted` tinyint(1) NOT NULL DEFAULT 0,
-  `createdAt` timestamp NOT NULL DEFAULT current_timestamp(),
-  `updatedAt` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
-  PRIMARY KEY (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+-- Main table for Purchase Orders
+CREATE TABLE IF NOT EXISTS `purchase_orders` (
+  `id` INT AUTO_INCREMENT PRIMARY KEY,
+  `sourcePiId` INT NOT NULL,
+  `exporterId` INT NOT NULL,
+  `manufacturerId` INT NOT NULL,
+  `poNumber` VARCHAR(100) NOT NULL,
+  `poDate` DATETIME NOT NULL,
+  `sizeId` INT NOT NULL,
+  `numberOfContainers` INT NOT NULL,
+  `items_json` JSON,
+  `termsAndConditions` TEXT,
+  `isDeleted` BOOLEAN DEFAULT FALSE,
+  `createdAt` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  `updatedAt` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  FOREIGN KEY (`sourcePiId`) REFERENCES `performa_invoices`(`id`),
+  FOREIGN KEY (`exporterId`) REFERENCES `companies`(`id`),
+  FOREIGN KEY (`manufacturerId`) REFERENCES `manufacturers`(`id`),
+  FOREIGN KEY (`sizeId`) REFERENCES `sizes`(`id`)
+);
 
-CREATE TABLE `suppliers` (
-  `id` int(11) NOT NULL AUTO_INCREMENT,
-  `companyName` varchar(255) NOT NULL,
-  `gstNumber` varchar(50) NOT NULL,
-  `contactPerson` varchar(255) NOT NULL,
-  `contactNumber` varchar(50) NOT NULL,
-  `isDeleted` tinyint(1) NOT NULL DEFAULT 0,
-  `createdAt` timestamp NOT NULL DEFAULT current_timestamp(),
-  `updatedAt` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
-  PRIMARY KEY (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+-- Main table for Export Documents
+CREATE TABLE IF NOT EXISTS `export_documents` (
+  `id` INT AUTO_INCREMENT PRIMARY KEY,
+  `exporterId` INT NOT NULL,
+  `purchaseOrderId` INT,
+  `exportInvoiceNumber` VARCHAR(100) NOT NULL,
+  `exportInvoiceDate` DATETIME NOT NULL,
+  `manufacturerDetails_json` JSON,
+  `countryOfFinalDestination` VARCHAR(255),
+  `vesselFlightNo` VARCHAR(100),
+  `portOfLoading` VARCHAR(100),
+  `portOfDischarge` VARCHAR(100),
+  `finalDestination` VARCHAR(255),
+  `termsOfDeliveryAndPayment` TEXT,
+  `conversationRate` DECIMAL(10, 4),
+  `exchangeNotification` VARCHAR(255),
+  `exchangeDate` DATETIME,
+  `transporterId` INT,
+  `freight` DECIMAL(12, 2),
+  `gst` VARCHAR(10),
+  `discount` DECIMAL(12, 2),
+  `containerItems_json` JSON,
+  `ewayBillNumber` VARCHAR(100),
+  `ewayBillDate` DATE,
+  `ewayBillDocument` TEXT,
+  `shippingBillNumber` VARCHAR(100),
+  `shippingBillDate` DATE,
+  `shippingBillDocument` TEXT,
+  `blNumber` VARCHAR(100),
+  `blDate` DATE,
+  `blDocument` TEXT,
+  `brcDocument` TEXT,
+  `isDeleted` BOOLEAN DEFAULT FALSE,
+  `createdAt` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  `updatedAt` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  FOREIGN KEY (`exporterId`) REFERENCES `companies`(`id`),
+  FOREIGN KEY (`purchaseOrderId`) REFERENCES `purchase_orders`(`id`),
+  FOREIGN KEY (`transporterId`) REFERENCES `transporters`(`id`)
+);
 
-CREATE TABLE `supply_bills` (
-  `id` int(11) NOT NULL AUTO_INCREMENT,
-  `exportDocumentId` int(11) NOT NULL,
-  `supplierId` int(11) NOT NULL,
-  `invoiceNumber` varchar(100) NOT NULL,
-  `invoiceDate` datetime NOT NULL,
-  `ackNo` varchar(100) DEFAULT NULL,
-  `ackDate` datetime DEFAULT NULL,
-  `items_json` json NOT NULL,
-  `remarks` text DEFAULT NULL,
-  `subTotal` decimal(12,2) NOT NULL,
-  `discountAmount` decimal(12,2) DEFAULT 0.00,
-  `insuranceAmount` decimal(12,2) DEFAULT 0.00,
-  `freightAmount` decimal(12,2) DEFAULT 0.00,
-  `finalSubTotal` decimal(12,2) NOT NULL,
-  `centralTaxRate` decimal(5,2) NOT NULL,
-  `centralTaxAmount` decimal(12,2) NOT NULL,
-  `stateTaxRate` decimal(5,2) NOT NULL,
-  `stateTaxAmount` decimal(12,2) NOT NULL,
-  `roundOff` decimal(10,2) DEFAULT 0.00,
-  `grandTotal` decimal(12,2) NOT NULL,
-  `billDocumentUri` longtext DEFAULT NULL,
-  `ewayBillDocumentUri` longtext DEFAULT NULL,
-  `isDeleted` tinyint(1) NOT NULL DEFAULT 0,
-  `createdAt` timestamp NOT NULL DEFAULT current_timestamp(),
-  `updatedAt` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
-  PRIMARY KEY (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+-- Main table for Manufacturer Bills
+CREATE TABLE IF NOT EXISTS `manu_bills` (
+    `id` INT AUTO_INCREMENT PRIMARY KEY,
+    `exportDocumentId` INT NOT NULL,
+    `manufacturerId` INT NOT NULL,
+    `invoiceNumber` VARCHAR(100) NOT NULL,
+    `invoiceDate` DATETIME NOT NULL,
+    `ackNo` VARCHAR(100),
+    `ackDate` DATETIME,
+    `items_json` JSON,
+    `remarks` TEXT,
+    `subTotal` DECIMAL(15, 2),
+    `discountAmount` DECIMAL(15, 2) DEFAULT 0,
+    `insuranceAmount` DECIMAL(15, 2) DEFAULT 0,
+    `freightAmount` DECIMAL(15, 2) DEFAULT 0,
+    `finalSubTotal` DECIMAL(15, 2),
+    `centralTaxRate` DECIMAL(5, 2),
+    `centralTaxAmount` DECIMAL(15, 2),
+    `stateTaxRate` DECIMAL(5, 2),
+    `stateTaxAmount` DECIMAL(15, 2),
+    `roundOff` DECIMAL(10, 2) DEFAULT 0,
+    `grandTotal` DECIMAL(15, 2),
+    `billDocumentUri` VARCHAR(255),
+    `ewayBillDocumentUri` VARCHAR(255),
+    `isDeleted` BOOLEAN DEFAULT FALSE,
+    `createdAt` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    `updatedAt` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (`exportDocumentId`) REFERENCES `export_documents`(`id`),
+    FOREIGN KEY (`manufacturerId`) REFERENCES `manufacturers`(`id`)
+);
 
-CREATE TABLE `trans_bills` (
-  `id` int(11) NOT NULL AUTO_INCREMENT,
-  `exportDocumentId` int(11) NOT NULL,
-  `transporterId` int(11) NOT NULL,
-  `invoiceNumber` varchar(100) NOT NULL,
-  `invoiceDate` datetime NOT NULL,
-  `shippingLine` varchar(255) DEFAULT NULL,
-  `portOfLoading` varchar(100) DEFAULT NULL,
-  `portOfDischarge` varchar(100) DEFAULT NULL,
-  `items_json` json NOT NULL,
-  `remarks` text DEFAULT NULL,
-  `subTotal` decimal(12,2) NOT NULL,
-  `cgstRate` decimal(5,2) NOT NULL,
-  `cgstAmount` decimal(12,2) NOT NULL,
-  `sgstRate` decimal(5,2) NOT NULL,
-  `sgstAmount` decimal(12,2) NOT NULL,
-  `totalTax` decimal(12,2) NOT NULL,
-  `totalAfterTax` decimal(12,2) NOT NULL,
-  `roundOff` decimal(10,2) DEFAULT 0.00,
-  `totalPayable` decimal(12,2) NOT NULL,
-  `billDocumentUri` longtext DEFAULT NULL,
-  `lrDocumentUri` longtext DEFAULT NULL,
-  `isDeleted` tinyint(1) NOT NULL DEFAULT 0,
-  `createdAt` timestamp NOT NULL DEFAULT current_timestamp(),
-  `updatedAt` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
-  PRIMARY KEY (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+-- Main table for Transporter Bills
+CREATE TABLE IF NOT EXISTS `trans_bills` (
+    `id` INT AUTO_INCREMENT PRIMARY KEY,
+    `exportDocumentId` INT NOT NULL,
+    `transporterId` INT NOT NULL,
+    `invoiceNumber` VARCHAR(100) NOT NULL,
+    `invoiceDate` DATETIME NOT NULL,
+    `shippingLine` VARCHAR(255),
+    `portOfLoading` VARCHAR(255),
+    `portOfDischarge` VARCHAR(255),
+    `items_json` JSON,
+    `remarks` TEXT,
+    `subTotal` DECIMAL(15, 2),
+    `cgstRate` DECIMAL(5, 2),
+    `cgstAmount` DECIMAL(15, 2),
+    `sgstRate` DECIMAL(5, 2),
+    `sgstAmount` DECIMAL(15, 2),
+    `totalTax` DECIMAL(15, 2),
+    `totalAfterTax` DECIMAL(15, 2),
+    `roundOff` DECIMAL(10, 2) DEFAULT 0,
+    `totalPayable` DECIMAL(15, 2),
+    `billDocumentUri` VARCHAR(255),
+    `lrDocumentUri` VARCHAR(255),
+    `isDeleted` BOOLEAN DEFAULT FALSE,
+    `createdAt` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    `updatedAt` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (`exportDocumentId`) REFERENCES `export_documents`(`id`),
+    FOREIGN KEY (`transporterId`) REFERENCES `transporters`(`id`)
+);
 
-CREATE TABLE `transactions` (
-  `id` int(11) NOT NULL AUTO_INCREMENT,
-  `date` datetime NOT NULL,
-  `type` enum('credit','debit') NOT NULL,
-  `partyType` varchar(50) NOT NULL,
-  `partyId` varchar(255) NOT NULL,
-  `exportDocumentId` int(11) DEFAULT NULL,
-  `relatedInvoices_json` json DEFAULT NULL,
-  `sourceBillId` varchar(255) DEFAULT NULL,
-  `sourceBillType` varchar(50) DEFAULT NULL,
-  `currency` enum('USD','EUR','INR') NOT NULL,
-  `amount` decimal(12,2) NOT NULL,
-  `description` text DEFAULT NULL,
-  `isDeleted` tinyint(1) NOT NULL DEFAULT 0,
-  `createdAt` timestamp NOT NULL DEFAULT current_timestamp(),
-  `updatedAt` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
-  PRIMARY KEY (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+-- Main table for Supply Bills (for Suppliers and Pallets)
+CREATE TABLE IF NOT EXISTS `supply_bills` (
+    `id` INT AUTO_INCREMENT PRIMARY KEY,
+    `exportDocumentId` INT NOT NULL,
+    `supplierId` INT NOT NULL, -- Generic ID, can refer to suppliers or pallets table
+    `invoiceNumber` VARCHAR(100) NOT NULL,
+    `invoiceDate` DATETIME NOT NULL,
+    `ackNo` VARCHAR(100),
+    `ackDate` DATETIME,
+    `items_json` JSON,
+    `remarks` TEXT,
+    `subTotal` DECIMAL(15, 2),
+    `discountAmount` DECIMAL(15, 2) DEFAULT 0,
+    `insuranceAmount` DECIMAL(15, 2) DEFAULT 0,
+    `freightAmount` DECIMAL(15, 2) DEFAULT 0,
+    `finalSubTotal` DECIMAL(15, 2),
+    `centralTaxRate` DECIMAL(5, 2),
+    `centralTaxAmount` DECIMAL(15, 2),
+    `stateTaxRate` DECIMAL(5, 2),
+    `stateTaxAmount` DECIMAL(15, 2),
+    `roundOff` DECIMAL(10, 2) DEFAULT 0,
+    `grandTotal` DECIMAL(15, 2),
+    `billDocumentUri` VARCHAR(255),
+    `ewayBillDocumentUri` VARCHAR(255),
+    `isDeleted` BOOLEAN DEFAULT FALSE,
+    `createdAt` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    `updatedAt` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (`exportDocumentId`) REFERENCES `export_documents`(`id`)
+);
 
-CREATE TABLE `transporters` (
-  `id` int(11) NOT NULL AUTO_INCREMENT,
-  `companyName` varchar(255) NOT NULL,
-  `gstNumber` varchar(50) NOT NULL,
-  `contactPerson` varchar(255) NOT NULL,
-  `contactNumber` varchar(50) NOT NULL,
-  `isDeleted` tinyint(1) NOT NULL DEFAULT 0,
-  `createdAt` timestamp NOT NULL DEFAULT current_timestamp(),
-  `updatedAt` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
-  PRIMARY KEY (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+-- Main table for Financial Transactions
+CREATE TABLE IF NOT EXISTS `transactions` (
+    `id` INT AUTO_INCREMENT PRIMARY KEY,
+    `date` DATETIME NOT NULL,
+    `type` ENUM('credit', 'debit') NOT NULL,
+    `partyType` ENUM('client', 'manufacturer', 'transporter', 'supplier', 'pallet', 'gst', 'duty_drawback', 'road_tp') NOT NULL,
+    `partyId` VARCHAR(255) NOT NULL,
+    `exportDocumentId` INT,
+    `relatedInvoices_json` JSON,
+    `currency` ENUM('USD', 'EUR', 'INR') NOT NULL,
+    `amount` DECIMAL(15, 2) NOT NULL,
+    `description` TEXT,
+    `isDeleted` BOOLEAN DEFAULT FALSE,
+    `createdAt` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    `updatedAt` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);
