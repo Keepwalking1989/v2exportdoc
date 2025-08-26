@@ -1,6 +1,7 @@
 
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import { format } from 'date-fns';
 import type { ExportDocument } from '@/types/export-document';
 import type { Company } from '@/types/company'; // Exporter
 import type { Manufacturer } from '@/types/manufacturer';
@@ -71,6 +72,7 @@ export async function generateVgmPdf(
     yPos += 20;
 
     const hasContainers = docData.containerItems && docData.containerItems.length > 0;
+    const firstContainer = hasContainers ? docData.containerItems![0] : undefined;
 
     // Main Information Table
     const mainTableHeader = [['Sr No.', 'Details of information', 'Particulars']];
@@ -84,8 +86,8 @@ export async function generateVgmPdf(
         ['7*', 'Maximum permissible weight of container as per the CSC plate', '30480'], // Hardcoded as per image
         ['8*', 'Weighbridge registration no. & Address of Weighbridge', `${manufacturer?.companyName || ''}\n${manufacturer?.address || 'N/A'}`.trim()],
         ['9*', 'Verified gross mass of container (method-1/method-2)', 'METHOD-1'],
-        ['10*', 'Date and time of weighing', hasContainers ? 'ATTACHED SHEET' : 'N/A'],
-        ['11*', 'Weighing slip no.', hasContainers ? 'ATTACHED SHEET' : 'N/A'],
+        ['10*', 'Date and time of weighing', firstContainer?.weighingDateTime ? format(new Date(firstContainer.weighingDateTime), 'dd-MM-yyyy HH:mm') : 'N/A'],
+        ['11*', 'Weighing slip no.', firstContainer?.weighingSlipNo || 'N/A'],
         ['12', 'Type (Normal/Reefer/Hazardous/others)', 'NORMAL'], // Hardcoded
         ['13', 'If Hazardous UN NO.IMDG class', 'N/A'], // Hardcoded
     ];
