@@ -12,7 +12,7 @@ import { amountToWords } from '@/lib/utils';
 
 // --- Reusable Style Definitions ---
 const FONT_TITLE = 14;
-const FONT_HEADER = 10;
+const FONT_HEADER = 9;
 const FONT_BODY = 8;
 const FONT_BODY_SMALL = 7;
 const CELL_PADDING = 4;
