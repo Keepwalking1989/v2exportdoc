@@ -94,6 +94,7 @@ export default function DocumentDataPageV2() {
   const [isEditingShippingBill, setIsEditingShippingBill] = useState(false);
   const [isEditingBl, setIsEditingBl] = useState(false);
   const [isEditingBrc, setIsEditingBrc] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
 
 
   // State for related data
@@ -185,14 +186,37 @@ export default function DocumentDataPageV2() {
   }, [docId, toast]);
 
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>, formSetter: (value: string) => void) => {
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>, formSetter: (value: string) => void) => {
     const file = e.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        formSetter(reader.result as string);
-      };
-      reader.readAsDataURL(file);
+    if (!file) return;
+
+    setIsUploading(true);
+    toast({ title: "Uploading...", description: `Uploading ${file.name}. Please wait.` });
+
+    try {
+        const reader = new FileReader();
+        reader.readAsDataURL(file);
+        reader.onloadend = async () => {
+            const fileData = reader.result;
+            const response = await fetch('/api/v2/upload', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ fileData, fileName: file.name }),
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.message || 'File upload failed');
+            }
+
+            const { filePath } = await response.json();
+            formSetter(filePath);
+            toast({ title: "Upload Successful", description: `File saved to: ${filePath}` });
+        };
+    } catch (error: any) {
+        toast({ variant: "destructive", title: "Upload Error", description: error.message });
+    } finally {
+        setIsUploading(false);
     }
   };
 
@@ -427,13 +451,13 @@ export default function DocumentDataPageV2() {
                     <CardHeader className="flex flex-row items-center justify-between"><div><CardTitle>Eway Bill Document Entry</CardTitle><CardDescription>Enter the Eway Bill details once available.</CardDescription></div>{!isEditingEway && document?.ewayBillNumber && (<Button variant="outline" onClick={() => setIsEditingEway(true)}><Edit className="mr-2 h-4 w-4" /> Edit</Button>)}</CardHeader>
                     <Form {...ewayBillForm}><form onSubmit={ewayBillForm.handleSubmit(onSaveEwayBill)}><CardContent className="space-y-6">
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        {isEditingEway ? (<FormField control={ewayBillForm.control} name="ewayBillNumber" render={({ field }) => (<FormItem><FormLabel>Eway Bill Number</FormLabel><FormControl><Input placeholder="Enter Eway Bill Number" {...field} /></FormControl><FormMessage /></FormItem>)} />) : (<DetailRow label="Eway Bill Number" value={document?.ewayBillNumber} />)}
+                        {isEditingEway ? (<FormField control={ewayBillForm.control} name="ewayBillNumber" render={({ field }) => (<FormItem><FormLabel>Eway Bill Number</FormLabel><FormControl><Input placeholder="Enter Eway Bill Number" {...field} value={field.value || ''} /></FormControl><FormMessage /></FormItem>)} />) : (<DetailRow label="Eway Bill Number" value={document?.ewayBillNumber} />)}
                         {isEditingEway ? (<FormField control={ewayBillForm.control} name="ewayBillDate" render={({ field }) => (<FormItem className="flex flex-col"><FormLabel>Eway Bill Date</FormLabel><Popover><PopoverTrigger asChild><FormControl><Button variant={"outline"} className={cn("w-full pl-3 text-left font-normal", !field.value && "text-muted-foreground")}>{field.value ? format(field.value, "PPP") : <span>Pick a date</span>}<CalendarIcon className="ml-auto h-4 w-4 opacity-50" /></Button></FormControl></PopoverTrigger><PopoverContent className="w-auto p-0" align="start"><Calendar mode="single" selected={field.value} onSelect={field.onChange} initialFocus /></PopoverContent></Popover><FormMessage /></FormItem>)} />) : (<DetailRow label="Eway Bill Date" value={document?.ewayBillDate ? format(new Date(document.ewayBillDate), "PPP") : 'N/A'} />)}
                       </div>
                       <div>
-                        {isEditingEway ? (<FormItem><FormLabel>Eway Bill Document</FormLabel><FormControl><Input type="file" onChange={(e) => handleFileChange(e, (val) => ewayBillForm.setValue('ewayBillDocument', val))} accept=".pdf,.jpg,.jpeg,.png" /></FormControl><FormMessage /></FormItem>) : (<div><p className="text-sm text-muted-foreground">Eway Bill Document</p>{document?.ewayBillDocument ? (<Button asChild className="mt-2"><a href={document.ewayBillDocument} download={`EwayBill_${document.exportInvoiceNumber}.pdf`}><Download className="mr-2 h-4 w-4" /> Download Document</a></Button>) : (<p className="font-semibold">No document uploaded.</p>)}</div>)}
+                        {isEditingEway ? (<FormItem><FormLabel>Eway Bill Document</FormLabel><FormControl><Input type="file" onChange={(e) => handleFileChange(e, (val) => ewayBillForm.setValue('ewayBillDocument', val))} accept=".pdf,.jpg,.jpeg,.png" disabled={isUploading} /></FormControl><FormMessage /></FormItem>) : (<div><p className="text-sm text-muted-foreground">Eway Bill Document</p>{document?.ewayBillDocument ? (<Button asChild className="mt-2"><a href={document.ewayBillDocument} download={`EwayBill_${document.exportInvoiceNumber}.pdf`}><Download className="mr-2 h-4 w-4" /> Download Document</a></Button>) : (<p className="font-semibold">No document uploaded.</p>)}</div>)}
                       </div>
-                    </CardContent>{isEditingEway && (<CardFooter className="justify-end gap-2"><Button type="button" variant="ghost" onClick={() => { setIsEditingEway(false); ewayBillForm.reset({ ewayBillNumber: document?.ewayBillNumber, ewayBillDate: document?.ewayBillDate, ewayBillDocument: document?.ewayBillDocument }); }}>Cancel</Button><Button type="submit">Save Details</Button></CardFooter>)}</form></Form>
+                    </CardContent>{isEditingEway && (<CardFooter className="justify-end gap-2"><Button type="button" variant="ghost" onClick={() => { setIsEditingEway(false); ewayBillForm.reset({ ewayBillNumber: document?.ewayBillNumber, ewayBillDate: document?.ewayBillDate, ewayBillDocument: document?.ewayBillDocument }); }}>Cancel</Button><Button type="submit" disabled={isUploading}>Save Details</Button></CardFooter>)}</form></Form>
                   </Card>
                 </div>
               ) : (<p>Could not generate Eway Bill data. Ensure all related information (manufacturer, products, etc.) is available.</p>)}
@@ -459,7 +483,7 @@ export default function DocumentDataPageV2() {
                             <CardContent className="space-y-6">
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                     {isEditingShippingBill ? (
-                                        <FormField control={shippingBillForm.control} name="shippingBillNumber" render={({ field }) => (<FormItem><FormLabel>Shipping Bill Number</FormLabel><FormControl><Input placeholder="Enter Shipping Bill Number" {...field} /></FormControl><FormMessage /></FormItem>)} />
+                                        <FormField control={shippingBillForm.control} name="shippingBillNumber" render={({ field }) => (<FormItem><FormLabel>Shipping Bill Number</FormLabel><FormControl><Input placeholder="Enter Shipping Bill Number" {...field} value={field.value || ''} /></FormControl><FormMessage /></FormItem>)} />
                                     ) : (
                                         <DetailRow label="Shipping Bill Number" value={document?.shippingBillNumber} />
                                     )}
@@ -471,7 +495,7 @@ export default function DocumentDataPageV2() {
                                 </div>
                                 <div>
                                     {isEditingShippingBill ? (
-                                        <FormItem><FormLabel>Shipping Bill Document</FormLabel><FormControl><Input type="file" onChange={(e) => handleFileChange(e, (val) => shippingBillForm.setValue('shippingBillDocument', val))} accept=".pdf,.jpg,.jpeg,.png" /></FormControl><FormMessage /></FormItem>
+                                        <FormItem><FormLabel>Shipping Bill Document</FormLabel><FormControl><Input type="file" onChange={(e) => handleFileChange(e, (val) => shippingBillForm.setValue('shippingBillDocument', val))} accept=".pdf,.jpg,.jpeg,.png" disabled={isUploading} /></FormControl><FormMessage /></FormItem>
                                     ) : (
                                         <div><p className="text-sm text-muted-foreground">Shipping Bill Document</p>{document?.shippingBillDocument ? (<Button asChild className="mt-2"><a href={document.shippingBillDocument} download={`ShippingBill_${document.exportInvoiceNumber}.pdf`}><Download className="mr-2 h-4 w-4" /> Download Document</a></Button>) : (<p className="font-semibold">No document uploaded.</p>)}</div>
                                     )}
@@ -480,7 +504,7 @@ export default function DocumentDataPageV2() {
                             {isEditingShippingBill && (
                                 <CardFooter className="justify-end gap-2">
                                     <Button type="button" variant="ghost" onClick={() => { setIsEditingShippingBill(false); shippingBillForm.reset({ shippingBillNumber: document?.shippingBillNumber, shippingBillDate: document?.shippingBillDate, shippingBillDocument: document?.shippingBillDocument }); }}>Cancel</Button>
-                                    <Button type="submit">Save Details</Button>
+                                    <Button type="submit" disabled={isUploading}>Save Details</Button>
                                 </CardFooter>
                             )}
                         </form>
@@ -504,7 +528,7 @@ export default function DocumentDataPageV2() {
                             <CardContent className="space-y-6">
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                     {isEditingBl ? (
-                                        <FormField control={blForm.control} name="blNumber" render={({ field }) => (<FormItem><FormLabel>BL Number</FormLabel><FormControl><Input placeholder="Enter BL Number" {...field} /></FormControl><FormMessage /></FormItem>)} />
+                                        <FormField control={blForm.control} name="blNumber" render={({ field }) => (<FormItem><FormLabel>BL Number</FormLabel><FormControl><Input placeholder="Enter BL Number" {...field} value={field.value || ''} /></FormControl><FormMessage /></FormItem>)} />
                                     ) : (
                                         <DetailRow label="BL Number" value={document?.blNumber} />
                                     )}
@@ -516,7 +540,7 @@ export default function DocumentDataPageV2() {
                                 </div>
                                 <div>
                                      {isEditingBl ? (
-                                        <FormItem><FormLabel>BL Document</FormLabel><FormControl><Input type="file" onChange={(e) => handleFileChange(e, (val) => blForm.setValue('blDocument', val))} accept=".pdf,.jpg,.jpeg,.png" /></FormControl><FormMessage /></FormItem>
+                                        <FormItem><FormLabel>BL Document</FormLabel><FormControl><Input type="file" onChange={(e) => handleFileChange(e, (val) => blForm.setValue('blDocument', val))} accept=".pdf,.jpg,.jpeg,.png" disabled={isUploading} /></FormControl><FormMessage /></FormItem>
                                     ) : (
                                         <div><p className="text-sm text-muted-foreground">BL Document</p>{document?.blDocument ? (<Button asChild className="mt-2"><a href={document.blDocument} download={`BL_${document.exportInvoiceNumber}.pdf`}><Download className="mr-2 h-4 w-4" /> Download Document</a></Button>) : (<p className="font-semibold">No document uploaded.</p>)}</div>
                                     )}
@@ -525,7 +549,7 @@ export default function DocumentDataPageV2() {
                              {isEditingBl && (
                                 <CardFooter className="justify-end gap-2">
                                     <Button type="button" variant="ghost" onClick={() => { setIsEditingBl(false); blForm.reset({ blNumber: document?.blNumber, blDate: document?.blDate, blDocument: document?.blDocument }); }}>Cancel</Button>
-                                    <Button type="submit">Save Details</Button>
+                                    <Button type="submit" disabled={isUploading}>Save Details</Button>
                                 </CardFooter>
                             )}
                         </form>
@@ -596,7 +620,7 @@ export default function DocumentDataPageV2() {
                       <FormItem>
                         <FormLabel>BRC Document</FormLabel>
                         <FormControl>
-                          <Input type="file" onChange={(e) => handleFileChange(e, (val) => brcForm.setValue('brcDocument', val))} accept=".pdf,.jpg,.jpeg,.png" />
+                          <Input type="file" onChange={(e) => handleFileChange(e, (val) => brcForm.setValue('brcDocument', val))} accept=".pdf,.jpg,.jpeg,.png" disabled={isUploading}/>
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -618,7 +642,7 @@ export default function DocumentDataPageV2() {
                   {isEditingBrc && (
                     <CardFooter className="justify-end gap-2">
                       <Button type="button" variant="ghost" onClick={() => { setIsEditingBrc(false); brcForm.reset({ brcDocument: document?.brcDocument }); }}>Cancel</Button>
-                      <Button type="submit">Save Document</Button>
+                      <Button type="submit" disabled={isUploading}>Save Document</Button>
                     </CardFooter>
                   )}
                 </form>
@@ -631,3 +655,4 @@ export default function DocumentDataPageV2() {
     </div>
   );
 }
+
