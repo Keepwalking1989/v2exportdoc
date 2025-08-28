@@ -674,7 +674,6 @@ export function ExportDocumentFormV2({
 
 
   useEffect(() => {
-    // Scenario 1: Editing an existing document
     if (isEditing && initialData) {
         form.reset({
             ...initialData,
@@ -693,9 +692,7 @@ export function ExportDocumentFormV2({
                 }))
               : [defaultNewContainerItem],
         });
-    } 
-    // Scenario 2: Creating a new document from a source PO
-    else if (!isEditing && sourcePoId) {
+    } else if (!isEditing && sourcePoId) {
         const po = allPurchaseOrders.find(p => p.id.toString() === sourcePoId);
         if (!po) return;
 
@@ -704,10 +701,10 @@ export function ExportDocumentFormV2({
         
         form.reset({
             ...getDefaultFormValues(nextExportInvoiceNumber),
+            exporterId: po.exporterId,
             clientId: pi.clientId,
             performaInvoiceId: pi.id,
             purchaseOrderId: po.id,
-            exporterId: po.exporterId,
             manufacturerDetails: [{
               id: Date.now().toString(),
               manufacturerId: po.manufacturerId,
@@ -717,9 +714,7 @@ export function ExportDocumentFormV2({
             }],
             countryOfFinalDestination: allClients.find(c => c.id === pi.clientId)?.country || '',
         });
-    } 
-    // Scenario 3: Creating a brand new document from scratch
-    else {
+    } else {
         form.reset(getDefaultFormValues(nextExportInvoiceNumber));
     }
 }, [isEditing, initialData, sourcePoId, form, nextExportInvoiceNumber, allPurchaseOrders, allPerformaInvoices, allClients, allManufacturers]);
@@ -753,34 +748,26 @@ export function ExportDocumentFormV2({
   const piOptions = useMemo(() => {
     const currentClientId = watchedClientId;
     if (!currentClientId) {
-      return isEditing && initialData?.performaInvoiceId 
-        ? allPerformaInvoices
-            .filter(pi => String(pi.id) === String(initialData.performaInvoiceId))
-            .map(pi => ({ value: pi.id.toString(), label: pi.invoiceNumber }))
-        : [];
+        return allPerformaInvoices.map(pi => ({ value: pi.id.toString(), label: pi.invoiceNumber }));
     }
     
     return allPerformaInvoices
       .filter(pi => String(pi.clientId) === String(currentClientId))
       .map(pi => ({ value: pi.id.toString(), label: pi.invoiceNumber }));
-  }, [watchedClientId, allPerformaInvoices, isEditing, initialData]);
+  }, [watchedClientId, allPerformaInvoices]);
 
   const poOptions = useMemo(() => {
     const currentPiId = watchedPerformaInvoiceId;
     const selectedManufacturerId = watchedManufacturerDetails?.[0]?.manufacturerId;
 
     if (!currentPiId || !selectedManufacturerId) {
-      return isEditing && initialData?.purchaseOrderId
-        ? allPurchaseOrders
-            .filter(po => String(po.id) === String(initialData.purchaseOrderId))
-            .map(po => ({ value: po.id.toString(), label: po.poNumber }))
-        : [];
+       return allPurchaseOrders.map(po => ({ value: po.id.toString(), label: po.poNumber }))
     }
     
     return allPurchaseOrders
       .filter(po => String(po.sourcePiId) === String(currentPiId) && String(po.manufacturerId) === String(selectedManufacturerId))
       .map(po => ({ value: po.id.toString(), label: po.poNumber }));
-  }, [watchedPerformaInvoiceId, watchedManufacturerDetails, allPurchaseOrders, isEditing, initialData]);
+  }, [watchedPerformaInvoiceId, watchedManufacturerDetails, allPurchaseOrders]);
 
 
   const exporterOptions: ComboboxOption[] = useMemo(() =>
