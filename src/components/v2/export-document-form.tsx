@@ -752,42 +752,34 @@ export function ExportDocumentFormV2({
   
   const piOptions = useMemo(() => {
     const currentClientId = watchedClientId;
-    let filteredPies: PerformaInvoice[] = [];
-
-    if (currentClientId) {
-      filteredPies = allPerformaInvoices.filter(pi => String(pi.clientId) === String(currentClientId));
-    }
-
-    if (isEditing && initialData?.performaInvoiceId) {
-      const savedPi = allPerformaInvoices.find(pi => String(pi.id) === String(initialData.performaInvoiceId));
-      if (savedPi && !filteredPies.some(pi => String(pi.id) === String(savedPi.id))) {
-        filteredPies.push(savedPi);
-      }
+    if (!currentClientId) {
+      return isEditing && initialData?.performaInvoiceId 
+        ? allPerformaInvoices
+            .filter(pi => String(pi.id) === String(initialData.performaInvoiceId))
+            .map(pi => ({ value: pi.id.toString(), label: pi.invoiceNumber }))
+        : [];
     }
     
-    return filteredPies.map(pi => ({ value: pi.id.toString(), label: pi.invoiceNumber }));
+    return allPerformaInvoices
+      .filter(pi => String(pi.clientId) === String(currentClientId))
+      .map(pi => ({ value: pi.id.toString(), label: pi.invoiceNumber }));
   }, [watchedClientId, allPerformaInvoices, isEditing, initialData]);
 
   const poOptions = useMemo(() => {
     const currentPiId = watchedPerformaInvoiceId;
     const selectedManufacturerId = watchedManufacturerDetails?.[0]?.manufacturerId;
-    let filteredPos: PurchaseOrder[] = [];
 
-    if (currentPiId && selectedManufacturerId) {
-      filteredPos = allPurchaseOrders.filter(po => 
-        String(po.sourcePiId) === String(currentPiId) &&
-        String(po.manufacturerId) === String(selectedManufacturerId)
-      );
+    if (!currentPiId || !selectedManufacturerId) {
+      return isEditing && initialData?.purchaseOrderId
+        ? allPurchaseOrders
+            .filter(po => String(po.id) === String(initialData.purchaseOrderId))
+            .map(po => ({ value: po.id.toString(), label: po.poNumber }))
+        : [];
     }
     
-    if (isEditing && initialData?.purchaseOrderId) {
-      const savedPo = allPurchaseOrders.find(po => String(po.id) === String(initialData.purchaseOrderId));
-      if (savedPo && !filteredPos.some(po => String(po.id) === String(savedPo.id))) {
-        filteredPos.push(savedPo);
-      }
-    }
-
-    return filteredPos.map(po => ({ value: po.id.toString(), label: po.poNumber }));
+    return allPurchaseOrders
+      .filter(po => String(po.sourcePiId) === String(currentPiId) && String(po.manufacturerId) === String(selectedManufacturerId))
+      .map(po => ({ value: po.id.toString(), label: po.poNumber }));
   }, [watchedPerformaInvoiceId, watchedManufacturerDetails, allPurchaseOrders, isEditing, initialData]);
 
 
