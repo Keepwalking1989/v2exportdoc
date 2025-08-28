@@ -764,7 +764,7 @@ export function ExportDocumentFormV2({
     const selectedManufacturerId = watchedManufacturerDetails?.[0]?.manufacturerId;
 
     if (!currentPiId || !selectedManufacturerId) {
-       return [];
+       return allPurchaseOrders.map(po => ({ value: po.id.toString(), label: po.poNumber }));
     }
     
     return allPurchaseOrders
