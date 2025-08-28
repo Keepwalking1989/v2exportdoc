@@ -701,7 +701,7 @@ export function ExportDocumentFormV2({
         
         form.reset({
             ...getDefaultFormValues(nextExportInvoiceNumber),
-            exporterId: po.exporterId,
+            exporterId: pi.exporterId,
             clientId: pi.clientId,
             performaInvoiceId: pi.id,
             purchaseOrderId: po.id,
@@ -720,8 +720,15 @@ export function ExportDocumentFormV2({
 }, [isEditing, initialData, sourcePoId, form, nextExportInvoiceNumber, allPurchaseOrders, allPerformaInvoices, allClients, allManufacturers]);
 
   const watchedClientId = form.watch('clientId');
-  const watchedPerformaInvoiceId = form.watch('performaInvoiceId');
+  const watchedExporterId = form.watch('exporterId');
   const watchedManufacturerDetails = form.watch('manufacturerDetails');
+  const watchedPerformaInvoiceId = form.watch('performaInvoiceId');
+
+  // Find names for debug info
+  const exporterName = useMemo(() => allExporters.find(e => e.id === watchedExporterId)?.companyName, [watchedExporterId, allExporters]);
+  const clientName = useMemo(() => allClients.find(c => c.id === watchedClientId)?.companyName, [watchedClientId, allClients]);
+  const manufacturerName = useMemo(() => allManufacturers.find(m => m.id === watchedManufacturerDetails?.[0]?.manufacturerId)?.companyName, [watchedManufacturerDetails, allManufacturers]);
+  
 
   // Cascading Resets for NEW forms
   useEffect(() => {
@@ -746,13 +753,9 @@ export function ExportDocumentFormV2({
   );
   
   const piOptions = useMemo(() => {
-    const currentClientId = watchedClientId;
-    if (!currentClientId) {
-        return allPerformaInvoices.map(pi => ({ value: pi.id.toString(), label: pi.invoiceNumber }));
-    }
-    
+    if (!watchedClientId) return [];
     return allPerformaInvoices
-      .filter(pi => String(pi.clientId) === String(currentClientId))
+      .filter(pi => String(pi.clientId) === String(watchedClientId))
       .map(pi => ({ value: pi.id.toString(), label: pi.invoiceNumber }));
   }, [watchedClientId, allPerformaInvoices]);
 
@@ -761,7 +764,7 @@ export function ExportDocumentFormV2({
     const selectedManufacturerId = watchedManufacturerDetails?.[0]?.manufacturerId;
 
     if (!currentPiId || !selectedManufacturerId) {
-       return allPurchaseOrders.map(po => ({ value: po.id.toString(), label: po.poNumber }))
+       return [];
     }
     
     return allPurchaseOrders
@@ -818,6 +821,15 @@ export function ExportDocumentFormV2({
       <CardContent>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
+            {/* --- DEBUG BLOCK START --- */}
+            <div className="p-4 border-2 border-dashed border-red-500 bg-red-50 rounded-lg">
+                <h3 className="font-bold text-red-700 mb-2">Temporary Debug Info</h3>
+                <p className="text-sm"><strong>Exporter:</strong> {exporterName || 'Not Set'}</p>
+                <p className="text-sm"><strong>Client:</strong> {clientName || 'Not Set'}</p>
+                <p className="text-sm"><strong>Manufacturer:</strong> {manufacturerName || 'Not Set'}</p>
+            </div>
+            {/* --- DEBUG BLOCK END --- */}
+            
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                 <FormField control={form.control} name="exportInvoiceNumber" render={({ field }) => ( <FormItem><FormLabel className="flex items-center gap-2"><Hash className="h-4 w-4 text-muted-foreground" />Export Invoice No. *</FormLabel><FormControl><Input placeholder="e.g. EXP/HEM/001/25-26" {...field} /></FormControl><FormMessage /></FormItem>)} />
                 <FormField control={form.control} name="exportInvoiceDate" render={({ field }) => ( <FormItem className="flex flex-col"><FormLabel className="flex items-center gap-2"><CalendarIcon className="h-4 w-4 text-muted-foreground" />Export Invoice Date *</FormLabel><Popover><PopoverTrigger asChild><FormControl><Button variant={"outline"} className={cn("w-full pl-3 text-left font-normal",!field.value && "text-muted-foreground")}>{field.value ? format(field.value, "PPP"): <span>Pick a date</span>}<CalendarIcon className="ml-auto h-4 w-4 opacity-50" /></Button></FormControl></PopoverTrigger><PopoverContent className="w-auto p-0" align="start"><Calendar mode="single" selected={field.value} onSelect={field.onChange} disabled={(date) =>date > new Date() || date < new Date("2000-01-01")} initialFocus /></PopoverContent></Popover><FormMessage /></FormItem>)} />
