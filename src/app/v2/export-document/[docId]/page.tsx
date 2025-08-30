@@ -123,6 +123,10 @@ export default function DocumentDataPageV2() {
 
 
   const updateDocumentInDb = async (updatedFields: Partial<ExportDocument>) => {
+    if (!docId) {
+      toast({ variant: "destructive", title: "Update Error", description: "Document ID is missing." });
+      return false;
+    }
     try {
         const response = await fetch(`/api/v2/export-document-data?id=${docId}`, {
             method: 'PUT',
@@ -135,6 +139,7 @@ export default function DocumentDataPageV2() {
         }
         
         if (document) {
+            // Update local state to reflect changes without a full refetch
             const updatedDoc = { ...document, ...updatedFields } as ExportDocument;
             setDocument(updatedDoc);
         }
@@ -415,8 +420,8 @@ export default function DocumentDataPageV2() {
   };
   
   const handleDownloadPackingList = () => {
-    if (!document || !sourcePi) {
-      toast({ variant: "destructive", title: "Error", description: "Document or source Performa Invoice data not loaded." });
+    if (!document) {
+      toast({ variant: "destructive", title: "Error", description: "Document data not loaded." });
       return;
     }
     const exporter = allExporters.find(e => String(e.id) === String(document.exporterId));
@@ -433,7 +438,7 @@ export default function DocumentDataPageV2() {
        toast({ variant: "destructive", title: "Error", description: "The primary manufacturer for this document is missing or has been deleted." });
        return;
     }
-    generatePackingListPdf(document, exporter, firstManufacturer, allProducts, allSizes, sourcePi);
+    generatePackingListPdf(document, exporter, firstManufacturer, allProducts, allSizes);
   };
   
   const handleDownloadAnnexure = async () => {

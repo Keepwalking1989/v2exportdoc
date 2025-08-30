@@ -146,48 +146,38 @@ export async function PUT(request: Request) {
             if (Object.prototype.hasOwnProperty.call(doc, key)) {
                 const docKey = key as keyof ExportDocument;
 
-                switch(docKey) {
-                    case 'exportInvoiceDate':
-                    case 'exchangeDate':
-                    case 'ewayBillDate':
-                    case 'shippingBillDate':
-                    case 'blDate':
-                        if (doc[docKey]) {
-                            updateData[docKey] = format(new Date(doc[docKey] as Date), 'yyyy-MM-dd HH:mm:ss');
-                        } else {
-                            updateData[docKey] = null;
-                        }
-                        break;
-                    case 'containerItems':
-                        updateData['containerItems_json'] = JSON.stringify(doc.containerItems || []);
-                        break;
-                    case 'manufacturerDetails':
-                        updateData['manufacturerDetails_json'] = JSON.stringify(doc.manufacturerDetails || []);
-                        break;
-                    case 'qcPhotos':
-                        updateData['qcPhotos_json'] = JSON.stringify(doc.qcPhotos || []);
-                        break;
-                    case 'samplePhotos':
-                        updateData['samplePhotos_json'] = JSON.stringify(doc.samplePhotos || []);
-                        break;
-                    case 'id':
-                    case 'isDeleted':
-                        // Ignore these fields from the update payload
-                        break;
-                    default:
-                        // For all other fields, add them directly if they are defined in the request
-                        if (doc[docKey] !== undefined) {
-                            // @ts-ignore
-                            updateData[docKey] = doc[docKey];
-                        }
-                        break;
+                // Handle date fields separately only if they exist in the payload
+                if (['exportInvoiceDate', 'exchangeDate', 'ewayBillDate', 'shippingBillDate', 'blDate'].includes(docKey)) {
+                    // @ts-ignore
+                    const dateValue = doc[docKey];
+                    if (dateValue) {
+                        // @ts-ignore
+                        updateData[docKey] = format(new Date(dateValue), 'yyyy-MM-dd HH:mm:ss');
+                    } else {
+                        // @ts-ignore
+                        updateData[docKey] = null;
+                    }
+                }
+                // Handle JSON fields
+                else if (['containerItems', 'manufacturerDetails', 'qcPhotos', 'samplePhotos'].includes(docKey)) {
+                     // @ts-ignore
+                    const jsonValue = doc[docKey];
+                    // @ts-ignore
+                    updateData[`${docKey}_json`] = JSON.stringify(jsonValue || []);
+                }
+                // Ignore fields that should not be updated
+                else if (!['id', 'isDeleted', 'createdAt'].includes(docKey)) {
+                    // For all other fields, add them directly if they are defined in the request
+                     // @ts-ignore
+                    if (doc[docKey] !== undefined) {
+                         // @ts-ignore
+                        updateData[docKey] = doc[docKey];
+                    }
                 }
             }
         }
         
         if (Object.keys(updateData).length === 0) {
-            // Nothing to update, but we shouldn't throw an error.
-            // This might happen if the request body is empty or contains only unhandled fields.
              await connection.commit();
              return NextResponse.json({ message: "No fields to update", id }, { status: 200 });
         }
