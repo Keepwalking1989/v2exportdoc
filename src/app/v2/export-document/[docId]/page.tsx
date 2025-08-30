@@ -123,19 +123,19 @@ export default function DocumentDataPageV2() {
 
 
   const updateDocumentInDb = async (updatedFields: Partial<ExportDocument>) => {
-    if (!document) return;
-    const updatedDoc = { ...document, ...updatedFields };
     try {
         const response = await fetch(`/api/v2/export-document-data?id=${docId}`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(updatedDoc)
+            body: JSON.stringify(updatedFields)
         });
         if (!response.ok) {
             const errorData = await response.json().catch(() => ({ message: 'Failed to parse error response from server.' }));
             throw new Error(errorData.message || 'Failed to update document');
         }
-        setDocument(updatedDoc); // Update state locally to re-render UI
+        // Optimistically update local state or refetch for consistency
+        const updatedDoc = { ...document, ...updatedFields } as ExportDocument;
+        setDocument(updatedDoc);
         return true;
     } catch (error: any) {
         console.error("Failed to update document in DB", error);
@@ -431,7 +431,7 @@ export default function DocumentDataPageV2() {
        toast({ variant: "destructive", title: "Error", description: "The primary manufacturer for this document is missing or has been deleted." });
        return;
     }
-    generatePackingListPdf(document, exporter, firstManufacturer, allProducts, allSizes);
+    generatePackingListPdf(document, exporter, firstManufacturer, allProducts, allSizes, sourcePi);
   };
   
   const handleDownloadAnnexure = async () => {
@@ -735,7 +735,7 @@ export default function DocumentDataPageV2() {
             <Card className="mt-4">
               <CardHeader className="flex flex-row items-center justify-between">
                 <div>
-                  <CardTitle>QC & Sample Photos</CardTitle>
+                  <CardTitle>QC &amp; Sample Photos</CardTitle>
                   <CardDescription>Upload and manage Quality Control and Sample photos for this document.</CardDescription>
                 </div>
                 {!isEditingPhotos && (
@@ -815,3 +815,5 @@ export default function DocumentDataPageV2() {
     </div>
   );
 }
+
+    

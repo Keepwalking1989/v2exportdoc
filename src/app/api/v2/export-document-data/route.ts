@@ -141,44 +141,70 @@ export async function PUT(request: Request) {
 
     const connection = await pool.getConnection();
     try {
-        const doc: ExportDocument = await request.json();
+        const doc: Partial<ExportDocument> = await request.json();
         
         await connection.beginTransaction();
 
-        // Create a clean object with only the fields that exist in the database table
-        const updateData = {
-            exporterId: doc.exporterId,
-            purchaseOrderId: doc.purchaseOrderId,
-            exportInvoiceNumber: doc.exportInvoiceNumber,
-            exportInvoiceDate: format(new Date(doc.exportInvoiceDate), 'yyyy-MM-dd HH:mm:ss'),
-            manufacturerDetails_json: JSON.stringify(doc.manufacturerDetails || []),
-            countryOfFinalDestination: doc.countryOfFinalDestination,
-            vesselFlightNo: doc.vesselFlightNo,
-            portOfLoading: doc.portOfLoading,
-            portOfDischarge: doc.portOfDischarge,
-            finalDestination: doc.finalDestination,
-            termsOfDeliveryAndPayment: doc.termsOfDeliveryAndPayment,
-            conversationRate: doc.conversationRate,
-            exchangeNotification: doc.exchangeNotification,
-            exchangeDate: doc.exchangeDate ? format(new Date(doc.exchangeDate), 'yyyy-MM-dd HH:mm:ss') : new Date(),
-            transporterId: doc.transporterId,
-            freight: doc.freight,
-            gst: doc.gst,
-            discount: doc.discount,
-            containerItems_json: JSON.stringify(doc.containerItems || []),
-            ewayBillNumber: doc.ewayBillNumber,
-            ewayBillDate: doc.ewayBillDate ? format(new Date(doc.ewayBillDate), 'yyyy-MM-dd HH:mm:ss') : null,
-            ewayBillDocument: doc.ewayBillDocument,
-            shippingBillNumber: doc.shippingBillNumber,
-            shippingBillDate: doc.shippingBillDate ? format(new Date(doc.shippingBillDate), 'yyyy-MM-dd HH:mm:ss') : null,
-            shippingBillDocument: doc.shippingBillDocument,
-            blNumber: doc.blNumber,
-            blDate: doc.blDate ? format(new Date(doc.blDate), 'yyyy-MM-dd HH:mm:ss') : null,
-            blDocument: doc.blDocument,
-            brcDocument: doc.brcDocument,
-            qcPhotos_json: JSON.stringify(doc.qcPhotos || []),
-            samplePhotos_json: JSON.stringify(doc.samplePhotos || []),
+        // Create a clean object with only the fields that exist in the request body
+        const updateData: { [key: string]: any } = {};
+
+        // Map frontend fields to DB fields (with _json suffix for JSON fields)
+        const fieldMapping: { [key in keyof ExportDocument]?: string } = {
+            exporterId: 'exporterId',
+            purchaseOrderId: 'purchaseOrderId',
+            exportInvoiceNumber: 'exportInvoiceNumber',
+            manufacturerDetails: 'manufacturerDetails_json',
+            countryOfFinalDestination: 'countryOfFinalDestination',
+            vesselFlightNo: 'vesselFlightNo',
+            portOfLoading: 'portOfLoading',
+            portOfDischarge: 'portOfDischarge',
+            finalDestination: 'finalDestination',
+            termsOfDeliveryAndPayment: 'termsOfDeliveryAndPayment',
+            conversationRate: 'conversationRate',
+            exchangeNotification: 'exchangeNotification',
+            transporterId: 'transporterId',
+            freight: 'freight',
+            gst: 'gst',
+            discount: 'discount',
+            containerItems: 'containerItems_json',
+            ewayBillNumber: 'ewayBillNumber',
+            ewayBillDocument: 'ewayBillDocument',
+            shippingBillNumber: 'shippingBillNumber',
+            shippingBillDocument: 'shippingBillDocument',
+            blNumber: 'blNumber',
+            blDocument: 'blDocument',
+            brcDocument: 'brcDocument',
+            qcPhotos: 'qcPhotos_json',
+            samplePhotos: 'samplePhotos_json',
         };
+        
+        // Dates need special handling
+        const dateFields = ['exportInvoiceDate', 'exchangeDate', 'ewayBillDate', 'shippingBillDate', 'blDate'];
+
+        for (const key in doc) {
+            const docKey = key as keyof ExportDocument;
+
+            if (dateFields.includes(docKey)) {
+                const dateValue = doc[docKey];
+                if (dateValue) {
+                    updateData[docKey] = format(new Date(dateValue as Date), 'yyyy-MM-dd HH:mm:ss');
+                } else {
+                    updateData[docKey] = null;
+                }
+            } else if (fieldMapping[docKey]) {
+                const dbField = fieldMapping[docKey]!;
+                const value = doc[docKey];
+                if (dbField.endsWith('_json')) {
+                    updateData[dbField] = JSON.stringify(value || []);
+                } else {
+                    updateData[dbField] = value;
+                }
+            }
+        }
+
+        if (Object.keys(updateData).length === 0) {
+            return NextResponse.json({ message: 'No fields to update' }, { status: 400 });
+        }
 
         await connection.query<OkPacket>(
             'UPDATE export_documents SET ? WHERE id = ?',
@@ -220,3 +246,5 @@ export async function DELETE(request: Request) {
         return NextResponse.json({ message: 'Error deleting export document' }, { status: 500 });
     }
 }
+
+    
