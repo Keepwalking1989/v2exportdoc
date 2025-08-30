@@ -130,8 +130,8 @@ export async function generateVgmPdf(
 
     // Container Weight Details Table (Redesigned)
     const containerTableBody = (docData.containerItems || []).map(container => {
-        const cargoWeight = (container.productItems || []).reduce((sum, item) => sum + (item.netWeight || 0), 0) +
-                           (container.sampleItems || []).reduce((sum, item) => sum + (item.netWeight || 0), 0);
+        const cargoWeight = (container.productItems || []).reduce((sum, item) => sum + (item.grossWeight || 0), 0) +
+                           (container.sampleItems || []).reduce((sum, item) => sum + (item.grossWeight || 0), 0);
         const tareWeight = container.tareWeight || 0;
         const totalWeight = cargoWeight + tareWeight; // This is the VGM
 
@@ -207,7 +207,7 @@ export async function generateVgmPdf(
         margin: { left: contentWidth / 2 + pageMargin + 80 },
         styles: { fontSize: 9 },
         didDrawCell: (data) => {
-            if (data.section === 'body' && data.row.index === 1) {
+            if (data.section === 'body' && data.row.index === 1) { // The empty cell
                 if (signatureImage) {
                     const cell = data.cell;
                     const imgWidth = 80;
