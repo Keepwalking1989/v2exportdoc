@@ -11,8 +11,8 @@ export const dynamic = 'force-dynamic';
 interface ExportDocumentRow extends RowDataPacket, Omit<ExportDocument, 'containerItems' | 'manufacturerDetails' | 'qcPhotos' | 'samplePhotos'> {
     containerItems_json: string | null;
     manufacturerDetails_json: string | null;
-    qcPhotos_json: string | null; // For MEDIUMTEXT column
-    samplePhotos_json: string | null; // For MEDIUMTEXT column
+    qcPhotos_json: string | null;
+    samplePhotos_json: string | null;
 }
 
 // GET handler to fetch all non-deleted export documents, or a single one by ID
@@ -151,7 +151,12 @@ export async function PUT(request: Request) {
                 if (value === undefined) continue;
 
                 if (['exportInvoiceDate', 'exchangeDate', 'ewayBillDate', 'shippingBillDate', 'blDate'].includes(docKey)) {
-                    updateData[docKey] = value ? format(new Date(value as string | Date), 'yyyy-MM-dd HH:mm:ss') : null;
+                     // Check if date is not null or undefined before formatting
+                    if (value) {
+                         updateData[docKey] = format(new Date(value as string | Date), 'yyyy-MM-dd HH:mm:ss');
+                    } else {
+                        updateData[docKey] = null;
+                    }
                 } else if (['containerItems', 'manufacturerDetails', 'qcPhotos', 'samplePhotos'].includes(docKey)) {
                     updateData[`${docKey}_json`] = JSON.stringify(value || []);
                 } else if (!['id', 'isDeleted', 'createdAt'].includes(docKey)) {
@@ -162,6 +167,7 @@ export async function PUT(request: Request) {
         
         if (Object.keys(updateData).length === 0) {
              await connection.commit();
+             connection.release();
              return NextResponse.json({ message: "No fields to update", id }, { status: 200 });
         }
 
