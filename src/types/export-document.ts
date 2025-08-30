@@ -83,9 +83,5 @@ export interface ExportDocument {
   // New field for BRC
   brcDocument?: string; // data URI
 
-  // QC and Sample Photos
-  qcPhotos?: string[];
-  samplePhotos?: string[];
-
   isDeleted?: boolean;
 }

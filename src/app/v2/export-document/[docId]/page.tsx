@@ -7,7 +7,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
-import { ArrowLeft, Download, Wind, Sailboat, Nfc, BadgeCheck, Edit, CalendarIcon, FileText as FileTextIcon, Camera, Image as ImageIcon } from 'lucide-react';
+import { ArrowLeft, Download, Wind, Sailboat, Nfc, BadgeCheck, Edit, CalendarIcon, FileText as FileTextIcon } from 'lucide-react';
 import { useEffect, useState, useMemo } from 'react';
 import type { ExportDocument } from '@/types/export-document';
 import type { Manufacturer } from '@/types/manufacturer';
@@ -32,7 +32,6 @@ import { generateVgmPdf } from '@/lib/vgm-pdf';
 import type { Company } from '@/types/company';
 import type { PerformaInvoice } from '@/types/performa-invoice';
 import type { PurchaseOrder } from '@/types/purchase-order';
-import Image from 'next/image';
 
 
 const ewayBillSchema = z.object({
@@ -60,12 +59,6 @@ const brcSchema = z.object({
   brcDocument: z.string().optional(), // data URI
 });
 type BrcFormValues = z.infer<typeof brcSchema>;
-
-const photosSchema = z.object({
-  qcPhotos: z.array(z.string()).optional(),
-  samplePhotos: z.array(z.string()).optional(),
-});
-type PhotosFormValues = z.infer<typeof photosSchema>;
 
 
 const DownloadOption = ({ label, onDownload }: { label: string, onDownload: () => void }) => (
@@ -103,7 +96,6 @@ export default function DocumentDataPageV2() {
   const [isEditingShippingBill, setIsEditingShippingBill] = useState(false);
   const [isEditingBl, setIsEditingBl] = useState(false);
   const [isEditingBrc, setIsEditingBrc] = useState(false);
-  const [isEditingPhotos, setIsEditingPhotos] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
 
 
@@ -119,7 +111,6 @@ export default function DocumentDataPageV2() {
   const shippingBillForm = useForm<ShippingBillFormValues>({ resolver: zodResolver(shippingBillSchema) });
   const blForm = useForm<BlFormValues>({ resolver: zodResolver(blSchema) });
   const brcForm = useForm<BrcFormValues>({ resolver: zodResolver(brcSchema) });
-  const photosForm = useForm<PhotosFormValues>({ resolver: zodResolver(photosSchema) });
 
 
   const updateDocumentInDb = async (updatedFields: Partial<ExportDocument>) => {
@@ -139,7 +130,6 @@ export default function DocumentDataPageV2() {
         }
         
         if (document) {
-            // Update local state to reflect changes without a full refetch
             const updatedDoc = { ...document, ...updatedFields } as ExportDocument;
             setDocument(updatedDoc);
         }
@@ -176,8 +166,6 @@ export default function DocumentDataPageV2() {
                 ewayBillDate: docData.ewayBillDate ? new Date(docData.ewayBillDate) : undefined,
                 shippingBillDate: docData.shippingBillDate ? new Date(docData.shippingBillDate) : undefined,
                 blDate: docData.blDate ? new Date(docData.blDate) : undefined,
-                qcPhotos: docData.qcPhotos || [],
-                samplePhotos: docData.samplePhotos || [],
             };
             setDocument(parsedDoc);
             
@@ -185,14 +173,11 @@ export default function DocumentDataPageV2() {
             if (!parsedDoc.shippingBillNumber) setIsEditingShippingBill(true);
             if (!parsedDoc.blNumber) setIsEditingBl(true);
             if (!parsedDoc.brcDocument) setIsEditingBrc(true);
-            if (!parsedDoc.qcPhotos?.length && !parsedDoc.samplePhotos?.length) setIsEditingPhotos(true);
-
 
             ewayBillForm.reset({ ewayBillNumber: parsedDoc.ewayBillNumber, ewayBillDate: parsedDoc.ewayBillDate, ewayBillDocument: parsedDoc.ewayBillDocument });
             shippingBillForm.reset({ shippingBillNumber: parsedDoc.shippingBillNumber, shippingBillDate: parsedDoc.shippingBillDate, shippingBillDocument: parsedDoc.shippingBillDocument });
             blForm.reset({ blNumber: parsedDoc.blNumber, blDate: parsedDoc.blDate, blDocument: parsedDoc.blDocument });
             brcForm.reset({ brcDocument: parsedDoc.brcDocument });
-            photosForm.reset({ qcPhotos: parsedDoc.qcPhotos, samplePhotos: parsedDoc.samplePhotos });
 
             setAllExporters(await expRes.json());
             setAllManufacturers(await manuRes.json());
@@ -223,49 +208,6 @@ export default function DocumentDataPageV2() {
     fetchAllData();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [docId, toast]);
-
-
-  const handleMultipleFileChange = async (e: React.ChangeEvent<HTMLInputElement>, fieldName: 'qcPhotos' | 'samplePhotos') => {
-    const files = e.target.files;
-    if (!files || files.length === 0) return;
-    
-    setIsUploading(true);
-    toast({ title: "Uploading...", description: `Uploading ${files.length} images. Please wait.` });
-
-    const uploadPromises = Array.from(files).map(file => {
-      return new Promise<string>((resolve, reject) => {
-        const reader = new FileReader();
-        reader.readAsDataURL(file);
-        reader.onloadend = async () => {
-          try {
-            const fileData = reader.result;
-            const response = await fetch('/api/v2/upload', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ fileData, fileName: file.name }),
-            });
-            if (!response.ok) reject(new Error(`Failed to upload ${file.name}`));
-            const { filePath } = await response.json();
-            resolve(filePath);
-          } catch (uploadError) {
-            reject(uploadError);
-          }
-        };
-        reader.onerror = reject;
-      });
-    });
-
-    try {
-      const newFilePaths = await Promise.all(uploadPromises);
-      const existingPaths = photosForm.getValues(fieldName) || [];
-      photosForm.setValue(fieldName, [...existingPaths, ...newFilePaths], { shouldDirty: true, shouldValidate: true });
-      toast({ title: "Uploads Successful", description: `${files.length} images have been uploaded.` });
-    } catch (error: any) {
-      toast({ variant: "destructive", title: "Upload Error", description: error.message });
-    } finally {
-      setIsUploading(false);
-    }
-  };
   
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>, formSetter: (value: string) => void) => {
     const file = e.target.files?.[0];
@@ -326,13 +268,6 @@ export default function DocumentDataPageV2() {
     if (await updateDocumentInDb(data)) {
         setIsEditingBrc(false);
         toast({ title: "BRC Document Saved" });
-    }
-  };
-
-   const onSavePhotos = async (data: PhotosFormValues) => {
-    if (await updateDocumentInDb(data)) {
-      setIsEditingPhotos(false);
-      toast({ title: "Photos Saved", description: "QC and Sample photos have been successfully updated." });
     }
   };
 
@@ -465,8 +400,8 @@ export default function DocumentDataPageV2() {
   };
 
   const handleDownloadVgm = () => {
-    if (!document) {
-      toast({ variant: "destructive", title: "Error", description: "Document data not loaded." });
+    if (!document || !sourcePi) {
+      toast({ variant: "destructive", title: "Error", description: "Document or PI data not loaded." });
       return;
     }
     const exporter = allExporters.find(e => String(e.id) === String(document.exporterId));
@@ -504,13 +439,12 @@ export default function DocumentDataPageV2() {
           <Button onClick={() => router.push('/v2/export-document')} variant="outline"><ArrowLeft className="mr-2 h-4 w-4" /> Back to List</Button>
         </div>
         <Tabs defaultValue="download" className="w-full">
-          <TabsList className="grid w-full grid-cols-2 md:grid-cols-6">
+          <TabsList className="grid w-full grid-cols-2 md:grid-cols-5">
             <TabsTrigger value="download"><Download className="mr-2 h-4 w-4" /> Download</TabsTrigger>
             <TabsTrigger value="eway"><Wind className="mr-2 h-4 w-4" /> Eway Bill</TabsTrigger>
             <TabsTrigger value="shipping"><Sailboat className="mr-2 h-4 w-4" /> Shipping Bill</TabsTrigger>
             <TabsTrigger value="rfid"><Nfc className="mr-2 h-4 w-4" /> RFID Details</TabsTrigger>
             <TabsTrigger value="brc"><BadgeCheck className="mr-2 h-4 w-4" /> BRC Doc</TabsTrigger>
-            <TabsTrigger value="photos"><Camera className="mr-2 h-4 w-4" /> Photos</TabsTrigger>
           </TabsList>
 
           <TabsContent value="download">
@@ -738,84 +672,6 @@ export default function DocumentDataPageV2() {
             </Card>
           </TabsContent>
 
-          <TabsContent value="photos">
-            <Card className="mt-4">
-              <CardHeader className="flex flex-row items-center justify-between">
-                <div>
-                  <CardTitle>QC &amp; Sample Photos</CardTitle>
-                  <CardDescription>Upload and manage Quality Control and Sample photos for this document.</CardDescription>
-                </div>
-                {!isEditingPhotos && (
-                  <Button variant="outline" onClick={() => setIsEditingPhotos(true)}>
-                    <Edit className="mr-2 h-4 w-4" /> Edit Photos
-                  </Button>
-                )}
-              </CardHeader>
-              <Form {...photosForm}>
-                <form onSubmit={photosForm.handleSubmit(onSavePhotos)}>
-                  <CardContent className="space-y-8">
-                    {/* QC Photos Section */}
-                    <div className="space-y-4">
-                      <h3 className="text-lg font-semibold text-primary font-headline">Quality Control (QC) Photos</h3>
-                      {isEditingPhotos ? (
-                        <FormItem>
-                          <FormLabel>Upload QC Photos</FormLabel>
-                          <FormControl>
-                            <Input type="file" multiple onChange={(e) => handleMultipleFileChange(e, 'qcPhotos')} accept="image/*" disabled={isUploading} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      ) : null}
-                      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
-                        {photosForm.getValues('qcPhotos')?.map((url, index) => (
-                          <div key={index} className="relative group">
-                             <a href={url} download={`QC_Photo_${index + 1}.jpg`} target="_blank" rel="noopener noreferrer">
-                                <Image src={url} alt={`QC Photo ${index + 1}`} width={150} height={150} className="w-full h-auto aspect-square object-cover rounded-md border" />
-                             </a>
-                          </div>
-                        ))}
-                      </div>
-                      {!photosForm.getValues('qcPhotos')?.length && !isEditingPhotos && (
-                        <p className="text-sm text-muted-foreground">No QC photos uploaded.</p>
-                      )}
-                    </div>
-                    <Separator />
-                    {/* Sample Photos Section */}
-                    <div className="space-y-4">
-                      <h3 className="text-lg font-semibold text-primary font-headline">Sample Photos</h3>
-                       {isEditingPhotos ? (
-                        <FormItem>
-                          <FormLabel>Upload Sample Photos</FormLabel>
-                          <FormControl>
-                            <Input type="file" multiple onChange={(e) => handleMultipleFileChange(e, 'samplePhotos')} accept="image/*" disabled={isUploading} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      ) : null}
-                      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
-                        {photosForm.getValues('samplePhotos')?.map((url, index) => (
-                           <div key={index} className="relative group">
-                             <a href={url} download={`Sample_Photo_${index + 1}.jpg`} target="_blank" rel="noopener noreferrer">
-                                <Image src={url} alt={`Sample Photo ${index + 1}`} width={150} height={150} className="w-full h-auto aspect-square object-cover rounded-md border" />
-                             </a>
-                          </div>
-                        ))}
-                      </div>
-                       {!photosForm.getValues('samplePhotos')?.length && !isEditingPhotos && (
-                        <p className="text-sm text-muted-foreground">No sample photos uploaded.</p>
-                      )}
-                    </div>
-                  </CardContent>
-                  {isEditingPhotos && (
-                    <CardFooter className="justify-end gap-2">
-                       <Button type="button" variant="ghost" onClick={() => { setIsEditingPhotos(false); photosForm.reset({ qcPhotos: document?.qcPhotos || [], samplePhotos: document?.samplePhotos || [] }); }}>Cancel</Button>
-                       <Button type="submit" disabled={isUploading}>Save All Photos</Button>
-                    </CardFooter>
-                  )}
-                </form>
-              </Form>
-            </Card>
-          </TabsContent>
         </Tabs>
       </main>
       <footer className="py-6 text-center text-sm text-muted-foreground border-t">© {currentYear} HEMITH ERP. All rights reserved.</footer>
