@@ -32,7 +32,7 @@ function drawDocument(doc: jsPDF, docData: ExportDocument, exporter: Company, ma
     bodyData.push({ label: '1   Name Of Exporter:', value: `${exporter.companyName}\n${exporter.address}` });
     bodyData.push({ label: '2a  ICE No:', value: exporter.iecNumber || 'N/A' });
     bodyData.push({ label: ' b  Branch Code:', value: 'N/A' });
-    bodyData.push({ label: ' c  BIN No:', value: exporter.gstNumber ? exporter.gstNumber.substring(2, 12) : 'N/A' });
+    bodyData.push({ label: ' c  BIN No:', value: 'N/A' });
     bodyData.push({ label: '3   Name Of The Manufacturer (Stuffing Details):', value: manufacturerDetailsText });
     bodyData.push({ label: '4   Date Of Examination:', value: docData.exportInvoiceDate ? format(new Date(docData.exportInvoiceDate), 'dd/MM/yyyy') : 'N/A' });
     bodyData.push({ label: '5   Name of the Inspector of GST', value: 'SELF SEALNG' });
