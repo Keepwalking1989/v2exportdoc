@@ -5,7 +5,7 @@ import { useParams, useRouter } from 'next/navigation';
 import { Header } from '@/components/layout/header';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
+import { Button, buttonVariants } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { ArrowLeft, Download, Wind, Sailboat, Nfc, BadgeCheck, Edit, CalendarIcon, FileText as FileTextIcon, Camera, ImageDown, Save } from 'lucide-react';
 import { useEffect, useState, useMemo } from 'react';
@@ -416,8 +416,8 @@ export default function DocumentDataPageV2() {
   };
   
   const handleDownloadPackingList = () => {
-    if (!document || !sourcePi) {
-      toast({ variant: "destructive", title: "Error", description: "Document or source PI data not loaded." });
+    if (!document) {
+      toast({ variant: "destructive", title: "Error", description: "Document data not loaded." });
       return;
     }
     const exporter = allExporters.find(e => String(e.id) === String(document.exporterId));
@@ -434,7 +434,7 @@ export default function DocumentDataPageV2() {
        toast({ variant: "destructive", title: "Error", description: "The primary manufacturer for this document is missing or has been deleted." });
        return;
     }
-    generatePackingListPdf(document, exporter, firstManufacturer, allProducts, allSizes, sourcePi);
+    generatePackingListPdf(document, exporter, firstManufacturer, allProducts, allSizes);
   };
   
   const handleDownloadAnnexure = async () => {
@@ -461,8 +461,8 @@ export default function DocumentDataPageV2() {
   };
 
   const handleDownloadVgm = () => {
-    if (!document || !sourcePi) {
-      toast({ variant: "destructive", title: "Error", description: "Document or PI data not loaded." });
+    if (!document) {
+      toast({ variant: "destructive", title: "Error", description: "Document data not loaded." });
       return;
     }
     const exporter = allExporters.find(e => String(e.id) === String(document.exporterId));
