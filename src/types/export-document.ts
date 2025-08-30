@@ -83,5 +83,9 @@ export interface ExportDocument {
   // New field for BRC
   brcDocument?: string; // data URI
 
+  // Fields for the new Photo Tab
+  photoTabText?: string;
+  photoTabImages?: string[];
+
   isDeleted?: boolean;
 }

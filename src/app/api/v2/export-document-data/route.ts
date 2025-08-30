@@ -1,4 +1,5 @@
 
+
 import { NextResponse } from 'next/server';
 import { pool } from '@/lib/db';
 import type { ExportDocument } from '@/types/export-document';
@@ -7,9 +8,10 @@ import { format } from 'date-fns';
 
 export const dynamic = 'force-dynamic';
 
-interface ExportDocumentRow extends RowDataPacket, Omit<ExportDocument, 'containerItems' | 'manufacturerDetails'> {
+interface ExportDocumentRow extends RowDataPacket, Omit<ExportDocument, 'containerItems' | 'manufacturerDetails' | 'photoTabImages'> {
     containerItems_json: string | null;
     manufacturerDetails_json: string | null;
+    photoTabImages_json: string | null; // For MEDIUMTEXT column
 }
 
 // GET handler to fetch all non-deleted export documents, or a single one by ID
@@ -37,6 +39,7 @@ export async function GET(request: Request) {
             purchaseOrderId: row.purchaseOrderId?.toString(),
             containerItems: JSON.parse(row.containerItems_json || '[]'),
             manufacturerDetails: JSON.parse(row.manufacturerDetails_json || '[]'),
+            photoTabImages: JSON.parse(row.photoTabImages_json || '[]'),
             exportInvoiceDate: new Date(row.exportInvoiceDate),
             exchangeDate: new Date(row.exchangeDate),
             ewayBillDate: row.ewayBillDate ? new Date(row.ewayBillDate) : undefined,
@@ -51,13 +54,14 @@ export async function GET(request: Request) {
         );
         connection.release();
         const documents: ExportDocument[] = rows.map(row => {
-            const { containerItems_json, manufacturerDetails_json, ...docData } = row;
+            const { containerItems_json, manufacturerDetails_json, photoTabImages_json, ...docData } = row;
             return {
                 ...docData,
                 id: docData.id.toString(),
                 purchaseOrderId: docData.purchaseOrderId?.toString(),
                 containerItems: JSON.parse(containerItems_json || '[]'),
                 manufacturerDetails: JSON.parse(manufacturerDetails_json || '[]'),
+                photoTabImages: JSON.parse(photoTabImages_json || '[]'),
                 exportInvoiceDate: new Date(docData.exportInvoiceDate),
                 exchangeDate: new Date(docData.exchangeDate),
                 ewayBillDate: docData.ewayBillDate ? new Date(docData.ewayBillDate) : undefined,
@@ -78,7 +82,7 @@ export async function POST(request: Request) {
     const connection = await pool.getConnection();
     try {
         const doc: ExportDocument = await request.json();
-        const { containerItems, manufacturerDetails, ...docData } = doc;
+        const { containerItems, manufacturerDetails, photoTabImages, ...docData } = doc;
         
         await connection.beginTransaction();
 
@@ -101,6 +105,7 @@ export async function POST(request: Request) {
                 blDate,
                 containerItems_json: JSON.stringify(containerItems || []),
                 manufacturerDetails_json: JSON.stringify(manufacturerDetails || []),
+                photoTabImages_json: JSON.stringify(photoTabImages || []),
             }
         );
         
@@ -132,37 +137,26 @@ export async function PUT(request: Request) {
         await connection.beginTransaction();
 
         const updateData: { [key: string]: any } = {};
-
+        
         // Iterate over the keys present in the request body to build update object
         for (const key in doc) {
             if (Object.prototype.hasOwnProperty.call(doc, key)) {
                 const docKey = key as keyof ExportDocument;
 
-                // Handle date fields separately only if they exist in the payload
                 if (['exportInvoiceDate', 'exchangeDate', 'ewayBillDate', 'shippingBillDate', 'blDate'].includes(docKey)) {
                     // @ts-ignore
                     const dateValue = doc[docKey];
-                    if (dateValue) {
-                        // @ts-ignore
-                        updateData[docKey] = format(new Date(dateValue), 'yyyy-MM-dd HH:mm:ss');
-                    } else {
-                        // @ts-ignore
-                        updateData[docKey] = null;
-                    }
-                }
-                // Handle JSON fields
-                else if (['containerItems', 'manufacturerDetails'].includes(docKey)) {
-                     // @ts-ignore
+                    // @ts-ignore
+                    updateData[docKey] = dateValue ? format(new Date(dateValue), 'yyyy-MM-dd HH:mm:ss') : null;
+                } else if (['containerItems', 'manufacturerDetails', 'photoTabImages'].includes(docKey)) {
+                    // @ts-ignore
                     const jsonValue = doc[docKey];
                     // @ts-ignore
                     updateData[`${docKey}_json`] = JSON.stringify(jsonValue || []);
-                }
-                // Ignore fields that should not be updated
-                else if (!['id', 'isDeleted', 'createdAt'].includes(docKey)) {
-                    // For all other fields, add them directly if they are defined in the request
-                     // @ts-ignore
+                } else if (!['id', 'isDeleted', 'createdAt'].includes(docKey)) {
+                    // @ts-ignore
                     if (doc[docKey] !== undefined) {
-                         // @ts-ignore
+                        // @ts-ignore
                         updateData[docKey] = doc[docKey];
                     }
                 }
