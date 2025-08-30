@@ -10,9 +10,6 @@ export const dynamic = 'force-dynamic';
 interface ExportDocumentRow extends RowDataPacket, Omit<ExportDocument, 'containerItems' | 'manufacturerDetails' | 'qcPhotos' | 'samplePhotos'> {
     containerItems_json: string | null;
     manufacturerDetails_json: string | null;
-    // NOTE FOR DEVELOPER: The `qcPhotos_json` and `samplePhotos_json` columns should be MEDIUMTEXT to handle many image URLs.
-    // Example SQL: ALTER TABLE export_documents MODIFY qcPhotos_json MEDIUMTEXT;
-    // Example SQL: ALTER TABLE export_documents MODIFY samplePhotos_json MEDIUMTEXT;
     qcPhotos_json: string | null;
     samplePhotos_json: string | null;
 }
@@ -46,7 +43,6 @@ export async function GET(request: Request) {
             samplePhotos: JSON.parse(row.samplePhotos_json || '[]'),
             exportInvoiceDate: new Date(row.exportInvoiceDate),
             exchangeDate: new Date(row.exchangeDate),
-            // Ensure nested dates are parsed
             ewayBillDate: row.ewayBillDate ? new Date(row.ewayBillDate) : undefined,
             shippingBillDate: row.shippingBillDate ? new Date(row.shippingBillDate) : undefined,
             blDate: row.blDate ? new Date(row.blDate) : undefined,
@@ -95,7 +91,6 @@ export async function POST(request: Request) {
         const formattedExportInvoiceDate = format(new Date(docData.exportInvoiceDate), 'yyyy-MM-dd HH:mm:ss');
         const formattedExchangeDate = format(new Date(docData.exchangeDate), 'yyyy-MM-dd HH:mm:ss');
         
-        // Handle optional dates
         const ewayBillDate = docData.ewayBillDate ? format(new Date(docData.ewayBillDate), 'yyyy-MM-dd HH:mm:ss') : null;
         const shippingBillDate = docData.shippingBillDate ? format(new Date(docData.shippingBillDate), 'yyyy-MM-dd HH:mm:ss') : null;
         const blDate = docData.blDate ? format(new Date(docData.blDate), 'yyyy-MM-dd HH:mm:ss') : null;
@@ -148,66 +143,45 @@ export async function PUT(request: Request) {
 
         // Iterate over the keys present in the request body
         for (const key in doc) {
-            const docKey = key as keyof ExportDocument;
+            if (Object.prototype.hasOwnProperty.call(doc, key)) {
+                const docKey = key as keyof ExportDocument;
 
-            switch(docKey) {
-                case 'exportInvoiceDate':
-                case 'exchangeDate':
-                case 'ewayBillDate':
-                case 'shippingBillDate':
-                case 'blDate':
-                    if (doc[docKey]) {
-                        updateData[docKey] = format(new Date(doc[docKey] as Date), 'yyyy-MM-dd HH:mm:ss');
-                    } else {
-                        updateData[docKey] = null;
-                    }
-                    break;
-                case 'containerItems':
-                    updateData['containerItems_json'] = JSON.stringify(doc.containerItems || []);
-                    break;
-                case 'manufacturerDetails':
-                    updateData['manufacturerDetails_json'] = JSON.stringify(doc.manufacturerDetails || []);
-                    break;
-                case 'qcPhotos':
-                    updateData['qcPhotos_json'] = JSON.stringify(doc.qcPhotos || []);
-                    break;
-                case 'samplePhotos':
-                    updateData['samplePhotos_json'] = JSON.stringify(doc.samplePhotos || []);
-                    break;
-                // Add all other non-JSON, non-date fields here
-                case 'exporterId':
-                case 'purchaseOrderId':
-                case 'exportInvoiceNumber':
-                case 'countryOfFinalDestination':
-                case 'vesselFlightNo':
-                case 'portOfLoading':
-                case 'portOfDischarge':
-                case 'finalDestination':
-                case 'termsOfDeliveryAndPayment':
-                case 'conversationRate':
-                case 'exchangeNotification':
-                case 'transporterId':
-                case 'freight':
-                case 'gst':
-                case 'discount':
-                case 'ewayBillNumber':
-                case 'ewayBillDocument':
-                case 'shippingBillNumber':
-                case 'shippingBillDocument':
-                case 'blNumber':
-                case 'blDocument':
-                case 'brcDocument':
-                case 'clientId': // Added from other pages
-                case 'performaInvoiceId': // Added from other pages
-                    // @ts-ignore
-                    if (doc[docKey] !== undefined) {
-                         // @ts-ignore
-                        updateData[docKey] = doc[docKey];
-                    }
-                    break;
-                default:
-                    // Ignore fields like 'id', 'createdAt', etc.
-                    break;
+                switch(docKey) {
+                    case 'exportInvoiceDate':
+                    case 'exchangeDate':
+                    case 'ewayBillDate':
+                    case 'shippingBillDate':
+                    case 'blDate':
+                        if (doc[docKey]) {
+                            updateData[docKey] = format(new Date(doc[docKey] as Date), 'yyyy-MM-dd HH:mm:ss');
+                        } else {
+                            updateData[docKey] = null;
+                        }
+                        break;
+                    case 'containerItems':
+                        updateData['containerItems_json'] = JSON.stringify(doc.containerItems || []);
+                        break;
+                    case 'manufacturerDetails':
+                        updateData['manufacturerDetails_json'] = JSON.stringify(doc.manufacturerDetails || []);
+                        break;
+                    case 'qcPhotos':
+                        updateData['qcPhotos_json'] = JSON.stringify(doc.qcPhotos || []);
+                        break;
+                    case 'samplePhotos':
+                        updateData['samplePhotos_json'] = JSON.stringify(doc.samplePhotos || []);
+                        break;
+                    case 'id':
+                    case 'isDeleted':
+                        // Ignore these fields from the update payload
+                        break;
+                    default:
+                        // For all other fields, add them directly if they are defined in the request
+                        if (doc[docKey] !== undefined) {
+                            // @ts-ignore
+                            updateData[docKey] = doc[docKey];
+                        }
+                        break;
+                }
             }
         }
         
@@ -215,7 +189,7 @@ export async function PUT(request: Request) {
             // Nothing to update, but we shouldn't throw an error.
             // This might happen if the request body is empty or contains only unhandled fields.
              await connection.commit();
-             return NextResponse.json({ ...doc, id }, { status: 200 });
+             return NextResponse.json({ message: "No fields to update", id }, { status: 200 });
         }
 
         await connection.query<OkPacket>(
@@ -233,7 +207,7 @@ export async function PUT(request: Request) {
         if (error.code === 'ER_DATA_TOO_LONG') {
              return NextResponse.json({ message: 'The list of photos is too large to save. The database column may need to be changed to MEDIUMTEXT.' }, { status: 500 });
         }
-        return NextResponse.json({ message: 'Error updating export document' }, { status: 500 });
+        return NextResponse.json({ message: 'Error updating export document', details: error.message }, { status: 500 });
     } finally {
         connection.release();
     }

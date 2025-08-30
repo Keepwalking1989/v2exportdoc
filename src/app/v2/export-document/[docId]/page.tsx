@@ -134,8 +134,6 @@ export default function DocumentDataPageV2() {
             throw new Error(errorData.message || 'Failed to update document in DB');
         }
         
-        // ** THE FIX IS HERE **
-        // Guard against updating state if the base document hasn't loaded yet.
         if (document) {
             const updatedDoc = { ...document, ...updatedFields } as ExportDocument;
             setDocument(updatedDoc);
@@ -336,7 +334,6 @@ export default function DocumentDataPageV2() {
   const ewayBillData = useMemo(() => {
     if (!document || !allManufacturers.length || !allSizes.length || !allProducts.length) return null;
     
-    // Using the first manufacturer as the primary for Eway Bill
     const primaryManufacturerInfo = document.manufacturerDetails?.[0];
     const manufacturer = primaryManufacturerInfo ? allManufacturers.find(m => String(m.id) === String(primaryManufacturerInfo.manufacturerId)) : undefined;
     
@@ -418,8 +415,8 @@ export default function DocumentDataPageV2() {
   };
   
   const handleDownloadPackingList = () => {
-    if (!document) {
-      toast({ variant: "destructive", title: "Error", description: "Document data not loaded." });
+    if (!document || !sourcePi) {
+      toast({ variant: "destructive", title: "Error", description: "Document or source Performa Invoice data not loaded." });
       return;
     }
     const exporter = allExporters.find(e => String(e.id) === String(document.exporterId));
@@ -436,7 +433,7 @@ export default function DocumentDataPageV2() {
        toast({ variant: "destructive", title: "Error", description: "The primary manufacturer for this document is missing or has been deleted." });
        return;
     }
-    generatePackingListPdf(document, exporter, firstManufacturer, allProducts, allSizes);
+    generatePackingListPdf(document, exporter, firstManufacturer, allProducts, allSizes, sourcePi);
   };
   
   const handleDownloadAnnexure = async () => {
