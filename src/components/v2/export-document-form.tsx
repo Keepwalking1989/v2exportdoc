@@ -723,15 +723,8 @@ export function ExportDocumentFormV2({
 }, [isEditing, initialData, sourcePoId, form, nextExportInvoiceNumber, allPurchaseOrders, allPerformaInvoices, allClients, allManufacturers]);
 
   const watchedClientId = form.watch('clientId');
-  const watchedExporterId = form.watch('exporterId');
-  const watchedManufacturerDetails = form.watch('manufacturerDetails');
   const watchedPerformaInvoiceId = form.watch('performaInvoiceId');
-
-  // Find names for debug info
-  const exporterName = useMemo(() => allExporters.find(e => e.id === watchedExporterId)?.companyName, [watchedExporterId, allExporters]);
-  const clientName = useMemo(() => allClients.find(c => c.id === watchedClientId)?.companyName, [watchedClientId, allClients]);
-  const manufacturerName = useMemo(() => allManufacturers.find(m => m.id === watchedManufacturerDetails?.[0]?.manufacturerId)?.companyName, [watchedManufacturerDetails, allManufacturers]);
-  
+  const watchedManufacturerDetails = form.watch('manufacturerDetails');
 
   // Cascading Resets for NEW forms
   useEffect(() => {
@@ -815,12 +808,6 @@ export function ExportDocumentFormV2({
       <CardContent>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
-            <div className="p-4 border-2 border-dashed border-red-500 bg-red-50 rounded-lg">
-                <h3 className="font-bold text-red-700 mb-2">Temporary Debug Info</h3>
-                <p className="text-sm"><strong>Exporter:</strong> {exporterName || 'Not Set'}</p>
-                <p className="text-sm"><strong>Client:</strong> {clientName || 'Not Set'}</p>
-                <p className="text-sm"><strong>Manufacturer:</strong> {manufacturerName || 'Not Set'}</p>
-            </div>
             
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                 <FormField control={form.control} name="exportInvoiceNumber" render={({ field }) => ( <FormItem><FormLabel className="flex items-center gap-2"><Hash className="h-4 w-4 text-muted-foreground" />Export Invoice No. *</FormLabel><FormControl><Input placeholder="e.g. EXP/HEM/001/25-26" {...field} /></FormControl><FormMessage /></FormItem>)} />
