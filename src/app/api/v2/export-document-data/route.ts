@@ -142,68 +142,80 @@ export async function PUT(request: Request) {
     const connection = await pool.getConnection();
     try {
         const doc: Partial<ExportDocument> = await request.json();
-        
         await connection.beginTransaction();
 
-        // Create a clean object with only the fields that exist in the request body
         const updateData: { [key: string]: any } = {};
 
-        // Map frontend fields to DB fields (with _json suffix for JSON fields)
-        const fieldMapping: { [key in keyof ExportDocument]?: string } = {
-            exporterId: 'exporterId',
-            purchaseOrderId: 'purchaseOrderId',
-            exportInvoiceNumber: 'exportInvoiceNumber',
-            manufacturerDetails: 'manufacturerDetails_json',
-            countryOfFinalDestination: 'countryOfFinalDestination',
-            vesselFlightNo: 'vesselFlightNo',
-            portOfLoading: 'portOfLoading',
-            portOfDischarge: 'portOfDischarge',
-            finalDestination: 'finalDestination',
-            termsOfDeliveryAndPayment: 'termsOfDeliveryAndPayment',
-            conversationRate: 'conversationRate',
-            exchangeNotification: 'exchangeNotification',
-            transporterId: 'transporterId',
-            freight: 'freight',
-            gst: 'gst',
-            discount: 'discount',
-            containerItems: 'containerItems_json',
-            ewayBillNumber: 'ewayBillNumber',
-            ewayBillDocument: 'ewayBillDocument',
-            shippingBillNumber: 'shippingBillNumber',
-            shippingBillDocument: 'shippingBillDocument',
-            blNumber: 'blNumber',
-            blDocument: 'blDocument',
-            brcDocument: 'brcDocument',
-            qcPhotos: 'qcPhotos_json',
-            samplePhotos: 'samplePhotos_json',
-        };
-        
-        // Dates need special handling
-        const dateFields = ['exportInvoiceDate', 'exchangeDate', 'ewayBillDate', 'shippingBillDate', 'blDate'];
-
+        // Iterate over the keys present in the request body
         for (const key in doc) {
             const docKey = key as keyof ExportDocument;
 
-            if (dateFields.includes(docKey) && doc[docKey]) {
-                const dateValue = doc[docKey];
-                if (dateValue) {
-                    updateData[docKey] = format(new Date(dateValue as Date), 'yyyy-MM-dd HH:mm:ss');
-                } else {
-                    updateData[docKey] = null;
-                }
-            } else if (fieldMapping[docKey]) {
-                const dbField = fieldMapping[docKey]!;
-                const value = doc[docKey];
-                if (dbField.endsWith('_json')) {
-                    updateData[dbField] = JSON.stringify(value || []);
-                } else {
-                    updateData[dbField] = value;
-                }
+            switch(docKey) {
+                case 'exportInvoiceDate':
+                case 'exchangeDate':
+                case 'ewayBillDate':
+                case 'shippingBillDate':
+                case 'blDate':
+                    if (doc[docKey]) {
+                        updateData[docKey] = format(new Date(doc[docKey] as Date), 'yyyy-MM-dd HH:mm:ss');
+                    } else {
+                        updateData[docKey] = null;
+                    }
+                    break;
+                case 'containerItems':
+                    updateData['containerItems_json'] = JSON.stringify(doc.containerItems || []);
+                    break;
+                case 'manufacturerDetails':
+                    updateData['manufacturerDetails_json'] = JSON.stringify(doc.manufacturerDetails || []);
+                    break;
+                case 'qcPhotos':
+                    updateData['qcPhotos_json'] = JSON.stringify(doc.qcPhotos || []);
+                    break;
+                case 'samplePhotos':
+                    updateData['samplePhotos_json'] = JSON.stringify(doc.samplePhotos || []);
+                    break;
+                // Add all other non-JSON, non-date fields here
+                case 'exporterId':
+                case 'purchaseOrderId':
+                case 'exportInvoiceNumber':
+                case 'countryOfFinalDestination':
+                case 'vesselFlightNo':
+                case 'portOfLoading':
+                case 'portOfDischarge':
+                case 'finalDestination':
+                case 'termsOfDeliveryAndPayment':
+                case 'conversationRate':
+                case 'exchangeNotification':
+                case 'transporterId':
+                case 'freight':
+                case 'gst':
+                case 'discount':
+                case 'ewayBillNumber':
+                case 'ewayBillDocument':
+                case 'shippingBillNumber':
+                case 'shippingBillDocument':
+                case 'blNumber':
+                case 'blDocument':
+                case 'brcDocument':
+                case 'clientId': // Added from other pages
+                case 'performaInvoiceId': // Added from other pages
+                    // @ts-ignore
+                    if (doc[docKey] !== undefined) {
+                         // @ts-ignore
+                        updateData[docKey] = doc[docKey];
+                    }
+                    break;
+                default:
+                    // Ignore fields like 'id', 'createdAt', etc.
+                    break;
             }
         }
-
+        
         if (Object.keys(updateData).length === 0) {
-            return NextResponse.json({ message: 'No fields to update' }, { status: 400 });
+            // Nothing to update, but we shouldn't throw an error.
+            // This might happen if the request body is empty or contains only unhandled fields.
+             await connection.commit();
+             return NextResponse.json({ ...doc, id }, { status: 200 });
         }
 
         await connection.query<OkPacket>(
@@ -218,7 +230,6 @@ export async function PUT(request: Request) {
     } catch (error: any) {
         await connection.rollback();
         console.error("Error updating export document:", error);
-        // More specific error for large payload
         if (error.code === 'ER_DATA_TOO_LONG') {
              return NextResponse.json({ message: 'The list of photos is too large to save. The database column may need to be changed to MEDIUMTEXT.' }, { status: 500 });
         }
@@ -227,6 +238,7 @@ export async function PUT(request: Request) {
         connection.release();
     }
 }
+
 
 // DELETE handler to soft-delete an export document
 export async function DELETE(request: Request) {
@@ -246,7 +258,3 @@ export async function DELETE(request: Request) {
         return NextResponse.json({ message: 'Error deleting export document' }, { status: 500 });
     }
 }
-
-    
-
-    
