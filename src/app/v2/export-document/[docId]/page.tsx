@@ -126,13 +126,13 @@ export default function DocumentDataPageV2() {
     if (!document) return;
     const updatedDoc = { ...document, ...updatedFields };
     try {
-        const response = await fetch(`/api/v2/export-document-data?id=${document.id}`, {
+        const response = await fetch(`/api/v2/export-document-data?id=${docId}`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(updatedDoc)
         });
         if (!response.ok) {
-            const errorData = await response.json();
+            const errorData = await response.json().catch(() => ({ message: 'Failed to parse error response from server.' }));
             throw new Error(errorData.message || 'Failed to update document');
         }
         setDocument(updatedDoc); // Update state locally to re-render UI
@@ -413,8 +413,8 @@ export default function DocumentDataPageV2() {
   };
   
   const handleDownloadPackingList = () => {
-    if (!document || !sourcePi) {
-      toast({ variant: "destructive", title: "Error", description: "Document or source Performa Invoice not loaded." });
+    if (!document) {
+      toast({ variant: "destructive", title: "Error", description: "Document data not loaded." });
       return;
     }
     const exporter = allExporters.find(e => String(e.id) === String(document.exporterId));
@@ -431,10 +431,10 @@ export default function DocumentDataPageV2() {
        toast({ variant: "destructive", title: "Error", description: "The primary manufacturer for this document is missing or has been deleted." });
        return;
     }
-    generatePackingListPdf(document, exporter, firstManufacturer, allProducts, allSizes, sourcePi);
+    generatePackingListPdf(document, exporter, firstManufacturer, allProducts, allSizes);
   };
   
-  const handleDownloadAnnexure = () => {
+  const handleDownloadAnnexure = async () => {
     if (!document) {
       toast({ variant: "destructive", title: "Error", description: "Document data not loaded." });
       return;
@@ -454,7 +454,7 @@ export default function DocumentDataPageV2() {
       toast({ variant: "destructive", title: "Error", description: "No valid manufacturers found for this document. They may have been deleted." });
       return;
     }
-    generateAnnexurePdf(document, exporter, manufacturersWithDetails);
+    await generateAnnexurePdf(document, exporter, manufacturersWithDetails);
   };
 
   const handleDownloadVgm = () => {
