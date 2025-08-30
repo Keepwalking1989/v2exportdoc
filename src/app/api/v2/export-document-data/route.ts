@@ -7,9 +7,11 @@ import { format } from 'date-fns';
 
 export const dynamic = 'force-dynamic';
 
-interface ExportDocumentRow extends RowDataPacket, Omit<ExportDocument, 'containerItems' | 'manufacturerDetails'> {
+interface ExportDocumentRow extends RowDataPacket, Omit<ExportDocument, 'containerItems' | 'manufacturerDetails' | 'qcPhotos' | 'samplePhotos'> {
     containerItems_json: string | null;
     manufacturerDetails_json: string | null;
+    qcPhotos_json: string | null;
+    samplePhotos_json: string | null;
 }
 
 // GET handler to fetch all non-deleted export documents, or a single one by ID
@@ -37,6 +39,8 @@ export async function GET(request: Request) {
             purchaseOrderId: row.purchaseOrderId?.toString(),
             containerItems: JSON.parse(row.containerItems_json || '[]'),
             manufacturerDetails: JSON.parse(row.manufacturerDetails_json || '[]'),
+            qcPhotos: JSON.parse(row.qcPhotos_json || '[]'),
+            samplePhotos: JSON.parse(row.samplePhotos_json || '[]'),
             exportInvoiceDate: new Date(row.exportInvoiceDate),
             exchangeDate: new Date(row.exchangeDate),
             // Ensure nested dates are parsed
@@ -52,13 +56,15 @@ export async function GET(request: Request) {
         );
         connection.release();
         const documents: ExportDocument[] = rows.map(row => {
-            const { containerItems_json, manufacturerDetails_json, ...docData } = row;
+            const { containerItems_json, manufacturerDetails_json, qcPhotos_json, samplePhotos_json, ...docData } = row;
             return {
                 ...docData,
                 id: docData.id.toString(),
                 purchaseOrderId: docData.purchaseOrderId?.toString(),
                 containerItems: JSON.parse(containerItems_json || '[]'),
                 manufacturerDetails: JSON.parse(manufacturerDetails_json || '[]'),
+                qcPhotos: JSON.parse(qcPhotos_json || '[]'),
+                samplePhotos: JSON.parse(samplePhotos_json || '[]'),
                 exportInvoiceDate: new Date(docData.exportInvoiceDate),
                 exchangeDate: new Date(docData.exchangeDate),
                 ewayBillDate: docData.ewayBillDate ? new Date(docData.ewayBillDate) : undefined,
@@ -79,7 +85,7 @@ export async function POST(request: Request) {
     const connection = await pool.getConnection();
     try {
         const doc: ExportDocument = await request.json();
-        const { containerItems, manufacturerDetails, ...docData } = doc;
+        const { containerItems, manufacturerDetails, qcPhotos, samplePhotos, ...docData } = doc;
         
         await connection.beginTransaction();
 
@@ -103,6 +109,8 @@ export async function POST(request: Request) {
                 blDate,
                 containerItems_json: JSON.stringify(containerItems || []),
                 manufacturerDetails_json: JSON.stringify(manufacturerDetails || []),
+                qcPhotos_json: JSON.stringify(qcPhotos || []),
+                samplePhotos_json: JSON.stringify(samplePhotos || []),
             }
         );
         
@@ -165,6 +173,8 @@ export async function PUT(request: Request) {
             blDate: doc.blDate ? format(new Date(doc.blDate), 'yyyy-MM-dd HH:mm:ss') : null,
             blDocument: doc.blDocument,
             brcDocument: doc.brcDocument,
+            qcPhotos_json: JSON.stringify(doc.qcPhotos || []),
+            samplePhotos_json: JSON.stringify(doc.samplePhotos || []),
         };
 
         await connection.query<OkPacket>(
