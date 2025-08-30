@@ -131,11 +131,16 @@ export default function DocumentDataPageV2() {
         });
         if (!response.ok) {
             const errorData = await response.json().catch(() => ({ message: 'Failed to parse error response from server.' }));
-            throw new Error(errorData.message || 'Failed to update document');
+            throw new Error(errorData.message || 'Failed to update document in DB');
         }
-        // Optimistically update local state or refetch for consistency
-        const updatedDoc = { ...document, ...updatedFields } as ExportDocument;
-        setDocument(updatedDoc);
+        
+        // ** THE FIX IS HERE **
+        // Guard against updating state if the base document hasn't loaded yet.
+        if (document) {
+            const updatedDoc = { ...document, ...updatedFields } as ExportDocument;
+            setDocument(updatedDoc);
+        }
+
         return true;
     } catch (error: any) {
         console.error("Failed to update document in DB", error);
@@ -431,7 +436,7 @@ export default function DocumentDataPageV2() {
        toast({ variant: "destructive", title: "Error", description: "The primary manufacturer for this document is missing or has been deleted." });
        return;
     }
-    generatePackingListPdf(document, exporter, firstManufacturer, allProducts, allSizes, sourcePi);
+    generatePackingListPdf(document, exporter, firstManufacturer, allProducts, allSizes);
   };
   
   const handleDownloadAnnexure = async () => {
@@ -815,5 +820,3 @@ export default function DocumentDataPageV2() {
     </div>
   );
 }
-
-    
