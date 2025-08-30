@@ -10,6 +10,9 @@ export const dynamic = 'force-dynamic';
 interface ExportDocumentRow extends RowDataPacket, Omit<ExportDocument, 'containerItems' | 'manufacturerDetails' | 'qcPhotos' | 'samplePhotos'> {
     containerItems_json: string | null;
     manufacturerDetails_json: string | null;
+    // NOTE FOR DEVELOPER: The `qcPhotos_json` and `samplePhotos_json` columns should be MEDIUMTEXT to handle many image URLs.
+    // Example SQL: ALTER TABLE export_documents MODIFY qcPhotos_json MEDIUMTEXT;
+    // Example SQL: ALTER TABLE export_documents MODIFY samplePhotos_json MEDIUMTEXT;
     qcPhotos_json: string | null;
     samplePhotos_json: string | null;
 }
@@ -186,9 +189,13 @@ export async function PUT(request: Request) {
 
         return NextResponse.json({ ...doc, id }, { status: 200 });
 
-    } catch (error) {
+    } catch (error: any) {
         await connection.rollback();
         console.error("Error updating export document:", error);
+        // More specific error for large payload
+        if (error.code === 'ER_DATA_TOO_LONG') {
+             return NextResponse.json({ message: 'The list of photos is too large to save. The database column may need to be changed to MEDIUMTEXT.' }, { status: 500 });
+        }
         return NextResponse.json({ message: 'Error updating export document' }, { status: 500 });
     } finally {
         connection.release();
