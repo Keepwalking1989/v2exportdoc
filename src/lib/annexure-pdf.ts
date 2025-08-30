@@ -6,7 +6,7 @@ import type { ExportDocument, ManufacturerInfo } from '@/types/export-document';
 import type { Company } from '@/types/company'; // Exporter
 import type { Manufacturer } from '@/types/manufacturer';
 
-function drawDocument(doc: jsPDF, docData: ExportDocument, exporter: Company, manufacturersWithDetails: (Manufacturer & { invoiceNumber: string, invoiceDate?: Date, permissionNumber?: string })[], padding: number): number {
+function drawDocument(doc: jsPDF, docData: ExportDocument, exporter: Company, manufacturersWithDetails: (Manufacturer & { invoiceNumber: string, invoiceDate?: Date, permissionNumber?: string })[], padding: number, signatureImage: Uint8Array | null, roundSealImage: Uint8Array | null): number {
     let yPos = 20;
     const pageMargin = 30;
     const contentWidth = doc.internal.pageSize.getWidth() - 2 * pageMargin;
@@ -178,24 +178,50 @@ function drawDocument(doc: jsPDF, docData: ExportDocument, exporter: Company, ma
     const combinedFooterText = "Examined the export goods covered under this invoice description of the goods with reference to DBK & MEIS Scheme Value cap p/kg.Net Weight of Ceramic Glazed Wall Tiles are as under. Certified that the description and value of the goods covered by this invoice have been checked by me and the goods have been packed and sealed with lead seal one time lock seal checked by me and the goods have been packed and sealed with lead seal/ one time lock seal.";
     drawCenteredWrappedText(combinedFooterText);
 
-    // --- Signature ---
-    const signatureBlockHeight = 40; // Reduced height
+    // --- Signature Block ---
+    const signatureBlockHeight = 60; 
     if (yPos + signatureBlockHeight > doc.internal.pageSize.getHeight() - pageMargin) {
         doc.addPage();
         yPos = pageMargin;
     }
-
+    
     const signatureTableBody = [
-        [{ content: `For, ${exporter.companyName.toUpperCase()}`, styles: { halign: 'center', fontStyle: 'bold' } }]
+        [
+            { content: `For, ${exporter.companyName}\n\n\nAUTHORISED SIGN\nSIGNATURE OF EXPORTER`, styles: { valign: 'middle', halign: 'left', fontStyle: 'bold' } },
+            { content: '', styles: { halign: 'center' } }, // Cell for signature image
+            { content: '', styles: { halign: 'center' } }, // Cell for round seal
+        ],
     ];
 
     autoTable(doc, {
         startY: yPos,
         body: signatureTableBody,
         theme: 'plain',
-        tableWidth: 'wrap',
-        margin: { left: contentWidth / 2 + pageMargin },
-        styles: { fontSize: 9, cellPadding: 1 }, // Reduced padding
+        columnStyles: {
+            0: { cellWidth: contentWidth * 0.33, minCellHeight: signatureBlockHeight },
+            1: { cellWidth: contentWidth * 0.34, minCellHeight: signatureBlockHeight },
+            2: { cellWidth: contentWidth * 0.33, minCellHeight: signatureBlockHeight },
+        },
+        margin: { left: pageMargin, right: pageMargin },
+        didDrawCell: (data) => {
+            if (data.section === 'body' && data.row.index === 0) {
+                if (data.column.index === 1 && signatureImage) {
+                    const cell = data.cell;
+                    const imgWidth = 100;
+                    const imgHeight = 50;
+                    const imgX = cell.x + (cell.width - imgWidth) / 2;
+                    const imgY = cell.y + (cell.height - imgHeight) / 2;
+                    doc.addImage(signatureImage, 'PNG', imgX, imgY, imgWidth, imgHeight);
+                }
+                if (data.column.index === 2 && roundSealImage) {
+                     const cell = data.cell;
+                    const imgSize = 60;
+                    const imgX = cell.x + (cell.width - imgSize) / 2;
+                    const imgY = cell.y + (cell.height - imgSize) / 2;
+                    doc.addImage(roundSealImage, 'PNG', imgX, imgY, imgSize, imgSize);
+                }
+            }
+        },
     });
     
     return doc.internal.getNumberOfPages();
@@ -207,19 +233,30 @@ export async function generateAnnexurePdf(
     exporter: Company,
     manufacturersWithDetails: (Manufacturer & { invoiceNumber: string, invoiceDate?: Date, permissionNumber?: string })[]
 ) {
+    let signatureImage: Uint8Array | null = null;
+    let roundSealImage: Uint8Array | null = null;
+    try {
+      const sigRes = await fetch('/signature.png');
+      if (sigRes.ok) signatureImage = new Uint8Array(await sigRes.arrayBuffer());
+      const sealRes = await fetch('/Hemith-Round.png');
+      if (sealRes.ok) roundSealImage = new Uint8Array(await sealRes.arrayBuffer());
+    } catch (e) {
+      console.error("Error fetching images for Annexure PDF", e);
+    }
+    
     const largePadding = 4;
     const smallPadding = 2;
 
     // 1. Dry run with large padding to check page count
     const tempDoc = new jsPDF({ unit: 'pt', format: 'a4' });
-    const pageCountWithLargePadding = drawDocument(tempDoc, docData, exporter, manufacturersWithDetails, largePadding);
+    const pageCountWithLargePadding = drawDocument(tempDoc, docData, exporter, manufacturersWithDetails, largePadding, signatureImage, roundSealImage);
     
     // 2. Decide final padding
     const finalPadding = pageCountWithLargePadding > 1 ? smallPadding : largePadding;
 
     // 3. Draw the final document with the chosen padding
     const finalDoc = new jsPDF({ unit: 'pt', format: 'a4' });
-    drawDocument(finalDoc, docData, exporter, manufacturersWithDetails, finalPadding);
+    drawDocument(finalDoc, docData, exporter, manufacturersWithDetails, finalPadding, signatureImage, roundSealImage);
 
     // 4. Save the final PDF
     finalDoc.save(`ANNEXURE_${docData.exportInvoiceNumber.replace(/[\\/:*?"<>|]/g, '_')}.pdf`);
