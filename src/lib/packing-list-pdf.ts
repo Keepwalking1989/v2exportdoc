@@ -7,7 +7,7 @@ import type { Company } from '@/types/company'; // For Exporter
 import type { Manufacturer } from '@/types/manufacturer';
 import type { Size } from '@/types/size';
 import type { Product } from '@/types/product';
-import { PerformaInvoice } from '@/types/performa-invoice';
+import type { PerformaInvoice } from '@/types/performa-invoice';
 
 // --- Reusable Style Definitions ---
 const classOneStyles = { 
@@ -40,7 +40,7 @@ export async function generatePackingListPdf(
     manufacturer: Manufacturer | undefined, // Though not directly displayed, might be useful in future
     allProducts: Product[],
     allSizes: Size[],
-    sourcePi: PerformaInvoice | undefined
+    sourcePi: PerformaInvoice | null
 ) {
     const doc = new jsPDF({ unit: 'pt', format: 'a4' });
     let yPos = 20;
@@ -110,8 +110,10 @@ export async function generatePackingListPdf(
     });
     // @ts-ignore
     yPos = doc.lastAutoTable.finalY;
-
+    
+    // Correctly format Marks & Nos. text
     const marksAndNosText = sourcePi?.containers?.map(c => `${c.quantity} x ${c.size}`).join(', ') || `${docData.containerItems?.length || 0} Container(s)`;
+
 
     // --- Shipment Details Grid ---
      autoTable(doc, {
