@@ -68,6 +68,17 @@ export async function generatePackingListPdf(
     doc.text('PACKING LIST', doc.internal.pageSize.getWidth() / 2, yPos, { align: 'center' });
     yPos += 20;
 
+    // --- TEMPORARY DEBUG BLOCK ---
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(255, 0, 0); // Red color
+    const debugText = `**DEBUG:** Container Data from PI: ${sourcePi?.containers?.map(c => `${c.quantity}x${c.size}`).join(', ') || 'No Container Data Found in PI'}`;
+    const splitText = doc.splitTextToSize(debugText, contentWidth);
+    doc.text(splitText, pageMargin, yPos);
+    yPos += (splitText.length * 12) + 10;
+    doc.setTextColor(0, 0, 0); // Reset color
+    // --- END DEBUG BLOCK ---
+
     // --- Exporter, Invoice Details, Ref (as a table) ---
     autoTable(doc, {
         startY: yPos,
