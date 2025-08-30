@@ -84,8 +84,8 @@ export interface ExportDocument {
   brcDocument?: string; // data URI
 
   // Fields for the new Photo Tab
-  photoTabText?: string;
-  photoTabImages?: string[];
+  qcPhotos?: string[];
+  samplePhotos?: string[];
 
   isDeleted?: boolean;
 }

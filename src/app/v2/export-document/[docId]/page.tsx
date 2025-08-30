@@ -62,11 +62,15 @@ const brcSchema = z.object({
 });
 type BrcFormValues = z.infer<typeof brcSchema>;
 
-const photosSchema = z.object({
-    photoTabText: z.string().optional(),
-    photoTabImages: z.array(z.string()).optional(),
+const qcPhotosSchema = z.object({
+    qcPhotos: z.array(z.string()).optional(),
 });
-type PhotosFormValues = z.infer<typeof photosSchema>;
+type QcPhotosFormValues = z.infer<typeof qcPhotosSchema>;
+
+const samplePhotosSchema = z.object({
+    samplePhotos: z.array(z.string()).optional(),
+});
+type SamplePhotosFormValues = z.infer<typeof samplePhotosSchema>;
 
 
 const DownloadOption = ({ label, onDownload }: { label: string, onDownload: () => void }) => (
@@ -119,21 +123,18 @@ export default function DocumentDataPageV2() {
   const shippingBillForm = useForm<ShippingBillFormValues>({ resolver: zodResolver(shippingBillSchema) });
   const blForm = useForm<BlFormValues>({ resolver: zodResolver(blSchema) });
   const brcForm = useForm<BrcFormValues>({ resolver: zodResolver(brcSchema) });
-  const photosForm = useForm<PhotosFormValues>({ resolver: zodResolver(photosSchema), defaultValues: { photoTabImages: [], photoTabText: "" } });
   
-  const { fields: photoFields, append: appendPhoto, remove: removePhoto } = useFieldArray({
-    control: photosForm.control,
-    name: "photoTabImages"
-  });
+  const qcPhotosForm = useForm<QcPhotosFormValues>({ resolver: zodResolver(qcPhotosSchema), defaultValues: { qcPhotos: [] } });
+  const { fields: qcPhotoFields, append: appendQcPhoto, remove: removeQcPhoto } = useFieldArray({ control: qcPhotosForm.control, name: "qcPhotos" });
+
+  const samplePhotosForm = useForm<SamplePhotosFormValues>({ resolver: zodResolver(samplePhotosSchema), defaultValues: { samplePhotos: [] } });
+  const { fields: samplePhotoFields, append: appendSamplePhoto, remove: removeSamplePhoto } = useFieldArray({ control: samplePhotosForm.control, name: "samplePhotos" });
 
 
   const updateDocumentInDb = async (updatedFields: Partial<ExportDocument>) => {
-    if (!docId) {
-      toast({ variant: "destructive", title: "Update Error", description: "Document ID is missing." });
-      return false;
-    }
-    if (!document) {
-      toast({ variant: "destructive", title: "Update Error", description: "Original document data not loaded. Please refresh." });
+    if (!docId || !document) {
+      const errorMsg = !docId ? "Document ID is missing." : "Original document data not loaded. Please refresh.";
+      toast({ variant: "destructive", title: "Update Error", description: errorMsg });
       return false;
     }
 
@@ -195,7 +196,8 @@ export default function DocumentDataPageV2() {
             shippingBillForm.reset({ shippingBillNumber: parsedDoc.shippingBillNumber, shippingBillDate: parsedDoc.shippingBillDate, shippingBillDocument: parsedDoc.shippingBillDocument });
             blForm.reset({ blNumber: parsedDoc.blNumber, blDate: parsedDoc.blDate, blDocument: parsedDoc.blDocument });
             brcForm.reset({ brcDocument: parsedDoc.brcDocument });
-            photosForm.reset({ photoTabText: parsedDoc.photoTabText || "", photoTabImages: parsedDoc.photoTabImages || [] });
+            qcPhotosForm.reset({ qcPhotos: parsedDoc.qcPhotos || [] });
+            samplePhotosForm.reset({ samplePhotos: parsedDoc.samplePhotos || [] });
 
             setAllExporters(await expRes.json());
             setAllManufacturers(await manuRes.json());
@@ -225,7 +227,7 @@ export default function DocumentDataPageV2() {
 
     fetchAllData();
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [docId, toast]);
+  }, [docId]);
   
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>, formSetter: (value: string) => void) => {
     const file = e.target.files?.[0];
@@ -261,12 +263,6 @@ export default function DocumentDataPageV2() {
     }
   };
 
-  const onSavePhotos = async (data: PhotosFormValues) => {
-      if (await updateDocumentInDb(data)) {
-          toast({ title: "Photos Saved", description: "The text and image URLs have been saved successfully." });
-      }
-  };
-
   const onSaveEwayBill = async (data: EwayBillFormValues) => {
     if (await updateDocumentInDb(data)) {
         setIsEditingEway(false);
@@ -293,6 +289,18 @@ export default function DocumentDataPageV2() {
         setIsEditingBrc(false);
         toast({ title: "BRC Document Saved" });
     }
+  };
+
+  const onSaveQcPhotos = async (data: QcPhotosFormValues) => {
+    if (await updateDocumentInDb({ qcPhotos: data.qcPhotos })) {
+        toast({ title: "QC Photos Saved", description: "The QC photos have been saved successfully." });
+    }
+  };
+
+  const onSaveSamplePhotos = async (data: SamplePhotosFormValues) => {
+      if (await updateDocumentInDb({ samplePhotos: data.samplePhotos })) {
+          toast({ title: "Sample Photos Saved", description: "The sample photos have been saved successfully." });
+      }
   };
 
   const ewayBillData = useMemo(() => {
@@ -465,7 +473,7 @@ export default function DocumentDataPageV2() {
         <Tabs defaultValue="download" className="w-full">
           <TabsList className="grid w-full grid-cols-2 md:grid-cols-6">
             <TabsTrigger value="download"><Download className="mr-2 h-4 w-4" /> Download</TabsTrigger>
-            <TabsTrigger value="photos"><Camera className="mr-2 h-4 w-4" /> Photo Tab</TabsTrigger>
+            <TabsTrigger value="photos"><Camera className="mr-2 h-4 w-4" /> Photos</TabsTrigger>
             <TabsTrigger value="eway"><Wind className="mr-2 h-4 w-4" /> Eway Bill</TabsTrigger>
             <TabsTrigger value="shipping"><Sailboat className="mr-2 h-4 w-4" /> Shipping Bill</TabsTrigger>
             <TabsTrigger value="rfid"><Nfc className="mr-2 h-4 w-4" /> RFID Details</TabsTrigger>
@@ -487,86 +495,102 @@ export default function DocumentDataPageV2() {
           </TabsContent>
 
           <TabsContent value="photos">
-            <Card className="mt-4">
-              <Form {...photosForm}>
-                <form onSubmit={photosForm.handleSubmit(onSavePhotos)}>
-                  <CardHeader>
-                    <CardTitle>Photo Attachments</CardTitle>
-                    <CardDescription>Add a note and upload photos related to this document.</CardDescription>
-                  </CardHeader>
-                  <CardContent className="space-y-6">
-                    <FormField
-                      control={photosForm.control}
-                      name="photoTabText"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Photo Description / Note</FormLabel>
-                          <FormControl>
-                            <Textarea placeholder="Enter a description for these photos..." {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    
-                     <div className="space-y-2">
-                        <FormLabel>Uploaded Photos</FormLabel>
-                        {photoFields.length > 0 && (
-                            <ScrollArea className="h-72 w-full rounded-md border p-4">
-                                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                                    {photoFields.map((field, index) => (
-                                        <div key={field.id} className="relative group aspect-square">
-                                            <Image src={photosForm.getValues(`photoTabImages.${index}`)} alt={`Uploaded image ${index + 1}`} layout="fill" className="object-cover rounded-md" />
-                                            <div className="absolute inset-0 bg-black/50 flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                                               <a href={photosForm.getValues(`photoTabImages.${index}`)} download={`Photo_${docId}_${index + 1}.jpg`} className={cn(buttonVariants({ variant: "secondary", size: "icon" }))}>
-                                                    <ImageDown className="h-5 w-5" />
-                                                </a>
-                                                <Button variant="destructive" size="icon" type="button" onClick={() => removePhoto(index)}>
-                                                    <Trash2 className="h-5 w-5" />
-                                                </Button>
-                                            </div>
+            <div className="mt-4 grid grid-cols-1 lg:grid-cols-2 gap-6">
+                 {/* QC Photos Form */}
+                <Card>
+                    <Form {...qcPhotosForm}>
+                        <form onSubmit={qcPhotosForm.handleSubmit(onSaveQcPhotos)}>
+                            <CardHeader>
+                                <CardTitle>QC Photos</CardTitle>
+                                <CardDescription>Manage Quality Control photos for this document.</CardDescription>
+                            </CardHeader>
+                            <CardContent className="space-y-4">
+                                <Button type="button" variant="outline" size="sm" onClick={() => appendQcPhoto('')}><PlusCircle className="mr-2 h-4 w-4"/>Add Photo Slot</Button>
+                                {qcPhotoFields.length > 0 && (
+                                    <ScrollArea className="h-72 w-full rounded-md border p-4">
+                                        <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                                            {qcPhotoFields.map((field, index) => (
+                                                <div key={field.id} className="relative group aspect-square">
+                                                    {qcPhotosForm.getValues(`qcPhotos.${index}`) ? (
+                                                        <>
+                                                            <Image src={qcPhotosForm.getValues(`qcPhotos.${index}`)} alt={`QC Photo ${index + 1}`} layout="fill" className="object-cover rounded-md" />
+                                                            <div className="absolute inset-0 bg-black/60 flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                                <a href={qcPhotosForm.getValues(`qcPhotos.${index}`)} download={`QC_Photo_${docId}_${index + 1}.jpg`} className={cn(buttonVariants({ variant: "secondary", size: "icon" }))}><ImageDown className="h-5 w-5" /></a>
+                                                                <Button variant="destructive" size="icon" type="button" onClick={() => removeQcPhoto(index)}><Trash2 className="h-5 w-5" /></Button>
+                                                            </div>
+                                                        </>
+                                                    ) : (
+                                                        <FormField
+                                                            control={qcPhotosForm.control}
+                                                            name={`qcPhotos.${index}`}
+                                                            render={({ field: RHFfield }) => (
+                                                                <FormItem className="h-full w-full">
+                                                                    <FormControl>
+                                                                        <Input type="file" onChange={(e) => handleFileChange(e, (val) => RHFfield.onChange(val))} accept="image/jpeg,image/png,image/gif" disabled={isUploading} className="w-full h-full opacity-0 absolute cursor-pointer"/>
+                                                                    </FormControl>
+                                                                    <div className="h-full w-full border-dashed border-2 rounded-md flex items-center justify-center text-muted-foreground"><span>Select File</span></div>
+                                                                </FormItem>
+                                                            )}
+                                                        />
+                                                    )}
+                                                </div>
+                                            ))}
                                         </div>
-                                    ))}
-                                </div>
-                            </ScrollArea>
-                        )}
-                        <Button type="button" variant="outline" size="sm" onClick={() => appendPhoto('')}>
-                            <PlusCircle className="mr-2 h-4 w-4" />Add Photo
-                        </Button>
-                         {photoFields.map((field, index) => (
-                            <FormField
-                                key={field.id}
-                                control={photosForm.control}
-                                name={`photoTabImages.${index}` as const}
-                                render={({ field: RHFfield }) => (
-                                    <FormItem>
-                                        <div className="flex items-center gap-2">
-                                            <FormControl>
-                                                <Input 
-                                                    type="file" 
-                                                    onChange={(e) => handleFileChange(e, (val) => RHFfield.onChange(val))}
-                                                    accept="image/jpeg,image/png,image/gif"
-                                                    disabled={isUploading}
-                                                    className="flex-grow"
-                                                />
-                                            </FormControl>
-                                        </div>
-                                        <FormMessage />
-                                    </FormItem>
+                                    </ScrollArea>
                                 )}
-                            />
-                        ))}
-                    </div>
-
-                  </CardContent>
-                  <CardFooter className="justify-end">
-                    <Button type="submit" disabled={isUploading}>
-                      <Save className="mr-2 h-4 w-4" /> {isUploading ? 'Uploading...' : 'Save Photos'}
-                    </Button>
-                  </CardFooter>
-                </form>
-              </Form>
-            </Card>
+                            </CardContent>
+                            <CardFooter className="justify-end"><Button type="submit" disabled={isUploading || !qcPhotosForm.formState.isDirty}><Save className="mr-2 h-4 w-4"/>Save QC Photos</Button></CardFooter>
+                        </form>
+                    </Form>
+                </Card>
+                 {/* Sample Photos Form */}
+                <Card>
+                   <Form {...samplePhotosForm}>
+                        <form onSubmit={samplePhotosForm.handleSubmit(onSaveSamplePhotos)}>
+                            <CardHeader>
+                                <CardTitle>Loading & Sample Photos</CardTitle>
+                                <CardDescription>Manage loading and sample photos for this document.</CardDescription>
+                            </CardHeader>
+                            <CardContent className="space-y-4">
+                                <Button type="button" variant="outline" size="sm" onClick={() => appendSamplePhoto('')}><PlusCircle className="mr-2 h-4 w-4"/>Add Photo Slot</Button>
+                                {samplePhotoFields.length > 0 && (
+                                    <ScrollArea className="h-72 w-full rounded-md border p-4">
+                                        <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                                            {samplePhotoFields.map((field, index) => (
+                                                <div key={field.id} className="relative group aspect-square">
+                                                     {samplePhotosForm.getValues(`samplePhotos.${index}`) ? (
+                                                        <>
+                                                            <Image src={samplePhotosForm.getValues(`samplePhotos.${index}`)} alt={`Sample Photo ${index + 1}`} layout="fill" className="object-cover rounded-md" />
+                                                            <div className="absolute inset-0 bg-black/60 flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                                <a href={samplePhotosForm.getValues(`samplePhotos.${index}`)} download={`Sample_Photo_${docId}_${index + 1}.jpg`} className={cn(buttonVariants({ variant: "secondary", size: "icon" }))}><ImageDown className="h-5 w-5" /></a>
+                                                                <Button variant="destructive" size="icon" type="button" onClick={() => removeSamplePhoto(index)}><Trash2 className="h-5 w-5" /></Button>
+                                                            </div>
+                                                        </>
+                                                    ) : (
+                                                        <FormField
+                                                            control={samplePhotosForm.control}
+                                                            name={`samplePhotos.${index}`}
+                                                            render={({ field: RHFfield }) => (
+                                                                <FormItem className="h-full w-full">
+                                                                    <FormControl>
+                                                                        <Input type="file" onChange={(e) => handleFileChange(e, (val) => RHFfield.onChange(val))} accept="image/jpeg,image/png,image/gif" disabled={isUploading} className="w-full h-full opacity-0 absolute cursor-pointer"/>
+                                                                    </FormControl>
+                                                                     <div className="h-full w-full border-dashed border-2 rounded-md flex items-center justify-center text-muted-foreground"><span>Select File</span></div>
+                                                                </FormItem>
+                                                            )}
+                                                        />
+                                                    )}
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </ScrollArea>
+                                )}
+                            </CardContent>
+                            <CardFooter className="justify-end"><Button type="submit" disabled={isUploading || !samplePhotosForm.formState.isDirty}><Save className="mr-2 h-4 w-4"/>Save Sample Photos</Button></CardFooter>
+                        </form>
+                    </Form>
+                </Card>
+            </div>
           </TabsContent>
 
           <TabsContent value="eway">

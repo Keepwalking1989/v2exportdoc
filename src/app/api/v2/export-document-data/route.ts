@@ -8,10 +8,11 @@ import { format } from 'date-fns';
 
 export const dynamic = 'force-dynamic';
 
-interface ExportDocumentRow extends RowDataPacket, Omit<ExportDocument, 'containerItems' | 'manufacturerDetails' | 'photoTabImages'> {
+interface ExportDocumentRow extends RowDataPacket, Omit<ExportDocument, 'containerItems' | 'manufacturerDetails' | 'qcPhotos' | 'samplePhotos'> {
     containerItems_json: string | null;
     manufacturerDetails_json: string | null;
-    photoTabImages_json: string | null; // For MEDIUMTEXT column
+    qcPhotos_json: string | null; // For MEDIUMTEXT column
+    samplePhotos_json: string | null; // For MEDIUMTEXT column
 }
 
 // GET handler to fetch all non-deleted export documents, or a single one by ID
@@ -39,7 +40,8 @@ export async function GET(request: Request) {
             purchaseOrderId: row.purchaseOrderId?.toString(),
             containerItems: JSON.parse(row.containerItems_json || '[]'),
             manufacturerDetails: JSON.parse(row.manufacturerDetails_json || '[]'),
-            photoTabImages: JSON.parse(row.photoTabImages_json || '[]'),
+            qcPhotos: JSON.parse(row.qcPhotos_json || '[]'),
+            samplePhotos: JSON.parse(row.samplePhotos_json || '[]'),
             exportInvoiceDate: new Date(row.exportInvoiceDate),
             exchangeDate: new Date(row.exchangeDate),
             ewayBillDate: row.ewayBillDate ? new Date(row.ewayBillDate) : undefined,
@@ -54,14 +56,15 @@ export async function GET(request: Request) {
         );
         connection.release();
         const documents: ExportDocument[] = rows.map(row => {
-            const { containerItems_json, manufacturerDetails_json, photoTabImages_json, ...docData } = row;
+            const { containerItems_json, manufacturerDetails_json, qcPhotos_json, samplePhotos_json, ...docData } = row;
             return {
                 ...docData,
                 id: docData.id.toString(),
                 purchaseOrderId: docData.purchaseOrderId?.toString(),
                 containerItems: JSON.parse(containerItems_json || '[]'),
                 manufacturerDetails: JSON.parse(manufacturerDetails_json || '[]'),
-                photoTabImages: JSON.parse(photoTabImages_json || '[]'),
+                qcPhotos: JSON.parse(qcPhotos_json || '[]'),
+                samplePhotos: JSON.parse(samplePhotos_json || '[]'),
                 exportInvoiceDate: new Date(docData.exportInvoiceDate),
                 exchangeDate: new Date(docData.exchangeDate),
                 ewayBillDate: docData.ewayBillDate ? new Date(docData.ewayBillDate) : undefined,
@@ -82,7 +85,7 @@ export async function POST(request: Request) {
     const connection = await pool.getConnection();
     try {
         const doc: ExportDocument = await request.json();
-        const { containerItems, manufacturerDetails, photoTabImages, ...docData } = doc;
+        const { containerItems, manufacturerDetails, qcPhotos, samplePhotos, ...docData } = doc;
         
         await connection.beginTransaction();
 
@@ -105,7 +108,8 @@ export async function POST(request: Request) {
                 blDate,
                 containerItems_json: JSON.stringify(containerItems || []),
                 manufacturerDetails_json: JSON.stringify(manufacturerDetails || []),
-                photoTabImages_json: JSON.stringify(photoTabImages || []),
+                qcPhotos_json: JSON.stringify(qcPhotos || []),
+                samplePhotos_json: JSON.stringify(samplePhotos || []),
             }
         );
         
@@ -142,23 +146,16 @@ export async function PUT(request: Request) {
         for (const key in doc) {
             if (Object.prototype.hasOwnProperty.call(doc, key)) {
                 const docKey = key as keyof ExportDocument;
+                const value = doc[docKey];
+
+                if (value === undefined) continue;
 
                 if (['exportInvoiceDate', 'exchangeDate', 'ewayBillDate', 'shippingBillDate', 'blDate'].includes(docKey)) {
-                    // @ts-ignore
-                    const dateValue = doc[docKey];
-                    // @ts-ignore
-                    updateData[docKey] = dateValue ? format(new Date(dateValue), 'yyyy-MM-dd HH:mm:ss') : null;
-                } else if (['containerItems', 'manufacturerDetails', 'photoTabImages'].includes(docKey)) {
-                    // @ts-ignore
-                    const jsonValue = doc[docKey];
-                    // @ts-ignore
-                    updateData[`${docKey}_json`] = JSON.stringify(jsonValue || []);
+                    updateData[docKey] = value ? format(new Date(value as string | Date), 'yyyy-MM-dd HH:mm:ss') : null;
+                } else if (['containerItems', 'manufacturerDetails', 'qcPhotos', 'samplePhotos'].includes(docKey)) {
+                    updateData[`${docKey}_json`] = JSON.stringify(value || []);
                 } else if (!['id', 'isDeleted', 'createdAt'].includes(docKey)) {
-                    // @ts-ignore
-                    if (doc[docKey] !== undefined) {
-                        // @ts-ignore
-                        updateData[docKey] = doc[docKey];
-                    }
+                    updateData[docKey] = value;
                 }
             }
         }
