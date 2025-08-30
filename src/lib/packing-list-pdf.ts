@@ -40,7 +40,6 @@ export async function generatePackingListPdf(
     manufacturer: Manufacturer | undefined, // Though not directly displayed, might be useful in future
     allProducts: Product[],
     allSizes: Size[],
-    sourcePi: PerformaInvoice | null
 ) {
     const doc = new jsPDF({ unit: 'pt', format: 'a4' });
     let yPos = 20;
@@ -67,17 +66,6 @@ export async function generatePackingListPdf(
     doc.setFont('helvetica', 'bold');
     doc.text('PACKING LIST', doc.internal.pageSize.getWidth() / 2, yPos, { align: 'center' });
     yPos += 20;
-
-    // --- TEMPORARY DEBUG BLOCK ---
-    doc.setFontSize(10);
-    doc.setFont('helvetica', 'bold');
-    doc.setTextColor(255, 0, 0); // Red color
-    const debugText = `**DEBUG:** Container Data from PI: ${sourcePi?.containers?.map(c => `${c.quantity}x${c.size}`).join(', ') || 'No Container Data Found in PI'}`;
-    const splitText = doc.splitTextToSize(debugText, contentWidth);
-    doc.text(splitText, pageMargin, yPos);
-    yPos += (splitText.length * 12) + 10;
-    doc.setTextColor(0, 0, 0); // Reset color
-    // --- END DEBUG BLOCK ---
 
     // --- Exporter, Invoice Details, Ref (as a table) ---
     autoTable(doc, {
@@ -123,7 +111,8 @@ export async function generatePackingListPdf(
     yPos = doc.lastAutoTable.finalY;
     
     // Correctly format Marks & Nos. text
-    const marksAndNosText = sourcePi?.containers?.map(c => `${c.quantity} x ${c.size}`).join(', ') || `${docData.containerItems?.length || 0} Container(s)`;
+    const containerCount = docData.containerItems?.length || 0;
+    const marksAndNosText = `${containerCount} x 20'`;
 
 
     // --- Shipment Details Grid ---
@@ -342,7 +331,21 @@ export async function generatePackingListPdf(
 
     autoTable(doc, {
         startY: yPos,
-        head: [['CONTAINER NO.', 'Line Seal', 'RFID SEAL', 'DISCRIPTION', 'BOXES', 'Pallet No.', 'Net Wt.', 'Gross Wt.']],
+        head: [
+            [
+                { content: 'CONTAINER NO.', rowSpan: 2 },
+                { content: 'Line Seal', rowSpan: 2 },
+                { content: 'RFID SEAL', rowSpan: 2 },
+                { content: 'DISCRIPTION', rowSpan: 2 },
+                { content: 'BOXES', rowSpan: 2 },
+                { content: 'Pallet No.', rowSpan: 2 },
+                { content: 'VGM (KGS)\n( CARGO+TARE WEIGHT)', colSpan: 2, styles: { halign: 'center' } }
+            ],
+            [
+                'Net Wt.',
+                'Gross Wt.'
+            ]
+        ],
         body: containerTableBody,
         foot: [
             [
@@ -416,7 +419,7 @@ export async function generatePackingListPdf(
                     colSpan: 2, 
                     styles: {
                         lineWidth: 0.5, 
-                        lineColor: [0,0,0], 
+                        lineColor: [0, 0, 0], 
                         ...classOneStyles, 
                         halign: 'center', 
                         fontSize: FONT_CAT2_SIZE,

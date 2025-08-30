@@ -368,7 +368,7 @@ export default function DocumentDataPageV2() {
        toast({ variant: "destructive", title: "Error", description: "The primary manufacturer for this document is missing or has been deleted." });
        return;
     }
-    generatePackingListPdf(document, exporter, firstManufacturer, allProducts, allSizes, sourcePi);
+    generatePackingListPdf(document, exporter, firstManufacturer, allProducts, allSizes);
   };
   
   const handleDownloadAnnexure = () => {
