@@ -7,6 +7,7 @@ import type { Company } from '@/types/company'; // For Exporter
 import type { Manufacturer } from '@/types/manufacturer';
 import type { Size } from '@/types/size';
 import type { Product } from '@/types/product';
+import { PerformaInvoice } from '@/types/performa-invoice';
 
 // --- Reusable Style Definitions ---
 const classOneStyles = { 
@@ -38,7 +39,8 @@ export async function generatePackingListPdf(
     exporter: Company,
     manufacturer: Manufacturer | undefined, // Though not directly displayed, might be useful in future
     allProducts: Product[],
-    allSizes: Size[]
+    allSizes: Size[],
+    sourcePi: PerformaInvoice | undefined
 ) {
     const doc = new jsPDF({ unit: 'pt', format: 'a4' });
     let yPos = 20;
@@ -109,6 +111,8 @@ export async function generatePackingListPdf(
     // @ts-ignore
     yPos = doc.lastAutoTable.finalY;
 
+    const marksAndNosText = sourcePi?.containers?.map(c => `${c.quantity} x ${c.size}`).join(', ') || `${docData.containerItems?.length || 0} Container(s)`;
+
     // --- Shipment Details Grid ---
      autoTable(doc, {
         startY: yPos,
@@ -144,7 +148,7 @@ export async function generatePackingListPdf(
              [
                 { content: docData.portOfDischarge || 'N/A', styles: {...classTwoStyles, halign: 'center', cellPadding: 1} },
                 { content: docData.finalDestination || 'N/A', styles: {...classTwoStyles, halign: 'center', cellPadding: 1} },
-                { content: `${docData.containerItems?.length || 0} Container(s)`, colSpan: 2, styles: {...classTwoStyles, halign: 'center', cellPadding: 1} },
+                { content: marksAndNosText, colSpan: 2, styles: {...classTwoStyles, halign: 'center', cellPadding: 1} },
             ],
         ],
         margin: { left: pageMargin, right: pageMargin },

@@ -30,6 +30,8 @@ import { generatePackingListPdf } from '@/lib/packing-list-pdf';
 import { generateAnnexurePdf } from '@/lib/annexure-pdf';
 import { generateVgmPdf } from '@/lib/vgm-pdf';
 import type { Company } from '@/types/company';
+import type { PerformaInvoice } from '@/types/performa-invoice';
+import type { PurchaseOrder } from '@/types/purchase-order';
 
 
 const ewayBillSchema = z.object({
@@ -103,6 +105,7 @@ export default function DocumentDataPageV2() {
   const [allTransporters, setAllTransporters] = useState<Transporter[]>([]);
   const [allProducts, setAllProducts] = useState<Product[]>([]);
   const [allSizes, setAllSizes] = useState<Size[]>([]);
+  const [sourcePi, setSourcePi] = useState<PerformaInvoice | null>(null);
 
   const ewayBillForm = useForm<EwayBillFormValues>({ resolver: zodResolver(ewayBillSchema) });
   const shippingBillForm = useForm<ShippingBillFormValues>({ resolver: zodResolver(shippingBillSchema) });
@@ -138,13 +141,15 @@ export default function DocumentDataPageV2() {
     const fetchAllData = async () => {
         setIsLoading(true);
         try {
-            const [docRes, expRes, manuRes, transRes, prodRes, sizeRes] = await Promise.all([
+            const [docRes, expRes, manuRes, transRes, prodRes, sizeRes, poRes, piRes] = await Promise.all([
                 fetch(`/api/v2/export-document-data?id=${docId}`),
                 fetch('/api/v2/exporter-data'),
                 fetch('/api/v2/manufacturer-data'),
                 fetch('/api/v2/transporter-data'),
                 fetch('/api/v2/product-data'),
-                fetch('/api/v2/size-data')
+                fetch('/api/v2/size-data'),
+                fetch('/api/v2/purchase-order-data'),
+                fetch('/api/v2/performa-invoice-data'),
             ]);
             
             const docData = await docRes.json();
@@ -172,6 +177,18 @@ export default function DocumentDataPageV2() {
             setAllTransporters(await transRes.json());
             setAllProducts(await prodRes.json());
             setAllSizes(await sizeRes.json());
+            
+            const allPOs: PurchaseOrder[] = await poRes.json();
+            const allPIs: PerformaInvoice[] = await piRes.json();
+            
+            if(parsedDoc.purchaseOrderId) {
+                const po = allPOs.find(p => p.id === parsedDoc.purchaseOrderId);
+                if (po?.sourcePiId) {
+                    const pi = allPIs.find(p => p.id === po.sourcePiId);
+                    setSourcePi(pi || null);
+                }
+            }
+
 
         } catch (error) {
             console.error("Failed to load document data from database", error);
@@ -351,7 +368,7 @@ export default function DocumentDataPageV2() {
        toast({ variant: "destructive", title: "Error", description: "The primary manufacturer for this document is missing or has been deleted." });
        return;
     }
-    generatePackingListPdf(document, exporter, firstManufacturer, allProducts, allSizes);
+    generatePackingListPdf(document, exporter, firstManufacturer, allProducts, allSizes, sourcePi);
   };
   
   const handleDownloadAnnexure = () => {
@@ -655,4 +672,3 @@ export default function DocumentDataPageV2() {
     </div>
   );
 }
-
