@@ -184,7 +184,7 @@ export async function PUT(request: Request) {
         for (const key in doc) {
             const docKey = key as keyof ExportDocument;
 
-            if (dateFields.includes(docKey)) {
+            if (dateFields.includes(docKey) && doc[docKey]) {
                 const dateValue = doc[docKey];
                 if (dateValue) {
                     updateData[docKey] = format(new Date(dateValue as Date), 'yyyy-MM-dd HH:mm:ss');
@@ -246,5 +246,7 @@ export async function DELETE(request: Request) {
         return NextResponse.json({ message: 'Error deleting export document' }, { status: 500 });
     }
 }
+
+    
 
     
