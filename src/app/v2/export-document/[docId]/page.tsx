@@ -7,7 +7,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Button, buttonVariants } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
-import { ArrowLeft, Download, Wind, Sailboat, Nfc, BadgeCheck, Edit, CalendarIcon, FileText as FileTextIcon, Camera, ImageDown, Save } from 'lucide-react';
+import { ArrowLeft, Download, Wind, Sailboat, Nfc, BadgeCheck, Edit, CalendarIcon, FileText as FileTextIcon, Camera, ImageDown, Save, PlusCircle, Trash2 } from 'lucide-react';
 import { useEffect, useState, useMemo } from 'react';
 import type { ExportDocument } from '@/types/export-document';
 import type { Manufacturer } from '@/types/manufacturer';
@@ -16,7 +16,7 @@ import type { Product } from '@/types/product';
 import type { Size } from '@/types/size';
 import { format } from 'date-fns';
 import { Table, TableBody, TableCell, TableFooter, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { useForm } from 'react-hook-form';
+import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
@@ -120,6 +120,11 @@ export default function DocumentDataPageV2() {
   const blForm = useForm<BlFormValues>({ resolver: zodResolver(blSchema) });
   const brcForm = useForm<BrcFormValues>({ resolver: zodResolver(brcSchema) });
   const photosForm = useForm<PhotosFormValues>({ resolver: zodResolver(photosSchema), defaultValues: { photoTabImages: [], photoTabText: "" } });
+  
+  const { fields: photoFields, append: appendPhoto, remove: removePhoto } = useFieldArray({
+    control: photosForm.control,
+    name: "photoTabImages"
+  });
 
 
   const updateDocumentInDb = async (updatedFields: Partial<ExportDocument>) => {
@@ -128,7 +133,7 @@ export default function DocumentDataPageV2() {
       return false;
     }
     if (!document) {
-      toast({ variant: "destructive", title: "Update Error", description: "Original document data not loaded." });
+      toast({ variant: "destructive", title: "Update Error", description: "Original document data not loaded. Please refresh." });
       return false;
     }
 
@@ -139,7 +144,7 @@ export default function DocumentDataPageV2() {
             body: JSON.stringify(updatedFields)
         });
         if (!response.ok) {
-            const errorData = await response.json().catch(() => ({ message: 'Failed to parse error response from server.' }));
+            const errorData = await response.json().catch(() => ({ message: 'Failed to update document in DB' }));
             throw new Error(errorData.message || 'Failed to update document in DB');
         }
         
@@ -256,48 +261,6 @@ export default function DocumentDataPageV2() {
     }
   };
 
-  const handleMultipleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files;
-    if (!files || files.length === 0) return;
-
-    setIsUploading(true);
-    toast({ title: `Uploading ${files.length} files...`, description: "Please wait for all uploads to complete." });
-
-    const currentImages = photosForm.getValues('photoTabImages') || [];
-    const uploadPromises = Array.from(files).map(file => 
-        new Promise<string>((resolve, reject) => {
-            const reader = new FileReader();
-            reader.readAsDataURL(file);
-            reader.onloadend = async () => {
-                try {
-                    const fileData = reader.result;
-                    const response = await fetch('/api/v2/upload', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ fileData, fileName: file.name }),
-                    });
-                    if (!response.ok) reject(new Error(`Failed to upload ${file.name}`));
-                    const { filePath } = await response.json();
-                    resolve(filePath);
-                } catch (error) {
-                    reject(error);
-                }
-            };
-            reader.onerror = (error) => reject(error);
-        })
-    );
-
-    try {
-        const newImageUrls = await Promise.all(uploadPromises);
-        photosForm.setValue('photoTabImages', [...currentImages, ...newImageUrls], { shouldDirty: true });
-        toast({ title: "Uploads Successful", description: `${files.length} images have been prepared.` });
-    } catch (error: any) {
-        toast({ variant: "destructive", title: "Upload Error", description: error.message });
-    } finally {
-        setIsUploading(false);
-    }
-  };
-  
   const onSavePhotos = async (data: PhotosFormValues) => {
       if (await updateDocumentInDb(data)) {
           toast({ title: "Photos Saved", description: "The text and image URLs have been saved successfully." });
@@ -502,7 +465,7 @@ export default function DocumentDataPageV2() {
         <Tabs defaultValue="download" className="w-full">
           <TabsList className="grid w-full grid-cols-2 md:grid-cols-6">
             <TabsTrigger value="download"><Download className="mr-2 h-4 w-4" /> Download</TabsTrigger>
-            <TabsTrigger value="photos"><Camera className="mr-2 h-4 w-4" /> Photos</TabsTrigger>
+            <TabsTrigger value="photos"><Camera className="mr-2 h-4 w-4" /> Photo Tab</TabsTrigger>
             <TabsTrigger value="eway"><Wind className="mr-2 h-4 w-4" /> Eway Bill</TabsTrigger>
             <TabsTrigger value="shipping"><Sailboat className="mr-2 h-4 w-4" /> Shipping Bill</TabsTrigger>
             <TabsTrigger value="rfid"><Nfc className="mr-2 h-4 w-4" /> RFID Details</TabsTrigger>
@@ -529,7 +492,7 @@ export default function DocumentDataPageV2() {
                 <form onSubmit={photosForm.handleSubmit(onSavePhotos)}>
                   <CardHeader>
                     <CardTitle>Photo Attachments</CardTitle>
-                    <CardDescription>Add a note and upload multiple photos related to this document.</CardDescription>
+                    <CardDescription>Add a note and upload photos related to this document.</CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-6">
                     <FormField
@@ -545,41 +508,55 @@ export default function DocumentDataPageV2() {
                         </FormItem>
                       )}
                     />
-                    <FormItem>
-                        <FormLabel>Upload Photos</FormLabel>
-                        <FormControl>
-                           <Input
-                                type="file"
-                                multiple
-                                onChange={handleMultipleFileChange}
-                                accept="image/jpeg,image/png,image/gif"
-                                disabled={isUploading}
-                                className="block w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-primary/10 file:text-primary hover:file:bg-primary/20"
-                            />
-                        </FormControl>
-                        <FormMessage />
-                    </FormItem>
                     
-                    <Separator />
-                    <h3 className="text-md font-semibold">Uploaded Photos Preview:</h3>
-                    
-                    <ScrollArea className="h-72 w-full rounded-md border p-4">
-                        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                            {photosForm.getValues('photoTabImages')?.map((imageUrl, index) => (
-                                <div key={index} className="relative group aspect-square">
-                                    <Image src={imageUrl} alt={`Uploaded image ${index + 1}`} layout="fill" className="object-cover rounded-md" />
-                                    <div className="absolute inset-0 bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                                       <a href={imageUrl} download={`Photo_${docId}_${index + 1}.jpg`} className={cn(buttonVariants({ variant: "secondary", size: "icon" }))}>
-                                            <ImageDown className="h-5 w-5" />
-                                        </a>
-                                    </div>
+                     <div className="space-y-2">
+                        <FormLabel>Uploaded Photos</FormLabel>
+                        {photoFields.length > 0 && (
+                            <ScrollArea className="h-72 w-full rounded-md border p-4">
+                                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                                    {photoFields.map((field, index) => (
+                                        <div key={field.id} className="relative group aspect-square">
+                                            <Image src={photosForm.getValues(`photoTabImages.${index}`)} alt={`Uploaded image ${index + 1}`} layout="fill" className="object-cover rounded-md" />
+                                            <div className="absolute inset-0 bg-black/50 flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                               <a href={photosForm.getValues(`photoTabImages.${index}`)} download={`Photo_${docId}_${index + 1}.jpg`} className={cn(buttonVariants({ variant: "secondary", size: "icon" }))}>
+                                                    <ImageDown className="h-5 w-5" />
+                                                </a>
+                                                <Button variant="destructive" size="icon" type="button" onClick={() => removePhoto(index)}>
+                                                    <Trash2 className="h-5 w-5" />
+                                                </Button>
+                                            </div>
+                                        </div>
+                                    ))}
                                 </div>
-                            ))}
-                            {(photosForm.getValues('photoTabImages')?.length || 0) === 0 && (
-                                <p className="col-span-full text-center text-muted-foreground">No photos uploaded yet.</p>
-                            )}
-                        </div>
-                    </ScrollArea>
+                            </ScrollArea>
+                        )}
+                        <Button type="button" variant="outline" size="sm" onClick={() => appendPhoto('')}>
+                            <PlusCircle className="mr-2 h-4 w-4" />Add Photo
+                        </Button>
+                         {photoFields.map((field, index) => (
+                            <FormField
+                                key={field.id}
+                                control={photosForm.control}
+                                name={`photoTabImages.${index}` as const}
+                                render={({ field: RHFfield }) => (
+                                    <FormItem>
+                                        <div className="flex items-center gap-2">
+                                            <FormControl>
+                                                <Input 
+                                                    type="file" 
+                                                    onChange={(e) => handleFileChange(e, (val) => RHFfield.onChange(val))}
+                                                    accept="image/jpeg,image/png,image/gif"
+                                                    disabled={isUploading}
+                                                    className="flex-grow"
+                                                />
+                                            </FormControl>
+                                        </div>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+                        ))}
+                    </div>
 
                   </CardContent>
                   <CardFooter className="justify-end">
